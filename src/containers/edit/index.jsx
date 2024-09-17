@@ -1,0 +1,153 @@
+import React, { useRef } from 'react'
+import Button from 'components/elements/Button'
+import Dialog from 'components/elements/Dialog'
+import AppBar from 'components/elements/AppBar'
+import Toolbar from 'components/elements/Toolbar'
+import IconButton from 'components/elements/IconButton'
+import Typography from 'components/elements/Typography'
+import CardContent from 'components/elements/CardContent'
+import { MdClose as Close } from 'react-icons/md'
+import TextField from 'components/elements/TextField'
+import DialogActions from 'components/elements/DialogActions'
+import DialogContent from 'components/elements/DialogContent'
+import DialogTitle from 'components/elements/DialogTitle'
+import FileInput from 'components/FileInput'
+import Menu from 'components/AddEditMenu'
+import styles from './styles'
+
+// lots of duplication between add / edit
+const Edit = ({
+  id = '',
+  title,
+  artist,
+  dialogCropperOpen,
+  pages = [],
+  onSave,
+  onEditCancel,
+  onChangeTitle,
+  onChangeArtist,
+  onFileChange,
+  onCropperCancel,
+  onCropperSave,
+  onEditPages,
+  onCropperOpen,
+}) => {
+  const images = useRef()
+
+  const editSave = async ({ thresholding }) => {
+    await onSave({ thresholding })
+  }
+
+  return (
+    <Dialog fullScreen open={true} onClose={onEditCancel}>
+      <AppBar style={styles.appBar}>
+        <Toolbar>
+          <IconButton color="inherit" onClick={onEditCancel} aria-label="Close">
+            <Close />
+          </IconButton>
+          <Typography variant="h6" color="inherit" style={styles.flex}>
+            Edit song
+          </Typography>
+          <Button
+            color="inherit"
+            disabled={title === '' || artist === ''}
+            style={styles.button}
+            onClick={() => {
+              editSave({ thresholding: false })
+            }}
+          >
+            save
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      <div style={styles.textFieldContainer}>
+        {!navigator.onLine && (
+          <CardContent>
+            <Typography variant="h5" component="h2">
+              Offline
+            </Typography>
+            <Typography component="p">
+              Changes you make will be saved locally but not saved to the server.
+            </Typography>
+            <Typography component="p">Save again when you are online</Typography>
+          </CardContent>
+        )}
+
+        {id.length > 15 && (
+          <CardContent>
+            <Typography variant="h5" component="h2">
+              Note
+            </Typography>
+            <Typography component="p">
+              If a song has just been added, you need to log out and in again (sorry!)
+            </Typography>
+          </CardContent>
+        )}
+
+        <TextField
+          label="Enter Title"
+          margin="normal"
+          variant="outlined"
+          value={title}
+          style={styles.textFieldTitle}
+          onChange={onChangeTitle}
+        />
+
+        <TextField
+          label="Enter Artist"
+          margin="normal"
+          variant="outlined"
+          value={artist}
+          onChange={onChangeArtist}
+        />
+      </div>
+
+      <div style={styles.fileInputWrapper}>
+        <FileInput id="file-input" onFileChange={onFileChange} />
+      </div>
+
+      <div style={styles.images} ref={images}>
+        {pages.map((page, i) => (
+          <div key={i} style={styles.imageItem}>
+            <Menu
+              pages={pages}
+              pageIndex={i}
+              page={page}
+              onEditPages={onEditPages}
+              onCropperOpen={onCropperOpen}
+            />
+
+            <div className="addedit-image-img">
+              <img id={`addedit-image-img-${i}`} style={styles.imageItemIMG} src={page.src} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* edit image */}
+      <Dialog open={dialogCropperOpen} onClose={() => {}}>
+        <DialogTitle>Crop Image</DialogTitle>
+        <DialogContent>
+          <img id="image-to-edit" src="" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onCropperCancel} color="primary">
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onCropperSave({ pages })
+            }}
+            color="primary"
+            autoFocus
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Dialog>
+  )
+}
+
+export default Edit
