@@ -2,10 +2,10 @@
   "name": "copio",
   "version": "0.20.0",
   "scripts": {
-    "dev": "webpack-dev-server --open --mode development --port 1234",
-    "dev-legacy": "NODE_OPTIONS=--openssl-legacy-provider npm run dev",
-    "build": "webpack --mode production",
-    "build-legacy": "NODE_OPTIONS=--openssl-legacy-provider npm run build",
+    "_dev": "webpack-dev-server --open --mode development --port 1234",
+    "dev": "NODE_OPTIONS=--openssl-legacy-provider npm run _dev",
+    "_build": "webpack --mode production",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider npm run _build",
     "postbuild": "node scripts/postbuild.js"
   },
   "devDependencies": {
