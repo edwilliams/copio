@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import Card from 'components/elements/Card'
 import CardContent from 'components/elements/CardContent'
 import Typography from 'components/elements/Typography'
-import Tabs from './Tabs'
 import Header from 'components/Header'
 import Fab from 'components/elements/Fab'
 import { MdPhotoCamera as PhotoCamera } from 'react-icons/md'
@@ -13,29 +12,31 @@ import SongList from './SongList'
 const styles = {
   card: {
     textAlign: 'center',
-    margin: '15px',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    padding: '20px 10px 10px 10px',
   },
 }
 
 const Main = props => {
-  const { songs, downloadPDF, onSwitchSongListing } = props
+  const { songs, downloadPDF } = props
   const { title, id } = downloadPDF
 
   return (
     <article>
       <Header />
 
-      <Tabs onSwitchSongListing={onSwitchSongListing} />
-
       {songs.length > 0 ? (
         <SongList {...props} songs={songs} />
       ) : (
         <Card style={styles.card}>
           <CardContent>
-            <Typography variant="h5" component="h2">
-              You have no songs
+            <Typography component="p">
+              Tap the <PhotoCamera size="1em" style={{ transform: 'translateY(2px)' }} /> icon below
+              to add an image / document.
             </Typography>
-            <Typography component="p">Tap the camera icon below to add a song.</Typography>
           </CardContent>
         </Card>
       )}
@@ -55,7 +56,6 @@ const Main = props => {
 Main.propTypes = {
   listing: PropTypes.string,
   songs: PropTypes.array,
-  onSwitchSongListing: PropTypes.func,
   onAddEditView: PropTypes.func,
 }
 

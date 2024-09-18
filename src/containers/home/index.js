@@ -32,10 +32,6 @@ const MainContainer = props => {
     setScreen(`edit/${id}`)
   }
 
-  const handleSwitchSongListing = () => {
-    console.log('todo')
-  }
-
   return (
     <Main
       {...props}
@@ -43,7 +39,6 @@ const MainContainer = props => {
       onLoadSongs={loadSongs}
       onToggleRegisterSubscribeModal={() => {}}
       onDeleteSong={_deleteSong}
-      onSwitchSongListing={handleSwitchSongListing}
       onPopulateEditSongModal={populateEditSongModal}
       onSearch={() => {}}
       onChangeEmail={() => {}}
