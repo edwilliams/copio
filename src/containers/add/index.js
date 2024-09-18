@@ -118,13 +118,11 @@ const AddContainer = props => {
   return (
     <Add
       {...props}
-      {...data}
       loading={loading}
       pages={pages}
       title={title}
       artist={artist}
       onLoadSongs={loadSongs}
-      onToggleRegisterSubscribeModal={toggleRegisterSubscribeModal}
       onChangeTitle={changeTitle}
       onChangeArtist={changeArtist}
       onFileChange={fileChange}

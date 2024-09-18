@@ -17,7 +17,6 @@ import styles from './styles'
 
 // lots of duplication between add / edit
 const Edit = ({
-  id = '',
   title,
   artist,
   dialogCropperOpen,
@@ -71,17 +70,6 @@ const Edit = ({
               Changes you make will be saved locally but not saved to the server.
             </Typography>
             <Typography component="p">Save again when you are online</Typography>
-          </CardContent>
-        )}
-
-        {id.length > 15 && (
-          <CardContent>
-            <Typography variant="h5" component="h2">
-              Note
-            </Typography>
-            <Typography component="p">
-              If a song has just been added, you need to log out and in again (sorry!)
-            </Typography>
           </CardContent>
         )}
 

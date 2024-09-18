@@ -134,14 +134,12 @@ const EditContainer = props => {
   return (
     <Edit
       {...props}
-      {...data}
       id={props.match.params.id_song}
       loading={loading}
       pages={pages}
       title={title}
       artist={artist}
       onLoadSongs={loadSongs}
-      onToggleRegisterSubscribeModal={toggleRegisterSubscribeModal}
       onChangeTitle={changeTitle}
       onChangeArtist={changeArtist}
       onFileChange={fileChange}
