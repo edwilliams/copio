@@ -10,7 +10,10 @@ const Header = () => {
   return (
     <div style={styles.root}>
       <button
-        onClick={() => removeServiceWorkers()}
+        onClick={() => {
+          removeServiceWorkers()
+          alert('Copio has been uninstalled. You\'ll need to be online for the next refresh.')
+        }}
         title="uninstall"
         style={{
           position: 'absolute',
@@ -22,7 +25,7 @@ const Header = () => {
         <span>💾</span>
         <span
           style={{
-            transform: 'translate(-16px, 3px)',
+            transform: 'translate(-20px, 3px)',
             position: 'absolute',
             opacity: '0.7',
           }}
