@@ -11,17 +11,27 @@ import { MdDelete as Delete } from 'react-icons/md'
 import { MdColorize as Colorize } from 'react-icons/md'
 import { MdCrop as Crop } from 'react-icons/md'
 import { MdEdit as Edit } from 'react-icons/md'
-// import { MdRotateLeft as Rotate } from 'react-icons/md'
+import { MdRotateLeft as Rotate } from 'react-icons/md'
 
 const styles = {
   button: {
     position: 'absolute',
     top: '15px',
-    right: '15px'
-  }
+    right: '15px',
+  },
+  text: {
+    marginLeft: '10px',
+  },
 }
 
-const AddEditMenu = ({ pages, page, pageIndex, onCropperOpen, onEditPages }) => {
+const AddEditMenu = ({
+  pages,
+  page,
+  pageIndex,
+  showLeftRight = true,
+  onCropperOpen,
+  onEditPages,
+}) => {
   const [anchorEl, setAnchorEl] = useState(null)
 
   const handleClose = () => {
@@ -33,10 +43,10 @@ const AddEditMenu = ({ pages, page, pageIndex, onCropperOpen, onEditPages }) => 
     onCropperOpen({ pages, pageIndex })
   }
 
-  // const handleRotate = () => {
-  //   handleClose()
-  //   onEditPages({ type: 'rotate', pageIndex })
-  // }
+  const handleRotate = () => {
+    handleClose()
+    onEditPages({ type: 'rotate', pageIndex })
+  }
 
   const handleLeft = () => {
     handleClose()
@@ -58,7 +68,7 @@ const AddEditMenu = ({ pages, page, pageIndex, onCropperOpen, onEditPages }) => 
     onEditPages({ type: 'remove', pageIndex })
   }
 
-  const handleClickIcon = (e) => {
+  const handleClickIcon = e => {
     setAnchorEl(e.currentTarget)
   }
 
@@ -71,36 +81,48 @@ const AddEditMenu = ({ pages, page, pageIndex, onCropperOpen, onEditPages }) => 
       </Fab>
       <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
         <MenuItem onClick={handleCrop}>
-          <p>Crop</p>
           <Crop />
+          <p style={styles.text}>Crop</p>
         </MenuItem>
+
         <Divider />
-        {/* <MenuItem onClick={handleRotate}>
-          <p>Rotate</p>
+
+        <MenuItem onClick={handleRotate}>
           <Rotate />
-        </MenuItem> */}
-        {/* <Divider /> */}
-        <MenuItem onClick={handleLeft}>
-          <p>Left</p>
-          <KeyboardArrowLeft />
+          <p style={styles.text}>Rotate</p>
         </MenuItem>
-        <MenuItem onClick={handleRight}>
-          <p>Right</p>
-          <KeyboardArrowRight />
-        </MenuItem>
+
+        {showLeftRight && <Divider />}
+
+        {showLeftRight && (
+          <MenuItem onClick={handleLeft}>
+            <KeyboardArrowLeft />
+            <p style={styles.text}>Left</p>
+          </MenuItem>
+        )}
+        {showLeftRight && (
+          <MenuItem onClick={handleRight}>
+            <KeyboardArrowRight />
+            <p style={styles.text}>Right</p>
+          </MenuItem>
+        )}
+
         <Divider />
+
         {!page.thresholded && (
           <div>
             <MenuItem onClick={handleThreshold}>
-              <p>Black &amp; White</p>
               <Colorize />
+              <p style={styles.text}>Black &amp; White</p>
             </MenuItem>
+
             <Divider />
           </div>
         )}
+
         <MenuItem onClick={handleDelete}>
-          <p>Delete</p>
           <Delete />
+          <p style={styles.text}>Delete</p>
         </MenuItem>
       </Menu>
     </Fragment>

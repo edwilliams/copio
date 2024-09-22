@@ -84,8 +84,6 @@ const rotate = dataurl => {
   })
 }
 
-/*
-// needs work
 export const __rotate = dataurl => {
   return new Promise((resolve, reject) => {
     const image = new Image()
@@ -97,11 +95,7 @@ export const __rotate = dataurl => {
       canvas.width = image.height
       canvas.height = image.width
 
-      ctx.drawImage(
-        image,
-        canvas.width / 2 - image.width / 2,
-        canvas.height / 2 - image.width / 2
-      )
+      ctx.drawImage(image, canvas.width / 2 - image.width / 2, canvas.height / 2 - image.width / 2)
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.save()
       ctx.translate(canvas.width / 2, canvas.height / 2)
@@ -112,7 +106,6 @@ export const __rotate = dataurl => {
     }
   })
 }
-*/
 
 const resize = dataurl => {
   return new Promise((resolve, reject) => {

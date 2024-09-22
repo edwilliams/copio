@@ -1,19 +1,11 @@
 import React, { useState } from 'react'
 import { Route, Switch } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
-
 import HOC_Cropper from 'hocs/cropper'
-
 import { setScreen } from 'utils/general'
 import { getSongs, addSong, editSong } from 'utils/song'
 import { thresholdImages } from 'utils/image'
-import {
-  // _rotate,
-  changePageOrder,
-  removePage,
-  thresholdPage,
-  getNextID,
-} from 'utils/add-edit'
+import { _rotate, changePageOrder, removePage, thresholdPage, getNextID } from 'utils/add-edit'
 
 import { changeSongs } from 'store/songs/actions'
 
@@ -76,20 +68,14 @@ const AddContainer = props => {
     const _pages = thresholding ? await thresholdImages(pages) : pages
 
     if (id === 'add') {
-      // createSongOnServer({ title, artist, images: _pages.map(({ src }) => src) })
-
       await addSong({
-        // username: getEmail(),
         title,
         artist,
         pages: _pages,
-        // devices: [DEVICEID]
       })
     } else {
       await editSong({ id, title, artist, pages: _pages })
     }
-
-    // props.onSync()
 
     loadSongs()
 
@@ -105,8 +91,9 @@ const AddContainer = props => {
   // duplicated
   const editPages = async ({ type, direction, pageIndex }) => {
     const newPages =
-      // type === 'rotate' ? await _rotate({ pages, pageIndex }) :
-      type === 'order' && pages.length > 1
+      type === 'rotate'
+        ? await _rotate({ pages, pageIndex })
+        : type === 'order' && pages.length > 1
         ? changePageOrder({ pages, direction, pageIndex })
         : type === 'remove'
         ? removePage({ pages, pageIndex })

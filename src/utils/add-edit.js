@@ -1,9 +1,6 @@
 // todo: can't add same image twice
 
-import {
-  thresholdImage,
-  // __rotate
-} from 'utils/image'
+import { thresholdImage, __rotate } from 'utils/image'
 
 const swapArrEls = (arr, a, b) => {
   let _arr = [...arr]
@@ -13,11 +10,11 @@ const swapArrEls = (arr, a, b) => {
   return _arr
 }
 
-// export const _rotate = async ({ pages, pageIndex }) => {
-//   const page = pages.find((p, i) => i === pageIndex)
-//   const src = await __rotate(page.src)
-//   return pages.map((obj, i) => (i === pageIndex ? { ...obj, src } : obj))
-// }
+export const _rotate = async ({ pages, pageIndex }) => {
+  const page = pages.find((p, i) => i === pageIndex)
+  const src = await __rotate(page.src)
+  return pages.map((obj, i) => (i === pageIndex ? { ...obj, src } : obj))
+}
 
 export const changePageOrder = ({ pages, direction, pageIndex }) => {
   const newPageIndex = direction === 'left' ? pageIndex - 1 : pageIndex + 1

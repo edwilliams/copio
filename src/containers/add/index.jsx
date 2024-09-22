@@ -5,14 +5,13 @@ import AppBar from 'components/elements/AppBar'
 import Toolbar from 'components/elements/Toolbar'
 import IconButton from 'components/elements/IconButton'
 import Typography from 'components/elements/Typography'
-import CardContent from 'components/elements/CardContent'
 import { MdClose as Close } from 'react-icons/md'
 import TextField from 'components/elements/TextField'
 import DialogActions from 'components/elements/DialogActions'
 import DialogContent from 'components/elements/DialogContent'
 import DialogTitle from 'components/elements/DialogTitle'
 import FileInput from 'components/FileInput'
-import Menu from 'components/AddEditMenu'
+import AddEditMenu from 'components/AddEditMenu'
 import styles from './styles'
 
 // lots of duplication between add / edit
@@ -87,7 +86,8 @@ const Add = ({
         <div style={styles.images} ref={images}>
           {pages.map((page, i) => (
             <div key={i} style={styles.imageItem}>
-              <Menu
+              <AddEditMenu
+                showLeftRight={pages.length > 1}
                 pages={pages}
                 pageIndex={i}
                 page={page}

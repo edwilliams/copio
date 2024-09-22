@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-
 import HOC_Cropper from 'hocs/cropper'
-
 import { setScreen } from 'utils/general'
 import { getSongs, getSong, editSong } from 'utils/song'
 import { thresholdImages } from 'utils/image'
-import {
-  // _rotate,
-  changePageOrder,
-  removePage,
-  thresholdPage,
-  getNextID,
-} from 'utils/add-edit'
+import { _rotate, changePageOrder, removePage, thresholdPage, getNextID } from 'utils/add-edit'
 
 import { changeSongs } from 'store/songs/actions'
 
@@ -121,8 +113,9 @@ const EditContainer = props => {
   // duplicated
   const editPages = async ({ type, direction, pageIndex }) => {
     const newPages =
-      // type === 'rotate' ? await _rotate({ pages, pageIndex }) :
-      type === 'order' && pages.length > 1
+      type === 'rotate'
+        ? await _rotate({ pages, pageIndex })
+        : type === 'order' && pages.length > 1
         ? changePageOrder({ pages, direction, pageIndex })
         : type === 'remove'
         ? removePage({ pages, pageIndex })
