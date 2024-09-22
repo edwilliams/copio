@@ -85,23 +85,22 @@ const rotate = dataurl => {
 }
 
 export const __rotate = dataurl => {
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     const image = new Image()
     image.src = dataurl
     image.onload = () => {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
 
-      canvas.width = image.height
-      canvas.height = image.width
+      canvas.width = image.width
+      canvas.height = image.height
 
-      ctx.drawImage(image, canvas.width / 2 - image.width / 2, canvas.height / 2 - image.width / 2)
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.save()
       ctx.translate(canvas.width / 2, canvas.height / 2)
       ctx.rotate((-90 * Math.PI) / 180)
-      ctx.drawImage(image, -image.width / 2, -image.width / 2)
+      ctx.drawImage(image, -image.width / 2, -image.height / 2)
       ctx.restore()
+
       resolve(canvas.toDataURL())
     }
   })
