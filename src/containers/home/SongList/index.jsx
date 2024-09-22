@@ -19,8 +19,8 @@ const SongList = props => {
   }
 
   const deleteSongModal = async () => {
-    await onDeleteSong({ id: idToDelete })
-    onLoadSongs()
+    await props.onDeleteSong({ id: idToDelete })
+    props.onLoadSongs()
     setModalOpen(false)
   }
 

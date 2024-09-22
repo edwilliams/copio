@@ -2,7 +2,6 @@ import React, { Fragment, useState } from 'react'
 import Menu from 'components/elements/Menu'
 import MenuItem from 'components/elements/MenuItem'
 import { MdMoreVert as MoreVert } from 'react-icons/md'
-import { isiOS } from 'utils/general'
 
 const MenuComp = ({ song, onPopulateEditSongModal, onOpenDeleteModal, onExportAsPDF }) => {
   const [anchorEl, setAnchorEl] = useState(null)
