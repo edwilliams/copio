@@ -62,17 +62,6 @@ const Add = ({
         </AppBar>
 
         <div style={styles.textFieldContainer}>
-          {!navigator.onLine && (
-            <CardContent>
-              <Typography variant="h5" component="h2">
-                Offline
-              </Typography>
-              <Typography component="p">
-                Changes you make will be saved locally but not saved to the server.
-              </Typography>
-              <Typography component="p">Save again when you are online</Typography>
-            </CardContent>
-          )}
           <TextField
             label="Enter Title"
             margin="normal"
