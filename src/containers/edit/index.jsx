@@ -1,4 +1,7 @@
 import React, { useRef } from 'react'
+
+import useCropper from 'hooks/cropper'
+
 import Button from 'components/elements/Button'
 import Dialog from 'components/elements/Dialog'
 import AppBar from 'components/elements/AppBar'
@@ -18,19 +21,17 @@ import styles from './styles'
 const Edit = ({
   title,
   artist,
-  dialogCropperOpen,
   pages = [],
   onSave,
   onEditCancel,
   onChangeTitle,
   onChangeArtist,
   onFileChange,
-  onCropperCancel,
-  onCropperSave,
   onEditPages,
-  onCropperOpen,
 }) => {
   const images = useRef()
+
+  const { dialogCropperOpen, cropperOpen, cropperCancel, cropperSave } = useCropper()
 
   const editSave = async ({ thresholding }) => {
     await onSave({ thresholding })
@@ -91,7 +92,7 @@ const Edit = ({
               pageIndex={i}
               page={page}
               onEditPages={onEditPages}
-              onCropperOpen={onCropperOpen}
+              onCropperOpen={cropperOpen}
             />
 
             <div className="addedit-image-img">
@@ -108,12 +109,12 @@ const Edit = ({
           <img id="image-to-edit" src="" />
         </DialogContent>
         <DialogActions>
-          <Button onClick={onCropperCancel} color="primary">
+          <Button onClick={cropperCancel} color="primary">
             Cancel
           </Button>
           <Button
             onClick={() => {
-              onCropperSave({ pages })
+              cropperSave({ pages })
             }}
             color="primary"
             autoFocus

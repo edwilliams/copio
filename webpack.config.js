@@ -34,7 +34,7 @@ module.exports = {
       components: path.resolve(__dirname, `src/components/`),
       config: path.resolve(__dirname, `src/config/`),
       containers: path.resolve(__dirname, `src/containers/`),
-      hocs: path.resolve(__dirname, `src/hocs/`),
+      hooks: path.resolve(__dirname, `src/hooks/`),
       lib: path.resolve(__dirname, `src/lib/`),
       store: path.resolve(__dirname, `src/store/`),
       theme: path.resolve(__dirname, `src/theme/`),

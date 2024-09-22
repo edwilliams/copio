@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-import HOC_Cropper from 'hocs/cropper'
 import { setScreen } from 'utils/general'
 import { getSongs, getSong, editSong } from 'utils/song'
 import { thresholdImages } from 'utils/image'
@@ -143,4 +142,4 @@ const EditContainer = props => {
   )
 }
 
-export default HOC_Cropper(EditContainer)
+export default EditContainer

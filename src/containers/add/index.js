@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Route, Switch } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
-import HOC_Cropper from 'hocs/cropper'
+// import HOC_Cropper from 'hocs/cropper'
 import { setScreen } from 'utils/general'
 import { getSongs, addSong, editSong } from 'utils/song'
 import { thresholdImages } from 'utils/image'
@@ -123,7 +123,7 @@ const AddContainer = props => {
 const HomeRoutes = () => {
   return (
     <Switch>
-      <Route path="/" component={HOC_Cropper(AddContainer)} />
+      <Route path="/" component={AddContainer} />
     </Switch>
   )
 }
