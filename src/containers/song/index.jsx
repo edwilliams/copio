@@ -53,11 +53,6 @@ const Song = ({ songs = [], id }) => {
         <KeyboardBackspace />
       </Fab>
 
-      {/* todo: pagination */}
-      {/* <nav style={styles.nav}>
-        <div style={styles.navItem}></div>
-      </nav> */}
-
       <div
         ref={reader}
         style={{

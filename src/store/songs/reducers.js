@@ -4,7 +4,6 @@ const initialState = {
   songs: [],
 }
 
-// todo: look into using immer
 export default (state = initialState, action) => {
   switch (action.type) {
     case CHANGE_SONGS:

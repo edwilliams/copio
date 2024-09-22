@@ -20,24 +20,6 @@ export default {
     top: '10px',
     left: '10px',
   },
-  // todo: pagination
-  // nav: {
-  //   width: '130px',
-  //   background: 'green',
-  //   position: 'absolute',
-  //   zIndex: '2',
-  //   top: '0',
-  //   height: '100%',
-  //   display: 'flex',
-  //   justifyContent: 'center',
-  //   alignItems: 'center'
-  // },
-  // navItem: {
-  //   background: 'red',
-  //   borderRadius: '100%',
-  //   width: '50px',
-  //   height: '50px'
-  // },
   prev: {
     position: 'absolute',
     left: '0',

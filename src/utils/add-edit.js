@@ -1,3 +1,5 @@
+// todo: can't add same image twice
+
 import {
   thresholdImage,
   // __rotate
