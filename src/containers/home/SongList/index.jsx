@@ -1,67 +1,54 @@
-import React, { Component } from 'react'
+import React, { useState } from 'react'
 
 import List from './List'
 import DialogDelete from './DialogDelete'
 
 import { setScreen } from 'utils/general'
 
-class SongList extends Component {
-  constructor(props) {
-    super(props)
+const SongList = props => {
+  const [modalOpen, setModalOpen] = useState(false)
+  const [idToDelete, setIdToDelete] = useState('')
 
-    this.viewSong = this.viewSong.bind(this)
-    this.openDeleteModal = this.openDeleteModal.bind(this)
-    this.deleteSongModal = this.deleteSongModal.bind(this)
-    this.exportAsPDF = this.exportAsPDF.bind(this)
-    this.closeDeleteModal = this.closeDeleteModal.bind(this)
-
-    this.state = {
-      modalOpen: false,
-      idToDelete: ''
-    }
-  }
-
-  viewSong(id) {
+  const viewSong = id => {
     setScreen(`songs/${id}`)
   }
 
-  openDeleteModal(id) {
-    this.setState({ modalOpen: true, idToDelete: id })
+  const openDeleteModal = id => {
+    setModalOpen(true)
+    setIdToDelete(id)
   }
 
-  async deleteSongModal() {
-    await this.props.onDeleteSong({ id: this.state.idToDelete })
-    this.props.onLoadSongs()
-    this.setState({ modalOpen: false })
+  const deleteSongModal = async () => {
+    await onDeleteSong({ id: idToDelete })
+    onLoadSongs()
+    setModalOpen(false)
   }
 
-  async exportAsPDF({ title, id }) {
-    await this.props.onExportAsPDF({ title, id })
-    this.setState({ modalOpen: false })
+  const exportAsPDF = async ({ title, id }) => {
+    await props.exportAsPDF({ title, id })
+    setModalOpen(false)
   }
 
-  closeDeleteModal() {
-    this.setState({ modalOpen: false })
+  const closeDeleteModal = () => {
+    setModalOpen(false)
   }
 
-  render() {
-    return (
-      <React.Fragment>
-        <List
-          {...this.props}
-          onViewSong={this.viewSong}
-          onOpenDeleteModal={this.openDeleteModal}
-          onExportAsPDF={this.exportAsPDF}
-        />
+  return (
+    <>
+      <List
+        {...props}
+        onViewSong={viewSong}
+        onOpenDeleteModal={openDeleteModal}
+        onExportAsPDF={exportAsPDF}
+      />
 
-        <DialogDelete
-          open={this.state.modalOpen}
-          onCloseDeleteModal={this.closeDeleteModal}
-          onDeleteSongModal={this.deleteSongModal}
-        />
-      </React.Fragment>
-    )
-  }
+      <DialogDelete
+        open={modalOpen}
+        onCloseDeleteModal={closeDeleteModal}
+        onDeleteSongModal={deleteSongModal}
+      />
+    </>
+  )
 }
 
 export default SongList

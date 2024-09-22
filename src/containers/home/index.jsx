@@ -1,11 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { MdPhotoCamera as PhotoCamera } from 'react-icons/md'
+
+import useExportAsPDF from './useExportAsPDF'
+
 import Card from 'components/elements/Card'
 import CardContent from 'components/elements/CardContent'
 import Typography from 'components/elements/Typography'
 import Header from 'components/Header'
 import Fab from 'components/elements/Fab'
-import { MdPhotoCamera as PhotoCamera } from 'react-icons/md'
 
 import SongList from './SongList'
 
@@ -21,15 +24,14 @@ const styles = {
 }
 
 const Main = props => {
-  const { songs, downloadPDF } = props
-  const { title, id } = downloadPDF
+  const { downloadPDF, exportAsPDF } = useExportAsPDF()
 
   return (
     <article>
       <Header />
 
-      {songs.length > 0 ? (
-        <SongList {...props} songs={songs} />
+      {props.songs.length > 0 ? (
+        <SongList {...props} songs={props.songs} exportAsPDF={exportAsPDF} />
       ) : (
         <Card style={styles.card}>
           <CardContent>
@@ -47,8 +49,7 @@ const Main = props => {
         </Fab>
       </div>
 
-      {/* todo: dynamically generate this anchor? */}
-      <a id="download" href={id} download={title}></a>
+      <a id="download" href={downloadPDF.id} download={downloadPDF.title}></a>
     </article>
   )
 }

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import HOC_ExportAsPDF from './hocs/exportAsPDF' // todo: resolve issues with parceljs
 import { getScreen, setScreen } from 'utils/general'
 import { getSongs, deleteSong } from 'utils/song'
 import { changeSongs } from 'store/songs/actions'
@@ -47,4 +46,4 @@ const MainContainer = props => {
   )
 }
 
-export default HOC_ExportAsPDF(MainContainer) // HomeRoutes
+export default MainContainer
