@@ -81,7 +81,7 @@ const Add = ({
         </div>
 
         <div style={styles.fileInputWrapper}>
-          <FileInput id="file-input" onFileChange={onFileChange} />
+          <FileInput onFileChange={onFileChange} />
         </div>
 
         <div style={styles.images} ref={images}>

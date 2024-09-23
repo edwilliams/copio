@@ -1,30 +1,27 @@
-import React, { useRef } from 'react'
-import Fab from 'components/elements/Fab'
-import { MdIconFileAttachment as IconFileAttachment } from 'react-icons/md'
+import React, { useEffect, useRef } from 'react'
 import { MdAdd as Add } from 'react-icons/md'
-
 import { removeFileExt } from 'utils/general'
 import {
   getFriendlyFileType,
   processPDFs,
-  processPngsAndJpgs
+  processPngsAndJpgs,
   // getEXIF
 } from 'utils/image'
-import { useEffect } from 'react'
+import Fab from 'components/elements/Fab'
 
 const styles = {
   input: {
     position: 'absolute',
     left: '-9999px',
     top: '-9999px',
-    visibility: 'hidden'
+    visibility: 'hidden',
   },
   button: {
-    margin: '20px 0 0 0'
-  }
+    margin: '20px 0 0 0',
+  },
 }
 
-const FileInput = ({ id, disabled, css, icon, onFileChange }) => {
+const FileInput = ({ disabled, onFileChange }) => {
   const fileInput = useRef()
 
   const change = () => {
@@ -47,7 +44,7 @@ const FileInput = ({ id, disabled, css, icon, onFileChange }) => {
       const obj = {
         name: removeFileExt(file.name),
         dataurls: dataurls,
-        type
+        type,
       }
       // get exif on unprocessed image or data is lost
       // if (type === 'png' || type === 'jpg') obj.exif = await getEXIF(result)
@@ -61,7 +58,7 @@ const FileInput = ({ id, disabled, css, icon, onFileChange }) => {
     return () => {
       fileInput.current.removeEventListener('change', change)
     }
-  }, [])
+  }, [change])
 
   const click = () => {
     if (disabled) {
@@ -71,15 +68,12 @@ const FileInput = ({ id, disabled, css, icon, onFileChange }) => {
     }
   }
 
-  const _css = css || {}
   return (
     <section>
-      <input id={id} type="file" ref={fileInput} style={styles.input} />
-      <div style={_css.button}>
-        <Fab color="primary" onClick={click} style={styles.button}>
-          {icon === 'attachment' ? <IconFileAttachment /> : <Add size="2em" />}
-        </Fab>
-      </div>
+      <input id="file-input" type="file" ref={fileInput} style={styles.input} />
+      <Fab color="primary" onClick={click} style={styles.button}>
+        <Add size="2em" />
+      </Fab>
     </section>
   )
 }

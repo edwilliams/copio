@@ -9,9 +9,6 @@ import { changeSongs } from 'store/songs/actions'
 
 import Edit from './index.jsx'
 
-// techdebt: in fileChange pages is empty, despite being populated in return
-let PAGES = []
-
 // function dataURLtoFile(dataurl, filename) {
 //   var arr = dataurl.split(','),
 //     mime = arr[0].match(/:(.*?);/)[1],
@@ -43,7 +40,6 @@ const EditContainer = props => {
     setTitle(song.title)
     setArtist(song.artist)
     setPages(song.pages)
-    PAGES = song.pages
   }
 
   // duplicate
@@ -53,23 +49,22 @@ const EditContainer = props => {
 
     setLoading(true)
 
-    let flagUsedPagesToIncrement = false
+    // let flagUsedPagesToIncrement = false
 
     dataurls.forEach((src, i) => {
       const id = getNextID({
         dataurls,
-        pages: PAGES,
+        pages,
         i,
-        useIncrement: flagUsedPagesToIncrement,
+        useIncrement: false, //flagUsedPagesToIncrement,
       })
       const obj = { id, src }
 
-      flagUsedPagesToIncrement = true
+      // flagUsedPagesToIncrement = true
 
       if (exif) obj.exif = exif
 
-      PAGES.push(obj)
-      setPages(PAGES)
+      setPages([...pages, obj])
     })
 
     setLoading(false)
