@@ -80,9 +80,10 @@ const Edit = ({
       </div>
 
       <div style={styles.fileInputWrapper}>
-        <FileInput onFileChange={onFileChange} />
+        <FileInput disabled={false} onFileChange={onFileChange} />
       </div>
 
+      {/* @ts-ignore */}
       <div style={styles.images} ref={images}>
         {pages.map((page, i) => (
           <div key={i} style={styles.imageItem}>

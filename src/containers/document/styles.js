@@ -1,3 +1,5 @@
+/** @type {any} */
+
 export default {
   container: {
     width: '100vw',
@@ -8,10 +10,7 @@ export default {
     transition: 'all 600ms ease 0s',
   },
   innerIMGLandscape: {
-    // height: '100%',
     width: '100%',
-    // objectFit: 'cover',
-    // objectPosition: '0 0',
     maxWidth: '1240px', // todo: needs to be set dynamically (currently roughly A4)
   },
   back: {

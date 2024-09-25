@@ -64,6 +64,7 @@ const EditContainer = props => {
 
       if (exif) obj.exif = exif
 
+      // @ts-ignore
       setPages([...pages, obj])
     })
 

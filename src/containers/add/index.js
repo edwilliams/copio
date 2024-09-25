@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Route, Switch } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
-// import HOC_Cropper from 'hocs/cropper'
 import { setScreen } from 'utils/general'
 import { getDocuments, addDocument, editDocument } from 'utils/document'
 import { thresholdImages } from 'utils/image'
@@ -45,6 +44,7 @@ const AddContainer = props => {
 
       // if (exif) obj.exif = exif
 
+      // @ts-ignore
       pages.push(obj)
       setPages(pages)
     })
@@ -68,7 +68,9 @@ const AddContainer = props => {
     const _pages = thresholding ? await thresholdImages(pages) : pages
 
     if (id === 'add') {
+      // @ts-ignore
       await addDocument({
+        // missing id
         title,
         description,
         pages: _pages,
