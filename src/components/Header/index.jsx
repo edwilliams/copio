@@ -20,24 +20,10 @@ const Uninstall = () => (
       }
     }}
     title="uninstall"
-    style={{
-      position: 'absolute',
-      padding: '8px',
-      cursor: 'pointer',
-      zIndex: '999',
-    }}
+    style={styles.uninstall.button}
   >
     <span>💾</span>
-    <span
-      style={{
-        position: 'absolute',
-        top: '12px',
-        left: '8px',
-        opacity: '0.7',
-      }}
-    >
-      ❌
-    </span>
+    <span style={styles.uninstall.cross}>❌</span>
   </button>
 )
 

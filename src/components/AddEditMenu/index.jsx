@@ -12,17 +12,7 @@ import { MdColorize as Colorize } from 'react-icons/md'
 import { MdCrop as Crop } from 'react-icons/md'
 import { MdEdit as Edit } from 'react-icons/md'
 import { MdRotateLeft as Rotate } from 'react-icons/md'
-
-const styles = {
-  button: {
-    position: 'absolute',
-    top: '15px',
-    right: '15px',
-  },
-  text: {
-    marginLeft: '10px',
-  },
-}
+import styles from './styles'
 
 const AddEditMenu = ({
   pages,

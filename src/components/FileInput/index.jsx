@@ -8,18 +8,7 @@ import {
   // getEXIF
 } from 'utils/image'
 import Fab from 'components/elements/Fab'
-
-const styles = {
-  input: {
-    position: 'absolute',
-    left: '-9999px',
-    top: '-9999px',
-    visibility: 'hidden',
-  },
-  button: {
-    margin: '20px 0 0 0',
-  },
-}
+import styles from './styles'
 
 const FileInput = ({ disabled, onFileChange }) => {
   const fileInput = useRef()
@@ -27,10 +16,12 @@ const FileInput = ({ disabled, onFileChange }) => {
   const change = () => {
     const reader = new FileReader()
 
+    // @ts-ignore
     fileInput.current.files.length && reader.readAsDataURL(fileInput.current.files[0])
 
     reader.onload = async () => {
       const { result } = reader
+      // @ts-ignore
       const file = fileInput.current.files[0]
       const type = getFriendlyFileType(file.type)
 
@@ -54,8 +45,10 @@ const FileInput = ({ disabled, onFileChange }) => {
   }
 
   useEffect(() => {
+    // @ts-ignore
     fileInput.current.addEventListener('change', change)
     return () => {
+      // @ts-ignore
       fileInput.current.removeEventListener('change', change)
     }
   }, [change])
@@ -64,12 +57,14 @@ const FileInput = ({ disabled, onFileChange }) => {
     if (disabled) {
       onFileChange({})
     } else {
+      // @ts-ignore
       fileInput.current.click()
     }
   }
 
   return (
     <section>
+      {/* @ts-ignore */}
       <input id="file-input" type="file" ref={fileInput} style={styles.input} />
       <Fab color="primary" onClick={click} style={styles.button}>
         <Add size="2em" />

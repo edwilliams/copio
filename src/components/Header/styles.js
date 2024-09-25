@@ -1,18 +1,20 @@
+/** @type {any} */
+
 export default {
   root: {
-    width: '100%'
+    width: '100%',
   },
   grow: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   menuButton: {
     marginLeft: -12,
-    marginRight: 20
+    marginRight: 20,
   },
   title: {
     // display: 'none',
     textAlign: 'center',
-    width: '100%'
+    width: '100%',
     // "@media (min-width:600px)": {
     //   "display": "block"
     // }
@@ -25,7 +27,7 @@ export default {
     //   "backgroundColor": "rgba(255, 255, 255, 0.25)"
     // },
     marginLeft: 0,
-    width: '100%'
+    width: '100%',
     // "@media (min-width:600px)": {
     //   "marginLeft": 8,
     //   "width": "auto"
@@ -38,7 +40,7 @@ export default {
     pointerEvents: 'none',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   inputInput: {
     color: 'inherit',
@@ -48,12 +50,25 @@ export default {
     paddingBottom: 8,
     paddingLeft: 80,
     transition: 'width 300ms cubic-bezier(0.4, 0, 0.2, 1) 0ms',
-    width: '100%'
     // "@media (min-width:600px)": {
     //   "width": 120,
     //   "&:focus": {
     //     "width": 200
     //   }
     // }
-  }
+  },
+  uninstall: {
+    button: {
+      position: 'absolute',
+      padding: '8px',
+      cursor: 'pointer',
+      zIndex: '999',
+    },
+    cross: {
+      position: 'absolute',
+      top: '12px',
+      left: '8px',
+      opacity: '0.7',
+    },
+  },
 }
