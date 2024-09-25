@@ -10,7 +10,7 @@ const DocumentList = props => {
   const [idToDelete, setIdToDelete] = useState('')
 
   const viewDocument = id => {
-    setScreen(`documents/${id}`)
+    setScreen(`document/${id}`)
   }
 
   const openDeleteModal = id => {

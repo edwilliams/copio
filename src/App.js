@@ -21,7 +21,7 @@ const App = () => (
           <Route path="/edit/:id_document" component={Edit} />
           <Route path="/login" component={Home} />
           <Route path="/reset" component={Home} />
-          <Route path="/documents/:id_document" component={Document} />
+          <Route path="/document/:id_document" component={Document} />
         </Switch>
       </Router>
     </Provider>

@@ -36,11 +36,8 @@ const MainContainer = props => {
       {...props}
       documents={documents.documents}
       onLoadDocuments={loadDocuments}
-      onToggleRegisterSubscribeModal={() => {}}
       onDeleteDocument={_deleteDocument}
       onPopulateEditDocumentModal={populateEditDocumentModal}
-      onSearch={() => {}}
-      onChangeEmail={() => {}}
       onAddView={() => setScreen('add')}
     />
   )
