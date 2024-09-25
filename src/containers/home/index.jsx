@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { MdPhotoCamera as PhotoCamera } from 'react-icons/md'
 
-import useExportAsPDF from './useExportAsPDF'
+import useExportAsPDF from 'hooks/useExportAsPDF'
 
 import Card from 'components/elements/Card'
 import CardContent from 'components/elements/CardContent'

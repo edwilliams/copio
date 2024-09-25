@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
 
-import useCropper from 'hooks/cropper'
+import useCropper from 'hooks/useCropper'
 
 import Button from 'components/elements/Button'
 import Dialog from 'components/elements/Dialog'
