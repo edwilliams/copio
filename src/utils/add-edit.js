@@ -58,7 +58,7 @@ export const getNextID = ({ dataurls, pages, i, useIncrement }) => {
     if (pages.length === 0) {
       return '01'
     } else {
-      const arr = pages.map(song => parseInt(song.id)) // e.g. [ 1, 2, 3 ]
+      const arr = pages.map(document => parseInt(document.id)) // e.g. [ 1, 2, 3 ]
       const int = Math.max(...arr) // e.g. 3
       return (int + 1).toString().padStart(2, '0') // e.g. '04'
     }

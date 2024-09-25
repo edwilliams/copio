@@ -10,9 +10,9 @@ export const mergeArraysByKey = ({ a, b, key }) => {
   return a.concat(_b)
 }
 
-export const removeAllSongs = () => {
+export const removeAllDocuments = () => {
   return new Promise((resolve, reject) => {
-    IDB.set('songs', []).then(resolve).catch(reject)
+    IDB.set('documents', []).then(resolve).catch(reject)
   })
 }
 

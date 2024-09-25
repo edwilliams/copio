@@ -1,0 +1,1 @@
+export const CHANGE_DOCUMENTS = 'CHANGE_DOCUMENTS'

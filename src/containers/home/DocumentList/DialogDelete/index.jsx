@@ -6,17 +6,19 @@ import DialogContent from 'components/elements/DialogContent'
 import DialogContentText from 'components/elements/DialogContentText'
 import DialogTitle from 'components/elements/DialogTitle'
 
-const DialogDelete = ({ open, onCloseDeleteModal, onDeleteSongModal }) => (
+const DialogDelete = ({ open, onCloseDeleteModal, onDeleteDocumentModal }) => (
   <Dialog open={open}>
-    <DialogTitle>Delete Song?</DialogTitle>
+    <DialogTitle>Delete Document?</DialogTitle>
     <DialogContent>
-      <DialogContentText>Would you like to remove this song from your library?</DialogContentText>
+      <DialogContentText>
+        Would you like to remove this document from your library?
+      </DialogContentText>
     </DialogContent>
     <DialogActions>
       <Button onClick={onCloseDeleteModal} color="primary">
         Cancel
       </Button>
-      <Button onClick={onDeleteSongModal} color="primary" autoFocus>
+      <Button onClick={onDeleteDocumentModal} color="primary" autoFocus>
         Delete
       </Button>
     </DialogActions>

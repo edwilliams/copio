@@ -5,12 +5,12 @@ import DialogDelete from './DialogDelete'
 
 import { setScreen } from 'utils/general'
 
-const SongList = props => {
+const DocumentList = props => {
   const [modalOpen, setModalOpen] = useState(false)
   const [idToDelete, setIdToDelete] = useState('')
 
-  const viewSong = id => {
-    setScreen(`songs/${id}`)
+  const viewDocument = id => {
+    setScreen(`documents/${id}`)
   }
 
   const openDeleteModal = id => {
@@ -18,9 +18,9 @@ const SongList = props => {
     setIdToDelete(id)
   }
 
-  const deleteSongModal = async () => {
-    await props.onDeleteSong({ id: idToDelete })
-    props.onLoadSongs()
+  const deleteDocumentModal = async () => {
+    await props.onDeleteDocument({ id: idToDelete })
+    props.onLoadDocuments()
     setModalOpen(false)
   }
 
@@ -37,7 +37,7 @@ const SongList = props => {
     <>
       <List
         {...props}
-        onViewSong={viewSong}
+        onViewDocument={viewDocument}
         onOpenDeleteModal={openDeleteModal}
         onExportAsPDF={exportAsPDF}
       />
@@ -45,10 +45,10 @@ const SongList = props => {
       <DialogDelete
         open={modalOpen}
         onCloseDeleteModal={closeDeleteModal}
-        onDeleteSongModal={deleteSongModal}
+        onDeleteDocumentModal={deleteDocumentModal}
       />
     </>
   )
 }
 
-export default SongList
+export default DocumentList

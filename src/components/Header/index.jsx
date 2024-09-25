@@ -3,7 +3,7 @@ import AppBar from 'components/elements/AppBar'
 import Toolbar from 'components/elements/Toolbar'
 import Typography from 'components/elements/Typography'
 import { removeServiceWorkers } from 'utils/general'
-import { deleteSongs } from 'utils/song'
+import { deleteDocuments } from 'utils/document'
 
 import styles from './styles'
 
@@ -15,7 +15,7 @@ const Uninstall = () => (
       )
       if (remove) {
         removeServiceWorkers()
-        deleteSongs()
+        deleteDocuments()
         window.location.reload()
       }
     }}

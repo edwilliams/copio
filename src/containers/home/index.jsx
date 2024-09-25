@@ -10,7 +10,7 @@ import Typography from 'components/elements/Typography'
 import Header from 'components/Header'
 import Fab from 'components/elements/Fab'
 
-import SongList from './SongList'
+import DocumentList from './DocumentList'
 
 const styles = {
   card: {
@@ -30,8 +30,8 @@ const Main = props => {
     <article>
       <Header />
 
-      {props.songs.length > 0 ? (
-        <SongList {...props} songs={props.songs} exportAsPDF={exportAsPDF} />
+      {props.documents.length > 0 ? (
+        <DocumentList {...props} documents={props.documents} exportAsPDF={exportAsPDF} />
       ) : (
         <Card style={styles.card}>
           <CardContent>
@@ -56,7 +56,7 @@ const Main = props => {
 
 Main.propTypes = {
   listing: PropTypes.string,
-  songs: PropTypes.array,
+  documents: PropTypes.array,
   onAddEditView: PropTypes.func,
 }
 

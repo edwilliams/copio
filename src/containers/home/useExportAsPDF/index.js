@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
-import { getSong } from 'utils/song'
+import { getDocument } from 'utils/document'
 import { createPDFArray } from './utils'
 
 const useExportAsPDF = () => {
   const [downloadPDF, setDownloadPDF] = useState({ title: '', id: '' })
 
   const exportAsPDF = useCallback(async ({ title, id }) => {
-    const arr = await getSong({ id })
+    const arr = await getDocument({ id })
     const PDFArray = await createPDFArray(arr)
 
     setDownloadPDF({ title, id: PDFArray[0] })

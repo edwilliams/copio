@@ -3,7 +3,7 @@ import Menu from 'components/elements/Menu'
 import MenuItem from 'components/elements/MenuItem'
 import { MdMoreVert as MoreVert } from 'react-icons/md'
 
-const MenuComp = ({ song, onPopulateEditSongModal, onOpenDeleteModal, onExportAsPDF }) => {
+const MenuComp = ({ document, onPopulateEditDocumentModal, onOpenDeleteModal, onExportAsPDF }) => {
   const [anchorEl, setAnchorEl] = useState(null)
 
   const handleClick = e => {
@@ -13,15 +13,15 @@ const MenuComp = ({ song, onPopulateEditSongModal, onOpenDeleteModal, onExportAs
     setAnchorEl(null)
   }
   const _edit = () => {
-    onPopulateEditSongModal(song.id)
+    onPopulateEditDocumentModal(document.id)
     handleClose()
   }
   const _delete = () => {
-    onOpenDeleteModal(song.id)
+    onOpenDeleteModal(document.id)
     handleClose()
   }
   const _download = () => {
-    onExportAsPDF({ title: song.title, id: song.id })
+    onExportAsPDF({ title: document.title, id: document.id })
     handleClose()
   }
   return (

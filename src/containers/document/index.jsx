@@ -9,7 +9,7 @@ import styles from './styles'
 
 const IMGHEIGHT = 1754
 
-const Song = ({ songs = [], id }) => {
+const Document = ({ documents = [], id }) => {
   const reader = useRef()
 
   const [index, setIndex] = useState(0)
@@ -25,16 +25,16 @@ const Song = ({ songs = [], id }) => {
 
   const next = () => {
     // todo: make this correct
-    // const song = songs.find(song => id === song.id) || { pages: [] }
+    // const document = documents.find(document => id === document.id) || { pages: [] }
     // const bool =
-    //   IMGHEIGHT * song.pages.length > index * window.innerHeight + IMGHEIGHT //* 2
+    //   IMGHEIGHT * document.pages.length > index * window.innerHeight + IMGHEIGHT //* 2
     // if (bool) setIndex(index + 1)
     setIndex(index + 1)
   }
 
-  const song = songs.find(song => id === song.id) || {}
+  const document = documents.find(document => id === document.id) || {}
 
-  let _pages = song.pages || []
+  let _pages = document.pages || []
 
   // todo: the last figure should be less, resulting in the last page finishing at the bottom of the screen
   // i.e. (pageHeight * numberOfPages) - (index * window.innerHeight)
@@ -60,7 +60,7 @@ const Song = ({ songs = [], id }) => {
           transform: `translate3d(0, -${yAxis}px, 0)`,
         }}
       >
-        {song && (
+        {document && (
           <React.Fragment>
             {_pages.map((page, i) => {
               return (
@@ -72,7 +72,7 @@ const Song = ({ songs = [], id }) => {
           </React.Fragment>
         )}
 
-        {song && <div className="reader-pagination"></div>}
+        {document && <div className="reader-pagination"></div>}
       </div>
 
       <div onClick={prev} style={styles.prev}></div>
@@ -81,9 +81,9 @@ const Song = ({ songs = [], id }) => {
   )
 }
 
-Song.propTypes = {
+Document.propTypes = {
   id: PropTypes.string,
-  songs: PropTypes.array,
+  documents: PropTypes.array,
 }
 
-export default Song
+export default Document

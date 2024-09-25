@@ -1,44 +1,44 @@
 import React, { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { getScreen, setScreen } from 'utils/general'
-import { getSongs, deleteSong } from 'utils/song'
-import { changeSongs } from 'store/songs/actions'
-import { songsSelector } from 'store/songs/selectors'
+import { getDocuments, deleteDocument } from 'utils/document'
+import { changeDocuments } from 'store/documents/actions'
+import { documentsSelector } from 'store/documents/selectors'
 import Main from './index.jsx'
 
 const MainContainer = props => {
   const dispatch = useDispatch()
-  const songs = useSelector(songsSelector)
+  const documents = useSelector(documentsSelector)
 
   useEffect(() => {
-    loadSongs()
+    loadDocuments()
     const url = getScreen().includes('edit/') ? getScreen().split('edit/')[1] : ''
-    if (url) populateEditSongModal(url)
+    if (url) populateEditDocumentModal(url)
   }, [])
 
   // duplicated in a HoC
-  const loadSongs = async () => {
-    const songs = await getSongs({ sortBy: 'title' })
-    await dispatch(changeSongs(songs))
+  const loadDocuments = async () => {
+    const documents = await getDocuments({ sortBy: 'title' })
+    await dispatch(changeDocuments(documents))
   }
 
-  const _deleteSong = async ({ id }) => {
-    await deleteSong({ id })
-    loadSongs()
+  const _deleteDocument = async ({ id }) => {
+    await deleteDocument({ id })
+    loadDocuments()
   }
 
-  const populateEditSongModal = async id => {
+  const populateEditDocumentModal = async id => {
     setScreen(`edit/${id}`)
   }
 
   return (
     <Main
       {...props}
-      songs={songs.songs}
-      onLoadSongs={loadSongs}
+      documents={documents.documents}
+      onLoadDocuments={loadDocuments}
       onToggleRegisterSubscribeModal={() => {}}
-      onDeleteSong={_deleteSong}
-      onPopulateEditSongModal={populateEditSongModal}
+      onDeleteDocument={_deleteDocument}
+      onPopulateEditDocumentModal={populateEditDocumentModal}
       onSearch={() => {}}
       onChangeEmail={() => {}}
       onAddView={() => setScreen('add')}

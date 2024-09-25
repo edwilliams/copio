@@ -20,12 +20,12 @@ import styles from './styles'
 // lots of duplication between add / edit
 const Edit = ({
   title,
-  artist,
+  description,
   pages = [],
   onSave,
   onEditCancel,
   onChangeTitle,
-  onChangeArtist,
+  onChangeDescription,
   onFileChange,
   onEditPages,
 }) => {
@@ -45,11 +45,11 @@ const Edit = ({
             <Close />
           </IconButton>
           <Typography variant="h6" color="inherit" style={styles.flex}>
-            Edit song
+            Edit document
           </Typography>
           <Button
             color="inherit"
-            disabled={title === '' || artist === ''}
+            disabled={title === '' || description === ''}
             style={styles.button}
             onClick={() => {
               editSave({ thresholding: false })
@@ -71,11 +71,11 @@ const Edit = ({
         />
 
         <TextField
-          label="Enter Artist"
+          label="Enter Description"
           margin="normal"
           variant="outlined"
-          value={artist}
-          onChange={onChangeArtist}
+          value={description}
+          onChange={onChangeDescription}
         />
       </div>
 

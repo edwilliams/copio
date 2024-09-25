@@ -3,11 +3,11 @@ import { Route, Switch } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 // import HOC_Cropper from 'hocs/cropper'
 import { setScreen } from 'utils/general'
-import { getSongs, addSong, editSong } from 'utils/song'
+import { getDocuments, addDocument, editDocument } from 'utils/document'
 import { thresholdImages } from 'utils/image'
 import { _rotate, changePageOrder, removePage, thresholdPage, getNextID } from 'utils/add-edit'
 
-import { changeSongs } from 'store/songs/actions'
+import { changeDocuments } from 'store/documents/actions'
 
 import Add from './index.jsx'
 
@@ -17,7 +17,7 @@ const AddContainer = props => {
   const [loading, setLoading] = useState(false)
   const [pages, setPages] = useState([])
   const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
+  const [description, setDescription] = useState('')
 
   // duplicate
   const fileChange = async ({
@@ -59,33 +59,33 @@ const AddContainer = props => {
   }
 
   // duplicate
-  const changeArtist = async e => {
+  const changeDescription = async e => {
     const str = e.target.value
-    setArtist(str)
+    setDescription(str)
   }
 
   const save = async ({ id, thresholding }) => {
     const _pages = thresholding ? await thresholdImages(pages) : pages
 
     if (id === 'add') {
-      await addSong({
+      await addDocument({
         title,
-        artist,
+        description,
         pages: _pages,
       })
     } else {
-      await editSong({ id, title, artist, pages: _pages })
+      await editDocument({ id, title, description, pages: _pages })
     }
 
-    loadSongs()
+    loadDocuments()
 
     setScreen('')
   }
 
   // duplicated
-  const loadSongs = async () => {
-    const songs = await getSongs({ sortBy: 'title' })
-    await dispatch(changeSongs(songs))
+  const loadDocuments = async () => {
+    const documents = await getDocuments({ sortBy: 'title' })
+    await dispatch(changeDocuments(documents))
   }
 
   // duplicated
@@ -108,10 +108,10 @@ const AddContainer = props => {
       loading={loading}
       pages={pages}
       title={title}
-      artist={artist}
-      onLoadSongs={loadSongs}
+      description={description}
+      onLoadDocuments={loadDocuments}
       onChangeTitle={changeTitle}
-      onChangeArtist={changeArtist}
+      onChangeDescription={changeDescription}
       onFileChange={fileChange}
       onSave={save}
       onEditPages={editPages}

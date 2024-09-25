@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { setScreen } from 'utils/general'
-import { getSongs, getSong, editSong } from 'utils/song'
+import { getDocuments, getDocument, editDocument } from 'utils/document'
 import { thresholdImages } from 'utils/image'
 import { _rotate, changePageOrder, removePage, thresholdPage, getNextID } from 'utils/add-edit'
 
-import { changeSongs } from 'store/songs/actions'
+import { changeDocuments } from 'store/documents/actions'
 
 import Edit from './index.jsx'
 
@@ -27,19 +27,19 @@ const EditContainer = props => {
   const [loading, setLoading] = useState(false)
   const [pages, setPages] = useState([])
   const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
+  const [description, setDescription] = useState('')
 
   useEffect(() => {
-    const id = props.match.params.id_song
+    const id = props.match.params.id_document
     init(id)
   }, [])
 
   const init = async id => {
-    const song = await getSong({ id })
+    const document = await getDocument({ id })
 
-    setTitle(song.title)
-    setArtist(song.artist)
-    setPages(song.pages)
+    setTitle(document.title)
+    setDescription(document.description)
+    setPages(document.pages)
   }
 
   // duplicate
@@ -77,31 +77,31 @@ const EditContainer = props => {
   }
 
   // duplicate
-  const changeArtist = async e => {
+  const changeDescription = async e => {
     const str = e.target.value
-    setArtist(str)
+    setDescription(str)
   }
 
   const editSave = async ({ thresholding }) => {
-    const id = props.match.params.id_song
+    const id = props.match.params.id_document
     const _pages = thresholding ? await thresholdImages(pages) : pages
 
-    await editSong({
+    await editDocument({
       id,
       title,
-      artist,
+      description,
       pages: _pages,
     })
 
-    loadSongs()
+    loadDocuments()
 
     setScreen('')
   }
 
   // duplicated
-  const loadSongs = async () => {
-    const songs = await getSongs({ sortBy: 'title' })
-    await dispatch(changeSongs(songs))
+  const loadDocuments = async () => {
+    const documents = await getDocuments({ sortBy: 'title' })
+    await dispatch(changeDocuments(documents))
   }
 
   // duplicated
@@ -121,14 +121,14 @@ const EditContainer = props => {
   return (
     <Edit
       {...props}
-      id={props.match.params.id_song}
+      id={props.match.params.id_document}
       loading={loading}
       pages={pages}
       title={title}
-      artist={artist}
-      onLoadSongs={loadSongs}
+      description={description}
+      onLoadDocuments={loadDocuments}
       onChangeTitle={changeTitle}
-      onChangeArtist={changeArtist}
+      onChangeDescription={changeDescription}
       onFileChange={fileChange}
       onSave={editSave}
       onEditCancel={() => setScreen('')}

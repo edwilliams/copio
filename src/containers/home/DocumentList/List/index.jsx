@@ -18,16 +18,16 @@ const styles = {
 }
 
 const InteractiveList = props => {
-  const { songs } = props
+  const { documents } = props
   return (
     <div style={styles.container}>
       <List dense={false}>
-        {songs.map((song, i) => {
+        {documents.map((document, i) => {
           return (
             <ListItem
               key={i}
               onClick={() => {
-                props.onViewSong(song.id)
+                props.onViewDocument(document.id)
               }}
             >
               <ListItemAvatar>
@@ -35,10 +35,10 @@ const InteractiveList = props => {
                   <CopioIcon />
                 </Avatar>
               </ListItemAvatar>
-              <ListItemText primary={song.title} secondary={song.artist} />
+              <ListItemText primary={document.title} secondary={document.description} />
               <ListItemSecondaryAction>
                 <IconButton aria-label="Edit">
-                  <Menu {...props} song={song} />
+                  <Menu {...props} document={document} />
                 </IconButton>
               </ListItemSecondaryAction>
             </ListItem>
