@@ -12,7 +12,9 @@ const useExportAsPDF = () => {
     setDownloadPDF({ title, id: PDFArray[0] })
 
     setTimeout(() => {
-      document.getElementById('download').click()
+      /** @type {HTMLElement|null} */
+      const el = document.getElementById('download')
+      if (el) el.click()
     }, 100)
   }, [])
 

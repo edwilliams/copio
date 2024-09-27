@@ -4,6 +4,7 @@ import Cropper from 'cropperjs'
 const useCropper = () => {
   const [dialogCropperOpen, setDialogCropperOpen] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
+  /** @type {React.MutableRefObject<Cropper | null>} */
   const cropperRef = useRef(null)
 
   const cropperOpen = useCallback(({ pages, pageIndex }) => {
@@ -12,13 +13,17 @@ const useCropper = () => {
 
     // Delay to ensure modal dialog is open and image is available in the DOM
     setTimeout(() => {
+      /** @type {HTMLElement|null} */
       const el = document.getElementById('image-to-edit')
       const dataurl = pages[pageIndex].src
-      el.setAttribute('src', dataurl)
+      el?.setAttribute('src', dataurl)
 
-      cropperRef.current = new Cropper(el, {
-        aspectRatio: 1 / 1.414,
-      })
+      if (el) {
+        // @ts-ignore
+        cropperRef.current = new Cropper(el, {
+          aspectRatio: 1 / 1.414,
+        })
+      }
     }, 100)
   }, [])
 

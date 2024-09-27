@@ -3,17 +3,18 @@
 import blobStream from 'blob-stream'
 const { promisify } = require('es6-promisify')
 
-const blobToDataURL = (blob) => {
+const blobToDataURL = blob => {
   return new Promise((resolve, reject) => {
     var a = new FileReader()
     a.readAsDataURL(blob)
-    a.onload = (e) => {
+    a.onload = e => {
+      // @ts-ignore
       resolve(e.target.result)
     }
   })
 }
 
-export const createPDFArray = async (arr) => {
+export const createPDFArray = async arr => {
   const promises = arr.pages.map(async () => {
     const doc = new window.PDFDocument()
     const stream = doc.pipe(blobStream())
