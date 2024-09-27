@@ -1,5 +1,4 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import { MdPhotoCamera as PhotoCamera } from 'react-icons/md'
 
 import useExportAsPDF from 'hooks/useExportAsPDF'
@@ -43,12 +42,6 @@ const Main = props => {
       <a id="download" href={downloadPDF.id} download={downloadPDF.title}></a>
     </article>
   )
-}
-
-Main.propTypes = {
-  listing: PropTypes.string,
-  documents: PropTypes.array,
-  onAddEditView: PropTypes.func,
 }
 
 export default Main

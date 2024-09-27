@@ -30,12 +30,14 @@ const InteractiveList = props => {
                 props.onViewDocument(document.id)
               }}
             >
+              {/* @ts-ignore */}
               <ListItemAvatar>
                 <Avatar color="blue">
                   <CopioIcon />
                 </Avatar>
               </ListItemAvatar>
               <ListItemText primary={document.title} secondary={document.description} />
+              {/* @ts-ignore */}
               <ListItemSecondaryAction>
                 <IconButton aria-label="Edit">
                   <Menu {...props} document={document} />
@@ -48,7 +50,5 @@ const InteractiveList = props => {
     </div>
   )
 }
-
-// InteractiveList.propTypes = {}
 
 export default InteractiveList

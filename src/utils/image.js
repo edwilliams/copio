@@ -28,7 +28,9 @@ export const getEXIF = dataurl => {
     const image = new Image()
     image.src = dataurl
     image.onload = () => {
+      // @ts-ignore
       EXIF.getData(image, function () {
+        // @ts-ignore
         const allMetaData = EXIF.getAllTags(this)
         if (allMetaData.MakerNote) delete allMetaData.MakerNote
         resolve(allMetaData)
@@ -47,6 +49,7 @@ const rotate = dataurl => {
       canvas.width = image.width // / 3
       canvas.height = image.height // / 3
 
+      // @ts-ignore
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
 
       resolve(canvas.toDataURL())
@@ -95,10 +98,15 @@ export const __rotate = dataurl => {
       canvas.width = image.width
       canvas.height = image.height
 
+      // @ts-ignore
       ctx.save()
+      // @ts-ignore
       ctx.translate(canvas.width / 2, canvas.height / 2)
+      // @ts-ignore
       ctx.rotate((-90 * Math.PI) / 180)
+      // @ts-ignore
       ctx.drawImage(image, -image.width / 2, -image.height / 2)
+      // @ts-ignore
       ctx.restore()
 
       resolve(canvas.toDataURL())
@@ -117,9 +125,11 @@ const resize = dataurl => {
         image.width *= MAX_HEIGHT / image.height
         image.height = MAX_HEIGHT
       }
+      // @ts-ignore
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       canvas.width = image.width
       canvas.height = image.height
+      // @ts-ignore
       ctx.drawImage(image, 0, 0, image.width, image.height)
       resolve(canvas.toDataURL())
     }

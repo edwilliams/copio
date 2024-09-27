@@ -81,9 +81,11 @@ const Add = ({
         </div>
 
         <div style={styles.fileInputWrapper}>
+          {/* @ts-ignore */}
           <FileInput onFileChange={onFileChange} />
         </div>
 
+        {/* @ts-ignore */}
         <div style={styles.images} ref={images}>
           {pages.map((page, i) => (
             <div key={i} style={styles.imageItem}>

@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react'
-import PropTypes from 'prop-types'
 import useEventListener from '@use-it/event-listener'
 import Fab from 'components/elements/Fab'
 import { MdKeyboardBackspace as KeyboardBackspace } from 'react-icons/md'
@@ -14,6 +13,7 @@ const Document = ({ documents = [], id }) => {
 
   const [index, setIndex] = useState(0)
 
+  // @ts-ignore
   useEventListener('keydown', ({ key }) => {
     if (key === 'ArrowLeft') prev()
     if (key === 'ArrowRight') next()
@@ -54,6 +54,7 @@ const Document = ({ documents = [], id }) => {
       </Fab>
 
       <div
+        // @ts-ignore
         ref={reader}
         style={{
           ...styles.reader,
@@ -79,11 +80,6 @@ const Document = ({ documents = [], id }) => {
       <div onClick={next} style={styles.next}></div>
     </article>
   )
-}
-
-Document.propTypes = {
-  id: PropTypes.string,
-  documents: PropTypes.array,
 }
 
 export default Document
