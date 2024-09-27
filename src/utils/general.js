@@ -4,18 +4,6 @@ export const removeFileExt = str => {
   return /.png|.jpg|.jpeg|.pdf/.test(str) ? str.split('.')[0] : str
 }
 
-export const mergeArraysByKey = ({ a, b, key }) => {
-  const aKeys = a.map(obj => obj[key])
-  const _b = b.filter(obj => !aKeys.some(id => id === obj[key]))
-  return a.concat(_b)
-}
-
-export const removeAllDocuments = () => {
-  return new Promise((resolve, reject) => {
-    IDB.set('documents', []).then(resolve).catch(reject)
-  })
-}
-
 export const getScreen = () => window.location.hash.split('#/')[1]
 
 export const setScreen = (data, opts = {}) => {

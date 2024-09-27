@@ -19,10 +19,6 @@ export const getDocuments = async (obj = {}) => {
   return documents ? documents.sort(dynamicSort(sortBy)) : []
 }
 
-export const setDocuments = async documents => {
-  await set('documents', documents)
-}
-
 export const addDocument = async ({ id, title, description, pages }) => {
   const documents = (await get('documents')) || []
   const _id = id || uuid()
