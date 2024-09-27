@@ -9,13 +9,7 @@ import IconButton from 'components/elements/IconButton'
 import CopioIcon from 'components/copio-icon'
 
 import Menu from './Menu'
-
-const styles = {
-  container: {
-    overflow: 'auto',
-    height: 'calc(100vh - 56px - 48px)',
-  },
-}
+import styles from './styles'
 
 const InteractiveList = props => {
   const { documents } = props
