@@ -21,9 +21,10 @@ export const setScreen = (data, opts = {}) => {
 export const removeServiceWorkers = async () => {
   if ('serviceWorker' in navigator) {
     const registrations = await navigator.serviceWorker.getRegistrations()
-    for (let registration of registrations) {
-      registration.unregister()
-    }
+    const cacheNames = await caches.keys()
+
+    await Promise.all(registrations.map(registration => registration.unregister()))
+    await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)))
   }
 }
 

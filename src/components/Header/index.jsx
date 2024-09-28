@@ -9,12 +9,12 @@ import styles from './styles'
 
 const Uninstall = () => (
   <button
-    onClick={() => {
+    onClick={async () => {
       const remove = confirm(
         'Do you want to uninstall COPIO? This will remove local files and user data.'
       )
       if (remove) {
-        removeServiceWorkers()
+        await removeServiceWorkers()
         deleteDocuments()
         window.location.reload()
       }
