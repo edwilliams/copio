@@ -1,0 +1,104 @@
+/* can be used instead of body.ready */
+/*
+:not(:defined) {
+  visibility: hidden;
+}
+*/
+
+body {
+  opacity: 0;
+}
+
+body.ready {
+  opacity: 1;
+  transition: 0.25s opacity;
+}
+
+html {
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #fff;
+  color: #151f2a;
+  margin: 0;
+  font-family: 'mont-regular';
+  background: #fff;
+}
+
+/* EXTEND SHOELACE */
+
+sl-card {
+  max-width: 300px;
+}
+
+sl-card::part(base) {
+  background: #151f2a;
+}
+
+sl-button.btn-round::part(base) {
+  border-radius: 100%;
+  width: 52px;
+  height: 52px;
+}
+
+/* UTILS */
+
+.atm,
+.abm,
+.amm,
+.alm,
+.arm {
+  position: absolute;
+}
+
+.atm {
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.abm {
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+
+.amm {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.alm {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.arm {
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.w-half {
+  width: 50%;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}

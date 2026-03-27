@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Offline first image and document scanner"
+    />
+    <meta property="og:title" content="Copio" />
+    <meta name="theme-color" content="#151F2A" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="icon" href="copio.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="css/reset.css" />
+    <link rel="stylesheet" href="css/shoelace.css" />
+    <link rel="stylesheet" href="css/utils.css" />
+    <link rel="stylesheet" href="css/cropper.css" />
+    <link rel="stylesheet" href="css/main.css" />
+    <title>COPIO</title>
+  </head>
+  <body>
+    <copio-app></copio-app>
+
+    <script src="js/cropper.js"></script>
+    <script src="js/pdfkit.js"></script>
+    <script src="js/peerjs.min.js"></script>
+    <script src="js/qrcode.js"></script>
+
+    <script type="module" src="js/shoelace.js"></script>
+    <script type="module" src="js/register-components.js"></script>
+    <script>
+      // set to false if testing SW locally
+      // http://192.168.x.x:3000 won't work as only localhost works this SWs or SSL is needed
+      const isDev = window.location.hostname === 'localhost';
+      if (!isDev && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+
+        // Capture whether a SW was already controlling this page at load time.
+        // If not (fresh install or post-unregister reload), we don't show the toast.
+        const hadController = !!navigator.serviceWorker.controller;
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!hadController) return;
+          const alert = Object.assign(document.createElement('sl-alert'), {
+            variant: 'primary',
+            closable: true,
+            duration: Infinity,
+          });
+          alert.innerHTML = `
+            <sl-icon slot="icon" name="arrow-clockwise"></sl-icon>
+            Update available &mdash;
+            <a href="#" style="color: inherit; font-weight: 600;">tap to reload</a>
+          `;
+          alert.querySelector('a').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.reload();
+          });
+          document.body.appendChild(alert);
+          alert.toast();
+        });
+      }
+    </script>
+  </body>
+</html>
