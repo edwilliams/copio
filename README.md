@@ -10,6 +10,7 @@
 
 ![Offline Ready](https://img.shields.io/badge/offline-ready-brightgreen)
 ![PWA](https://img.shields.io/badge/PWA-installable-blue)
+![Android TWA](https://img.shields.io/badge/Android-TWA%20APK-3ddc84)
 ![Built with Lit](https://img.shields.io/badge/built%20with-Lit-purple)
 ![No Framework](https://img.shields.io/badge/framework-none-lightgrey)
 
@@ -103,6 +104,53 @@ Open `http://localhost:3000` in your browser.
 2. **Add pages** — open the document, tap the camera icon, and capture or select an image.
 3. **Edit pages** — tap any page thumbnail to crop, rotate, or remove it. Drag thumbnails to reorder.
 4. **Export** — tap the PDF export button to download the document as a PDF.
+
+## Android APK (TWA)
+
+Copio is available as a native-feeling Android app via a [Trusted Web Activity (TWA)](https://developer.chrome.com/docs/android/trusted-web-activity/) — a lightweight APK shell that runs the web app full-screen with no browser chrome.
+
+**Install from the APK**
+
+Download `app-release-signed.apk` from the [`copio-twa/`](../copio-twa/) directory (next to this repo) and transfer it to your Android device.
+
+On your device:
+1. Open the APK file — Android will prompt you to install it.
+2. If prompted, allow "Install from unknown sources" in Settings.
+3. Tap **Install**.
+
+Or install via ADB:
+```bash
+adb install app-release-signed.apk
+```
+
+**Build your own APK**
+
+You'll need Node.js, a JDK (17+), and the Android SDK.
+
+```bash
+# Install the Bubblewrap CLI
+npm install -g @bubblewrap/cli
+
+# Create a project directory and add a twa-manifest.json
+# (see copio-twa/twa-manifest.json for the full config)
+mkdir copio-twa && cd copio-twa
+
+# Generate the Android project
+bubblewrap update --skipVersionUpgrade
+
+# Build the signed APK
+BUBBLEWRAP_KEYSTORE_PASSWORD=<your-password> \
+BUBBLEWRAP_KEY_PASSWORD=<your-password> \
+bubblewrap build
+```
+
+The output is `app-release-signed.apk` (sideload) and `app-release-bundle.aab` (Play Store).
+
+**Address bar removal**
+
+The browser address bar is hidden automatically once the [`/.well-known/assetlinks.json`](.well-known/assetlinks.json) file on the host is verified against the APK's signing certificate. This file is already committed and deployed.
+
+---
 
 ## PWA & Offline
 
