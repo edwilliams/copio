@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.netlify.copio",
+    "sha256_cert_fingerprints": [
+      "9D:16:A2:B0:41:52:61:2C:3A:B7:EF:97:4C:25:FB:C9:B5:00:EF:0C:EA:6A:EF:72:F9:E5:60:B0:32:33:17:AC"
+    ]
+  }
+}]
