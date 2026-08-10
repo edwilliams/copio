@@ -40,7 +40,11 @@ export async function fileToBase64(file) {
   return canvas.toDataURL(format, format === 'image/png' ? undefined : 0.82);
 }
 
-export function thresholdSrc(src) {
+/**
+ * Local adaptive document binarization using the Sauvola algorithm (from Doxa framework)
+ * Optimized using 2D Integral Images for O(W * H) linear time execution.
+ */
+export function thresholdSrc(src, windowSize = 21, k = 0.2, R = 128) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -49,33 +53,70 @@ export function thresholdSrc(src) {
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0);
+
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const { data, width, height } = imageData;
+
+      const stride = width + 1;
+      const sum = new Float64Array((width + 1) * (height + 1));
+      const sqSum = new Float64Array((width + 1) * (height + 1));
       const gray = new Uint8Array(width * height);
-      for (let i = 0; i < gray.length; i++) {
-        const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2];
-        gray[i] = (r * 77 + g * 150 + b * 29) >> 8;
-      }
-      const size = 15;
-      const half = Math.floor(size / 2);
-      const compensation = 7;
+
+      // Build integral image & integral squared image
       for (let y = 0; y < height; y++) {
+        let rowSum = 0;
+        let rowSqSum = 0;
+        const rowIdx = y * width;
+        const sumRowIdx = (y + 1) * stride;
+        const prevSumRowIdx = y * stride;
+
         for (let x = 0; x < width; x++) {
-          let sum = 0, count = 0;
-          for (let dy = -half; dy <= half; dy++) {
-            for (let dx = -half; dx <= half; dx++) {
-              const nx = Math.min(width - 1, Math.max(0, x + dx));
-              const ny = Math.min(height - 1, Math.max(0, y + dy));
-              sum += gray[ny * width + nx];
-              count++;
-            }
-          }
-          const mean = sum / count;
-          const val = gray[y * width + x] < mean - compensation ? 0 : 255;
-          const idx = (y * width + x) * 4;
-          data[idx] = data[idx + 1] = data[idx + 2] = val;
+          const idx = (rowIdx + x) * 4;
+          const g = (data[idx] * 77 + data[idx + 1] * 150 + data[idx + 2] * 29) >> 8;
+          gray[rowIdx + x] = g;
+
+          rowSum += g;
+          rowSqSum += g * g;
+
+          sum[sumRowIdx + x + 1] = sum[prevSumRowIdx + x + 1] + rowSum;
+          sqSum[sumRowIdx + x + 1] = sqSum[prevSumRowIdx + x + 1] + rowSqSum;
         }
       }
+
+      // Sauvola local window adaptive thresholding
+      const half = Math.floor(windowSize / 2);
+
+      for (let y = 0; y < height; y++) {
+        const y1 = Math.max(0, y - half);
+        const y2 = Math.min(height - 1, y + half);
+        const y1Str = y1 * stride;
+        const y2Str = (y2 + 1) * stride;
+
+        for (let x = 0; x < width; x++) {
+          const x1 = Math.max(0, x - half);
+          const x2 = Math.min(width - 1, x + half);
+
+          const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+
+          const areaSum = sum[y2Str + x2 + 1] - sum[y1Str + x2 + 1] - sum[y2Str + x1] + sum[y1Str + x1];
+          const areaSqSum = sqSum[y2Str + x2 + 1] - sqSum[y1Str + x2 + 1] - sqSum[y2Str + x1] + sqSum[y1Str + x1];
+
+          const mean = areaSum / count;
+          const variance = Math.max(0, (areaSqSum / count) - (mean * mean));
+          const stdDev = Math.sqrt(variance);
+
+          const threshold = mean * (1 + k * ((stdDev / R) - 1));
+
+          const pIdx = y * width + x;
+          const pixelVal = gray[pIdx] < threshold ? 0 : 255;
+
+          const dataIdx = pIdx * 4;
+          data[dataIdx] = pixelVal;
+          data[dataIdx + 1] = pixelVal;
+          data[dataIdx + 2] = pixelVal;
+        }
+      }
+
       ctx.putImageData(imageData, 0, 0);
       const isPng = src.startsWith('data:image/png');
       const format = isPng ? 'image/png' : 'image/jpeg';
