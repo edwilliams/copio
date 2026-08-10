@@ -19,13 +19,25 @@ export async function fileToBase64(file) {
   const MAX_W = 1654;
   const MAX_H = 2339;
   const scale = Math.min(1, MAX_W / bitmap.width, MAX_H / bitmap.height);
+
+  // If image already fits max dimensions and is a standard web image, preserve original file bytes
+  if (scale === 1 && (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png' || file.type === 'image/webp')) {
+    bitmap.close();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const format = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-  return canvas.toDataURL(format, 0.92);
+  return canvas.toDataURL(format, format === 'image/png' ? undefined : 0.82);
 }
 
 export function thresholdSrc(src) {
@@ -65,7 +77,9 @@ export function thresholdSrc(src) {
         }
       }
       ctx.putImageData(imageData, 0, 0);
-      resolve(canvas.toDataURL());
+      const isPng = src.startsWith('data:image/png');
+      const format = isPng ? 'image/png' : 'image/jpeg';
+      resolve(canvas.toDataURL(format, isPng ? undefined : 0.82));
     };
     img.src = src;
   });
@@ -82,7 +96,9 @@ export function rotateSrc(src) {
       ctx.translate(canvas.width / 2, canvas.height / 2);
       ctx.rotate(Math.PI / 2);
       ctx.drawImage(img, -img.width / 2, -img.height / 2);
-      resolve(canvas.toDataURL());
+      const isPng = src.startsWith('data:image/png');
+      const format = isPng ? 'image/png' : 'image/jpeg';
+      resolve(canvas.toDataURL(format, isPng ? undefined : 0.82));
     };
     img.src = src;
   });

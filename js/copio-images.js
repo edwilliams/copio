@@ -19,6 +19,7 @@ class CopioImages extends HTMLElement {
   #images = [];
   #cropper = null;
   #cropIndex = null;
+  #textIndex = null;
 
   constructor() {
     super();
@@ -99,6 +100,40 @@ class CopioImages extends HTMLElement {
           max-width: 100%;
           max-height: 60vh;
         }
+        .markdown-card {
+          width: 100%;
+          height: 100%;
+          border: 1px solid #334155;
+          border-radius: 4px;
+          background: #0f172a;
+          color: #f8fafc;
+          padding: 10px;
+          box-sizing: border-box;
+          font-family: monospace;
+          font-size: 0.72rem;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .markdown-card-header {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-weight: bold;
+          font-size: 0.75rem;
+          color: #38bdf8;
+          margin-bottom: 6px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .markdown-card-body {
+          flex: 1;
+          opacity: 0.8;
+          word-break: break-word;
+          overflow: hidden;
+          line-height: 1.35;
+        }
         button.add-btn {
           width: 100%;
           aspect-ratio: 1;
@@ -121,24 +156,52 @@ class CopioImages extends HTMLElement {
 
     const imageHtml = this.#images
       .map(
-        ({ src }, index) => `
-        <div class="image-wrapper" data-index="${index}">
-          <img src="${src}" draggable="false">
-          <sl-dropdown class="image-menu" data-index="${index}">
-            <sl-button slot="trigger" variant="default" size="small" circle>
-              <sl-icon name="three-dots-vertical"></sl-icon>
-            </sl-button>
-            <sl-menu>
-              <sl-menu-item value="crop">Crop</sl-menu-item>
-              <sl-menu-item value="rotate">Rotate</sl-menu-item>
-              <sl-menu-item value="threshold">Black &amp; White</sl-menu-item>
-              <sl-menu-item value="showdata">Show Data</sl-menu-item>
-              <sl-divider></sl-divider>
-              <sl-menu-item value="delete">Delete</sl-menu-item>
-            </sl-menu>
-          </sl-dropdown>
-        </div>
-      `,
+        (item, index) => {
+          if (item.type === 'markdown') {
+            const title = item.name || 'Markdown Note';
+            const snippet = (item.content || '').slice(0, 120);
+            return `
+              <div class="image-wrapper" data-index="${index}">
+                <div class="markdown-card">
+                  <div class="markdown-card-header">
+                    <sl-icon name="file-earmark-text"></sl-icon> ${title}
+                  </div>
+                  <div class="markdown-card-body">${snippet}</div>
+                </div>
+                <sl-dropdown class="image-menu" data-index="${index}">
+                  <sl-button slot="trigger" variant="default" size="small" circle>
+                    <sl-icon name="three-dots-vertical"></sl-icon>
+                  </sl-button>
+                  <sl-menu>
+                    <sl-menu-item value="edittext">Edit Text</sl-menu-item>
+                    <sl-menu-item value="download">Download Markdown</sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-item value="delete">Delete</sl-menu-item>
+                  </sl-menu>
+                </sl-dropdown>
+              </div>
+            `;
+          }
+          return `
+            <div class="image-wrapper" data-index="${index}">
+              <img src="${item.src}" draggable="false">
+              <sl-dropdown class="image-menu" data-index="${index}">
+                <sl-button slot="trigger" variant="default" size="small" circle>
+                  <sl-icon name="three-dots-vertical"></sl-icon>
+                </sl-button>
+                <sl-menu>
+                  <sl-menu-item value="crop">Crop</sl-menu-item>
+                  <sl-menu-item value="rotate">Rotate</sl-menu-item>
+                  <sl-menu-item value="threshold">Black &amp; White</sl-menu-item>
+                  <sl-menu-item value="showdata">Show Data</sl-menu-item>
+                  <sl-menu-item value="download">Download Image</sl-menu-item>
+                  <sl-divider></sl-divider>
+                  <sl-menu-item value="delete">Delete</sl-menu-item>
+                </sl-menu>
+              </sl-dropdown>
+            </div>
+          `;
+        },
       )
       .join('');
 
@@ -149,14 +212,22 @@ class CopioImages extends HTMLElement {
         <button class="add-btn" title="Add Image">+</button>
       </div>
 
-      <sl-dialog label="Select image(s) or PDF to upload" class="upload-dialog">
-        <input type="file" accept="image/*,application/pdf" multiple>
+      <sl-dialog label="Select image(s), PDF, or Markdown to upload" class="upload-dialog">
+        <input type="file" accept="image/*,application/pdf,.md,.markdown,text/plain" multiple>
         <sl-button
           slot="footer"
           variant="primary"
           class="close"
           >Close</sl-button
         >
+      </sl-dialog>
+
+      <sl-dialog label="Edit Markdown Text" class="text-dialog" style="--width: 80vw">
+        <div style="margin-bottom: 1rem;">
+          <sl-textarea class="text-editor" rows="12" placeholder="Enter markdown content..."></sl-textarea>
+        </div>
+        <sl-button slot="footer" variant="default" class="cancel-text">Cancel</sl-button>
+        <sl-button slot="footer" variant="primary" class="apply-text">Save Text</sl-button>
       </sl-dialog>
 
       <sl-dialog label="Image Data" class="data-dialog">
@@ -206,6 +277,14 @@ class CopioImages extends HTMLElement {
           // Process PDF: extract each page as an image
           const pdfImages = await this.pdfToImages(file);
           allImages.push(...pdfImages);
+        } else if (file.name.endsWith('.md') || file.name.endsWith('.markdown') || file.type === 'text/markdown' || file.type === 'text/plain') {
+          const content = await file.text();
+          allImages.push({
+            id: randomId(),
+            type: 'markdown',
+            name: file.name,
+            content,
+          });
         } else {
           // Process regular image
           const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
@@ -237,6 +316,11 @@ class CopioImages extends HTMLElement {
         } else if (event.detail.item.value === 'showdata') {
           dropdown.hide();
           this.showImageData(index);
+        } else if (event.detail.item.value === 'edittext') {
+          dropdown.hide();
+          this.openTextDialog(index);
+        } else if (event.detail.item.value === 'download') {
+          this.downloadImage(index);
         } else if (event.detail.item.value === 'delete') {
           this.#images.splice(index, 1);
           this.setAttribute('images', JSON.stringify(this.#images));
@@ -253,6 +337,14 @@ class CopioImages extends HTMLElement {
 
     this.shadowRoot.querySelector('.apply-crop').onclick = () => {
       this.applyCrop();
+    };
+
+    this.shadowRoot.querySelector('.cancel-text').onclick = () => {
+      this.closeTextDialog();
+    };
+
+    this.shadowRoot.querySelector('.apply-text').onclick = () => {
+      this.applyTextEdit();
     };
 
     // Clean up when dialog is closed by any means (ESC, overlay click, etc)
@@ -323,7 +415,10 @@ class CopioImages extends HTMLElement {
   applyCrop() {
     if (this.#cropper && this.#cropIndex !== null) {
       const canvas = this.#cropper.getCroppedCanvas();
-      const croppedSrc = canvas.toDataURL();
+      const originalSrc = this.#images[this.#cropIndex]?.src || '';
+      const isPng = originalSrc.startsWith('data:image/png');
+      const format = isPng ? 'image/png' : 'image/jpeg';
+      const croppedSrc = canvas.toDataURL(format, isPng ? undefined : 0.82);
 
       // Update the image
       this.#images[this.#cropIndex].src = croppedSrc;
@@ -343,6 +438,54 @@ class CopioImages extends HTMLElement {
     const thresholdedSrc = await thresholdSrc(this.#images[index].src);
     this.#images[index].src = thresholdedSrc;
     this.setAttribute('images', JSON.stringify(this.#images));
+  }
+
+  downloadImage(index) {
+    const page = this.#images[index];
+    if (!page) return;
+    if (page.type === 'markdown') {
+      const blob = new Blob([page.content || ''], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = page.name || `document-${index + 1}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    if (!page.src) return;
+    let ext = 'jpg';
+    if (page.src.startsWith('data:')) {
+      const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+      if (match && match[1].includes('png')) ext = 'png';
+    }
+    const a = document.createElement('a');
+    a.href = page.src;
+    a.download = `image-${index + 1}.${ext}`;
+    a.click();
+  }
+
+  openTextDialog(index) {
+    this.#textIndex = index;
+    const textDialog = this.shadowRoot.querySelector('.text-dialog');
+    const textEditor = this.shadowRoot.querySelector('.text-editor');
+    textEditor.value = this.#images[index].content || '';
+    textDialog.show();
+  }
+
+  applyTextEdit() {
+    if (this.#textIndex !== null && this.#images[this.#textIndex]) {
+      const textEditor = this.shadowRoot.querySelector('.text-editor');
+      this.#images[this.#textIndex].content = textEditor.value;
+      this.setAttribute('images', JSON.stringify(this.#images));
+      this.closeTextDialog();
+    }
+  }
+
+  closeTextDialog() {
+    const textDialog = this.shadowRoot.querySelector('.text-dialog');
+    this.#textIndex = null;
+    textDialog.hide();
   }
 
   showImageData(index) {
@@ -395,7 +538,7 @@ class CopioImages extends HTMLElement {
       }).promise;
 
       // Convert canvas to base64 image
-      const src = canvas.toDataURL('image/png');
+      const src = canvas.toDataURL('image/jpeg', 0.82);
 
       images.push({
         id: randomId(),

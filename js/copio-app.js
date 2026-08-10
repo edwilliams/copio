@@ -73,8 +73,20 @@ class CopioApp extends LitElement {
     }, 800);
   }
 
+  #handleDialogKeydown = (e) => {
+    if (e.key === 'Enter') {
+      if (e.target?.tagName === 'SL-BUTTON' || e.target?.tagName === 'BUTTON') return;
+      e.preventDefault();
+      this.handleAddEditSave();
+    }
+  };
+
   handleAddNew() {
-    this.querySelector('.dialog-add-edit').show();
+    const dialog = this.querySelector('.dialog-add-edit');
+    dialog.show();
+    setTimeout(() => {
+      this.querySelector('.dialog-add-edit-input-name')?.focus();
+    }, 100);
   }
 
   handleAddEditSave() {
@@ -88,10 +100,13 @@ class CopioApp extends LitElement {
       inputName.value = name;
     }
 
-    const pages = copioImages.images.map(({ id, src, exif }) => ({
+    const pages = copioImages.images.map(({ id, src, exif, type, name, content }) => ({
       id,
       src,
       exif,
+      type,
+      name,
+      content,
     }));
 
     const id = inputId?.value || randomId();
@@ -131,10 +146,13 @@ class CopioApp extends LitElement {
 
     inputId.value = id;
     inputName.value = vals.name;
+    setTimeout(() => {
+      inputName.focus();
+    }, 100);
 
     await customElements.whenDefined('copio-images');
     const pages = JSON.parse(vals.pages || '[]');
-    copioImages.images = pages.map(({ id, src, exif }) => ({ id, src, exif }));
+    copioImages.images = pages.map(({ id, src, exif, type, name, content }) => ({ id, src, exif, type, name, content }));
   }
 
   handleRowView(e) {
@@ -153,6 +171,150 @@ class CopioApp extends LitElement {
     const id = e.detail?.id;
     this.store.delRow('docs', id);
     // TinyBase listener updates docsData → Lit re-renders automatically
+  }
+
+  async renderMarkdownToImageDataUrl(page) {
+    const rawContent = page.content || '';
+    let htmlContent = window.marked && window.marked.parse ? window.marked.parse(rawContent) : rawContent;
+    const width = 1240;
+    const height = 1754;
+
+    // Convert HTML to valid XHTML for SVG XML parser
+    let cleanHtmlContent = htmlContent
+      .replace(/&nbsp;/g, '&#160;')
+      .replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;')
+      .replace(/<hr(\s+[^>]*?>|>)/gi, (m) => (m.endsWith('/>') ? m : m.slice(0, -1) + '/>'))
+      .replace(/<br(\s+[^>]*?>|>)/gi, (m) => (m.endsWith('/>') ? m : m.slice(0, -1) + '/>'))
+      .replace(/<input(\s+[^>]*?>|>)/gi, (m) => (m.endsWith('/>') ? m : m.slice(0, -1) + '/>'));
+
+    // Handle <img> tags for SVG foreignObject
+    cleanHtmlContent = cleanHtmlContent.replace(/<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi, (match, src) => {
+      if (src.startsWith('data:')) {
+        return `<img src="${src}" style="max-width:100%;height:auto;border-radius:6px;" />`;
+      }
+      return '<div style="padding:16px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;color:#475569;font-weight:600;font-size:1em;text-align:center;margin:1em 0;">📷 Image Attachment</div>';
+    });
+
+    try {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+          <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml">
+              <style>
+                .pdf-md-container {
+                  width: ${width}px;
+                  min-height: ${height}px;
+                  padding: 50px;
+                  box-sizing: border-box;
+                  background: #ffffff;
+                  color: #0f172a;
+                  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                  line-height: 1.6;
+                }
+                .pdf-md-container h1, .pdf-md-container h2, .pdf-md-container h3, .pdf-md-container h4 {
+                  color: #0f172a;
+                  margin-top: 1.3em;
+                  margin-bottom: 0.4em;
+                  font-weight: 700;
+                  line-height: 1.25;
+                  border-bottom: 1px solid #e2e8f0;
+                  padding-bottom: 0.3em;
+                }
+                .pdf-md-container h1 { font-size: 2.2em; }
+                .pdf-md-container h2 { font-size: 1.6em; }
+                .pdf-md-container h3 { font-size: 1.3em; }
+                .pdf-md-container p { margin-top: 0; margin-bottom: 1em; font-size: 1.1em; }
+                .pdf-md-container ul, .pdf-md-container ol { padding-left: 2em; margin-bottom: 1em; font-size: 1.1em; }
+                .pdf-md-container li { margin-bottom: 0.3em; }
+                .pdf-md-container code {
+                  background: #f1f5f9;
+                  color: #0f172a;
+                  padding: 0.2em 0.4em;
+                  border-radius: 4px;
+                  font-family: monospace;
+                  font-size: 0.9em;
+                }
+                .pdf-md-container pre {
+                  background: #0f172a;
+                  color: #f8fafc;
+                  padding: 1em;
+                  border-radius: 8px;
+                  overflow-x: auto;
+                }
+                .pdf-md-container pre code { background: none; color: inherit; padding: 0; }
+                .pdf-md-container blockquote {
+                  border-left: 4px solid #0284c7;
+                  margin: 1em 0;
+                  padding-left: 1em;
+                  color: #475569;
+                  font-style: italic;
+                }
+                .pdf-md-container table {
+                  border-collapse: collapse;
+                  width: 100%;
+                  margin-bottom: 1em;
+                }
+                .pdf-md-container th, .pdf-md-container td {
+                  border: 1px solid #cbd5e1;
+                  padding: 8px 12px;
+                  text-align: left;
+                }
+                .pdf-md-container th {
+                  background: #f1f5f9;
+                  font-weight: 600;
+                }
+                .pdf-md-container img {
+                  max-width: 100%;
+                  height: auto;
+                  border-radius: 6px;
+                }
+              </style>
+              <div class="pdf-md-container">
+                ${cleanHtmlContent}
+              </div>
+            </div>
+          </foreignObject>
+        </svg>
+      `;
+
+      const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = svgUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+
+      return canvas.toDataURL('image/jpeg', 0.85);
+    } catch (err) {
+      console.warn('SVG foreignObject render failed, using Canvas fallback:', err);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.fillText(page.name || 'Markdown Note', 60, 80);
+      ctx.font = '22px sans-serif';
+      const lines = rawContent.split('\n');
+      let y = 140;
+      for (const line of lines) {
+        if (y > canvas.height - 80) break;
+        ctx.fillText(line.slice(0, 75), 60, y);
+        y += 34;
+      }
+      return canvas.toDataURL('image/jpeg', 0.85);
+    }
   }
 
   async handleRowDownload(e) {
@@ -187,12 +349,22 @@ class CopioApp extends LitElement {
       });
 
       for (const page of pages) {
+        let imgSrc = page.src;
+        if (page.type === 'markdown') {
+          imgSrc = await this.renderMarkdownToImageDataUrl(page);
+        }
+
         const img = new Image();
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           img.onload = resolve;
-          img.onerror = reject;
-          img.src = page.src;
+          img.onerror = (err) => {
+            console.warn('Page image failed to load for PDF:', err);
+            resolve();
+          };
+          img.src = imgSrc;
         });
+
+        if (!img.width || !img.height) continue;
 
         doc.addPage({ size: 'A4' });
 
@@ -206,7 +378,7 @@ class CopioApp extends LitElement {
         const x = (A4_WIDTH - scaledWidth) / 2;
         const y = (A4_HEIGHT - scaledHeight) / 2;
 
-        doc.image(page.src, x, y, {
+        doc.image(imgSrc, x, y, {
           width: scaledWidth,
           height: scaledHeight,
         });
@@ -216,6 +388,130 @@ class CopioApp extends LitElement {
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF');
+    }
+  }
+
+  async handleRowDownloadImages(e) {
+    const id = e.detail?.id;
+    const vals = this.store.getRow('docs', id);
+    if (!vals) return;
+
+    const pages = JSON.parse(vals.pages || '[]');
+    if (pages.length === 0) {
+      alert('No images to export');
+      return;
+    }
+
+    try {
+      const docName = (vals.name || 'document').trim();
+      const sanitize = (str) => str.replace(/[/\\?%*:|"<>]/g, '_');
+      const safeName = sanitize(docName) || 'document';
+
+      if (pages.length === 1) {
+        const page = pages[0];
+        let ext = 'jpg';
+        if (page.src.startsWith('data:')) {
+          const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+          if (match && match[1].includes('png')) ext = 'png';
+        }
+
+        let downloadUrl = page.src;
+        let shouldRevoke = false;
+
+        if (!page.src.startsWith('data:') && !page.src.startsWith('blob:')) {
+          const response = await fetch(page.src);
+          const blob = await response.blob();
+          downloadUrl = URL.createObjectURL(blob);
+          shouldRevoke = true;
+        }
+
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `${safeName}.${ext}`;
+        a.click();
+        if (shouldRevoke) URL.revokeObjectURL(downloadUrl);
+      } else {
+        const zip = new JSZip();
+        const padLen = Math.max(2, String(pages.length).length);
+
+        for (let index = 0; index < pages.length; index++) {
+          const page = pages[index];
+          let ext = 'jpg';
+          let base64Data = '';
+
+          if (page.type === 'markdown') {
+            const dataUrl = await this.renderMarkdownToImageDataUrl(page);
+            ext = 'jpg';
+            base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
+          } else if (page.src && page.src.startsWith('data:')) {
+            const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
+            if (match) {
+              if (match[1].includes('png')) ext = 'png';
+              base64Data = match[2];
+            } else {
+              base64Data = page.src.replace(/^data:[^;]+;base64,/, '');
+            }
+          } else {
+            const response = await fetch(page.src);
+            const blob = await response.blob();
+            const arrayBuf = await blob.arrayBuffer();
+            const pageNum = String(index + 1).padStart(padLen, '0');
+            const fileName = `${safeName}-${pageNum}.${ext}`;
+            zip.file(fileName, arrayBuf);
+            continue;
+          }
+
+          const pageNum = String(index + 1).padStart(padLen, '0');
+          const fileName = `${safeName}-${pageNum}.${ext}`;
+          zip.file(fileName, base64Data, { base64: true });
+        }
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeName}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Error downloading images:', error);
+      alert('Failed to download images');
+    }
+  }
+
+  handleRowDownloadMarkdown(e) {
+    const id = e.detail?.id;
+    const vals = this.store.getRow('docs', id);
+    if (!vals) return;
+
+    const pages = JSON.parse(vals.pages || '[]');
+    const mdPages = pages.filter((p) => p.type === 'markdown');
+
+    if (mdPages.length === 0) {
+      alert('No markdown text in this document');
+      return;
+    }
+
+    const docName = (vals.name || 'document').trim().replace(/[/\\?%*:|"<>]/g, '_');
+
+    if (mdPages.length === 1) {
+      const blob = new Blob([mdPages[0].content || ''], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${docName}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const combined = mdPages.map((p, i) => `# Page ${i + 1}: ${p.name || ''}\n\n${p.content || ''}`).join('\n\n---\n\n');
+      const blob = new Blob([combined], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${docName}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
   }
 
@@ -358,24 +654,66 @@ class CopioApp extends LitElement {
     if (!this.docsData || Object.keys(this.docsData).length === 0) {
       return html`
         <style>
-          .wrapper {
+          .empty-state {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             height: calc(100vh - 64px);
-            padding: 8px;
+            padding: 1.5rem;
             text-align: center;
             color: white;
             background: #151f2a;
-            border-top: 1px solid #fff;
+            box-sizing: border-box;
+          }
+          .empty-state-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            max-width: 360px;
+            width: 100%;
+            padding: 2.5rem 1.5rem;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+            box-sizing: border-box;
+          }
+          .empty-state-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.45);
+            background: rgba(255, 255, 255, 0.07);
+          }
+          .empty-state-icon {
+            font-size: 4.5rem;
+            color: var(--sl-color-primary-400, #38bdf8);
+          }
+          .empty-state-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+          }
+          .empty-state-text {
+            font-size: 0.95rem;
+            color: #9ca3af;
+            margin: 0;
+            line-height: 1.4;
           }
         </style>
-        <div class="wrapper">
-          <span>
-            Tap the <sl-icon name="plus-circle"></sl-icon> icon below to add an
-            image / document.
-          </span>
+        <div class="empty-state">
+          <div class="empty-state-card" @click=${this.handleAddNew}>
+            <sl-icon class="empty-state-icon" name="plus-circle"></sl-icon>
+            <h2 class="empty-state-title">No documents yet</h2>
+            <p class="empty-state-text">
+              Tap here or the button below to add your first image or document.
+            </p>
+            <sl-button variant="primary" size="medium" @click=${(e) => { e.stopPropagation(); this.handleAddNew(); }}>
+              <sl-icon slot="prefix" name="plus-circle"></sl-icon>
+              Add Document
+            </sl-button>
+          </div>
         </div>
       `;
     }
@@ -391,6 +729,8 @@ class CopioApp extends LitElement {
             @copio-row:view=${this.handleRowView}
             @copio-row:delete=${this.handleRowDelete}
             @copio-row:download=${this.handleRowDownload}
+            @copio-row:download-images=${this.handleRowDownloadImages}
+            @copio-row:download-markdown=${this.handleRowDownloadMarkdown}
           ></copio-row>
         `,
       )}
@@ -418,6 +758,7 @@ class CopioApp extends LitElement {
           class="dialog-add-edit"
           style="--width: 90vw"
           @sl-hide=${this.handleAddEditHide}
+          @keydown=${this.#handleDialogKeydown}
         >
           <div class="relative" style="min-height: 65vh">
             <sl-input

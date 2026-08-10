@@ -47,6 +47,8 @@ class CopioRow extends LitElement {
     if (selected === 'delete') this.handleDelete();
     if (selected === 'edit') this.handleEdit();
     if (selected === 'download') this.handleDownload();
+    if (selected === 'download-images') this.handleDownloadImages();
+    if (selected === 'download-markdown') this.handleDownloadMarkdown();
   }
 
   handleView() {
@@ -89,6 +91,26 @@ class CopioRow extends LitElement {
     );
   }
 
+  handleDownloadImages() {
+    this.dispatchEvent(
+      new CustomEvent('copio-row:download-images', {
+        bubbles: true,
+        composed: true,
+        detail: { id: this.getAttribute('id') },
+      }),
+    );
+  }
+
+  handleDownloadMarkdown() {
+    this.dispatchEvent(
+      new CustomEvent('copio-row:download-markdown', {
+        bubbles: true,
+        composed: true,
+        detail: { id: this.getAttribute('id') },
+      }),
+    );
+  }
+
   render() {
     return html`
       <div class="wrapper" @click=${this.#handleWrapperClick}>
@@ -108,8 +130,10 @@ class CopioRow extends LitElement {
           </sl-button>
           <sl-menu @sl-select=${this.#handleMenuSelect}>
             <sl-menu-item value="edit">Edit</sl-menu-item>
-            <sl-menu-item value="delete">Delete</sl-menu-item>
             <sl-menu-item value="download">Download as PDF</sl-menu-item>
+            <sl-menu-item value="download-images">Download as Images</sl-menu-item>
+            <sl-menu-item value="download-markdown">Download as Markdown</sl-menu-item>
+            <sl-menu-item value="delete">Delete</sl-menu-item>
           </sl-menu>
         </sl-dropdown>
       </div>
