@@ -1,5 +1,4 @@
-import * as pdfjsLib from './lib/pdf.min.mjs';
-pdfjsLib.GlobalWorkerOptions.workerSrc = './js/lib/pdf.worker.min.mjs';
+import { renderPdfPagesToDataUrls } from './pdf-utils.js';
 
 /**
  * Clean text from markdown formatting and emojis for PDF kit rendering.
@@ -141,26 +140,7 @@ export async function renderMarkdownToPageDataUrls(page) {
   doc.end();
 
   const arrayBuffer = await arrayBufferPromise;
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const images = [];
-
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const pdfPage = await pdf.getPage(pageNum);
-    const scale = 2.0;
-    const viewport = pdfPage.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
-    await pdfPage.render({
-      canvasContext: context,
-      viewport: viewport,
-    }).promise;
-
-    images.push(canvas.toDataURL('image/jpeg', 0.82));
-  }
-  return images;
+  return renderPdfPagesToDataUrls(arrayBuffer);
 }
 
 /**

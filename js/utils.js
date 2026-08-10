@@ -103,3 +103,12 @@ export function rotateSrc(src) {
     img.src = src;
   });
 }
+
+export function getCroppedSrc(cropper, originalSrc = '') {
+  if (!cropper) return '';
+  const canvas = cropper.getCroppedCanvas();
+  const isPng = originalSrc.startsWith('data:image/png');
+  const format = isPng ? 'image/png' : 'image/jpeg';
+  return canvas.toDataURL(format, isPng ? undefined : 0.82);
+}
+

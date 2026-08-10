@@ -5,21 +5,16 @@ leaves lit-html's comment markers (used to track ChildParts) in their original p
 the element was and creates a duplicate — the moved node becomes orphaned.
 */
 
-// the images attr is an array of objects, e.g. [{ id: ..., src: ... }]
-// this component creates ids for new images
-
-// Import PDF.js for PDF processing
-import * as pdfjsLib from './lib/pdf.min.mjs';
-pdfjsLib.GlobalWorkerOptions.workerSrc = './js/lib/pdf.worker.min.mjs';
-
 import Sortable from './lib/sortable.esm.js';
-import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif } from './utils.js';
+import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from './utils.js';
+import { renderPdfPagesToDataUrls } from './pdf-utils.js';
 
 class CopioImages extends HTMLElement {
   #images = [];
   #cropper = null;
   #cropIndex = null;
   #textIndex = null;
+  #isInitialized = false;
 
   constructor() {
     super();
@@ -37,15 +32,21 @@ class CopioImages extends HTMLElement {
       } catch {
         this.#images = [];
       }
-      this.render();
+      if (this.#isInitialized) {
+        this.#renderGrid();
+      }
     }
   }
 
   connectedCallback() {
-    this.render();
+    if (!this.#isInitialized) {
+      this.#initShell();
+      this.#isInitialized = true;
+    }
+    this.#renderGrid();
   }
 
-  render() {
+  #initShell() {
     const styles = `
       <link rel="stylesheet" href="css/cropper.css">
       <style>
@@ -154,72 +155,13 @@ class CopioImages extends HTMLElement {
       </style>
     `;
 
-    const imageHtml = this.#images
-      .map(
-        (item, index) => {
-          if (item.type === 'markdown') {
-            const title = item.name || 'Markdown Note';
-            const snippet = (item.content || '').slice(0, 120);
-            return `
-              <div class="image-wrapper" data-index="${index}">
-                <div class="markdown-card">
-                  <div class="markdown-card-header">
-                    <sl-icon name="file-earmark-text"></sl-icon> ${title}
-                  </div>
-                  <div class="markdown-card-body">${snippet}</div>
-                </div>
-                <sl-dropdown class="image-menu" data-index="${index}">
-                  <sl-button slot="trigger" variant="default" size="small" circle>
-                    <sl-icon name="three-dots-vertical"></sl-icon>
-                  </sl-button>
-                  <sl-menu>
-                    <sl-menu-item value="edittext">Edit Text</sl-menu-item>
-                    <sl-menu-item value="download">Download Markdown</sl-menu-item>
-                    <sl-divider></sl-divider>
-                    <sl-menu-item value="delete">Delete</sl-menu-item>
-                  </sl-menu>
-                </sl-dropdown>
-              </div>
-            `;
-          }
-          return `
-            <div class="image-wrapper" data-index="${index}">
-              <img src="${item.src}" draggable="false">
-              <sl-dropdown class="image-menu" data-index="${index}">
-                <sl-button slot="trigger" variant="default" size="small" circle>
-                  <sl-icon name="three-dots-vertical"></sl-icon>
-                </sl-button>
-                <sl-menu>
-                  <sl-menu-item value="crop">Crop</sl-menu-item>
-                  <sl-menu-item value="rotate">Rotate</sl-menu-item>
-                  <sl-menu-item value="threshold">Black &amp; White</sl-menu-item>
-                  <sl-menu-item value="showdata">Show Data</sl-menu-item>
-                  <sl-menu-item value="download">Download Image</sl-menu-item>
-                  <sl-divider></sl-divider>
-                  <sl-menu-item value="delete">Delete</sl-menu-item>
-                </sl-menu>
-              </sl-dropdown>
-            </div>
-          `;
-        },
-      )
-      .join('');
-
     this.shadowRoot.innerHTML = `
       ${styles}
-      <div class="container">
-        ${imageHtml}
-        <button class="add-btn" title="Add Image">+</button>
-      </div>
+      <div class="container"></div>
 
       <sl-dialog label="Select image(s), PDF, or Markdown to upload" class="upload-dialog">
         <input type="file" accept="image/*,application/pdf,.md,.markdown,text/plain" multiple>
-        <sl-button
-          slot="footer"
-          variant="primary"
-          class="close"
-          >Close</sl-button
-        >
+        <sl-button slot="footer" variant="primary" class="close">Close</sl-button>
       </sl-dialog>
 
       <sl-dialog label="Edit Markdown Text" class="text-dialog" style="--width: 80vw">
@@ -239,24 +181,10 @@ class CopioImages extends HTMLElement {
         <div style="margin-bottom: 1rem;">
           <img id="crop-image" />
         </div>
-        <sl-button
-          slot="footer"
-          variant="default"
-          class="cancel-crop"
-          >Cancel</sl-button
-        >
-        <sl-button
-          slot="footer"
-          variant="primary"
-          class="apply-crop"
-          >Apply</sl-button
-        >
+        <sl-button slot="footer" variant="default" class="cancel-crop">Cancel</sl-button>
+        <sl-button slot="footer" variant="primary" class="apply-crop">Apply</sl-button>
       </sl-dialog>
-      `;
-
-    this.shadowRoot.querySelector('.add-btn').onclick = () => {
-      this.shadowRoot.querySelector('.upload-dialog').show();
-    };
+    `;
 
     this.shadowRoot.querySelector('.close').onclick = () => {
       this.shadowRoot.querySelector('.upload-dialog').hide();
@@ -266,15 +194,12 @@ class CopioImages extends HTMLElement {
       this.shadowRoot.querySelector('.data-dialog').hide();
     };
 
-    this.shadowRoot.querySelector('input[type="file"]').onchange = async (
-      event,
-    ) => {
+    this.shadowRoot.querySelector('input[type="file"]').onchange = async (event) => {
       const files = Array.from(event.target.files);
       const allImages = [];
 
       for (const file of files) {
         if (file.type === 'application/pdf') {
-          // Process PDF: extract each page as an image
           const pdfImages = await this.pdfToImages(file);
           allImages.push(...pdfImages);
         } else if (file.name.endsWith('.md') || file.name.endsWith('.markdown') || file.type === 'text/markdown' || file.type === 'text/plain') {
@@ -286,7 +211,6 @@ class CopioImages extends HTMLElement {
             content,
           });
         } else {
-          // Process regular image
           const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
           allImages.push({
             id: randomId(),
@@ -300,8 +224,84 @@ class CopioImages extends HTMLElement {
       this.setAttribute('images', JSON.stringify(this.#images));
     };
 
-    // Setup crop menu handlers
-    this.shadowRoot.querySelectorAll('.image-menu').forEach((dropdown) => {
+    const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
+    this.shadowRoot.querySelector('.cancel-crop').onclick = () => this.closeCropDialog();
+    this.shadowRoot.querySelector('.apply-crop').onclick = () => this.applyCrop();
+    this.shadowRoot.querySelector('.cancel-text').onclick = () => this.closeTextDialog();
+    this.shadowRoot.querySelector('.apply-text').onclick = () => this.applyTextEdit();
+
+    cropDialog.addEventListener('sl-hide', () => {
+      if (this.#cropper) {
+        this.#cropper.destroy();
+        this.#cropper = null;
+      }
+      this.#cropIndex = null;
+    });
+  }
+
+  #renderGrid() {
+    const container = this.shadowRoot.querySelector('.container');
+    if (!container) return;
+
+    const imageHtml = this.#images
+      .map((item, index) => {
+        if (item.type === 'markdown') {
+          const title = item.name || 'Markdown Note';
+          const snippet = (item.content || '').slice(0, 120);
+          return `
+            <div class="image-wrapper" data-index="${index}">
+              <div class="markdown-card">
+                <div class="markdown-card-header">
+                  <sl-icon name="file-earmark-text"></sl-icon> ${title}
+                </div>
+                <div class="markdown-card-body">${snippet}</div>
+              </div>
+              <sl-dropdown class="image-menu" data-index="${index}">
+                <sl-button slot="trigger" variant="default" size="small" circle>
+                  <sl-icon name="three-dots-vertical"></sl-icon>
+                </sl-button>
+                <sl-menu>
+                  <sl-menu-item value="edittext">Edit Text</sl-menu-item>
+                  <sl-menu-item value="download">Download Markdown</sl-menu-item>
+                  <sl-divider></sl-divider>
+                  <sl-menu-item value="delete">Delete</sl-menu-item>
+                </sl-menu>
+              </sl-dropdown>
+            </div>
+          `;
+        }
+        return `
+          <div class="image-wrapper" data-index="${index}">
+            <img src="${item.src}" draggable="false">
+            <sl-dropdown class="image-menu" data-index="${index}">
+              <sl-button slot="trigger" variant="default" size="small" circle>
+                <sl-icon name="three-dots-vertical"></sl-icon>
+              </sl-button>
+              <sl-menu>
+                <sl-menu-item value="crop">Crop</sl-menu-item>
+                <sl-menu-item value="rotate">Rotate</sl-menu-item>
+                <sl-menu-item value="threshold">Black &amp; White</sl-menu-item>
+                <sl-menu-item value="showdata">Show Data</sl-menu-item>
+                <sl-menu-item value="download">Download Image</sl-menu-item>
+                <sl-divider></sl-divider>
+                <sl-menu-item value="delete">Delete</sl-menu-item>
+              </sl-menu>
+            </sl-dropdown>
+          </div>
+        `;
+      })
+      .join('');
+
+    container.innerHTML = `
+      ${imageHtml}
+      <button class="add-btn" title="Add Image">+</button>
+    `;
+
+    container.querySelector('.add-btn').onclick = () => {
+      this.shadowRoot.querySelector('.upload-dialog').show();
+    };
+
+    container.querySelectorAll('.image-menu').forEach((dropdown) => {
       const menu = dropdown.querySelector('sl-menu');
       menu.addEventListener('sl-select', (event) => {
         event.stopPropagation();
@@ -328,40 +328,10 @@ class CopioImages extends HTMLElement {
       });
     });
 
-    // Setup crop dialog buttons
-    const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
-
-    this.shadowRoot.querySelector('.cancel-crop').onclick = () => {
-      this.closeCropDialog();
-    };
-
-    this.shadowRoot.querySelector('.apply-crop').onclick = () => {
-      this.applyCrop();
-    };
-
-    this.shadowRoot.querySelector('.cancel-text').onclick = () => {
-      this.closeTextDialog();
-    };
-
-    this.shadowRoot.querySelector('.apply-text').onclick = () => {
-      this.applyTextEdit();
-    };
-
-    // Clean up when dialog is closed by any means (ESC, overlay click, etc)
-    cropDialog.addEventListener('sl-hide', () => {
-      if (this.#cropper) {
-        this.#cropper.destroy();
-        this.#cropper = null;
-      }
-      this.#cropIndex = null;
-    });
-
-    this.#setupSortable();
+    this.#setupSortable(container);
   }
 
-  #setupSortable() {
-    const container = this.shadowRoot.querySelector('.container');
-
+  #setupSortable(container) {
     Sortable.create(container, {
       animation: 150,
       draggable: '.image-wrapper',
@@ -390,7 +360,6 @@ class CopioImages extends HTMLElement {
     cropImage.src = this.#images[index].src;
     cropDialog.show();
 
-    // Wait for image to load and dialog to be visible
     cropImage.onload = () => {
       if (this.#cropper) {
         this.#cropper.destroy();
@@ -414,13 +383,9 @@ class CopioImages extends HTMLElement {
 
   applyCrop() {
     if (this.#cropper && this.#cropIndex !== null) {
-      const canvas = this.#cropper.getCroppedCanvas();
       const originalSrc = this.#images[this.#cropIndex]?.src || '';
-      const isPng = originalSrc.startsWith('data:image/png');
-      const format = isPng ? 'image/png' : 'image/jpeg';
-      const croppedSrc = canvas.toDataURL(format, isPng ? undefined : 0.82);
+      const croppedSrc = getCroppedSrc(this.#cropper, originalSrc);
 
-      // Update the image
       this.#images[this.#cropIndex].src = croppedSrc;
       this.setAttribute('images', JSON.stringify(this.#images));
 
@@ -509,44 +474,12 @@ class CopioImages extends HTMLElement {
   }
 
   async pdfToImages(file) {
-    const images = [];
-
-    // Read PDF file as ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
-
-    // Load the PDF document
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-    // Process each page
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-
-      // Set scale for good quality (2x for retina displays)
-      const scale = 2.0;
-      const viewport = page.getViewport({ scale });
-
-      // Create canvas to render the page
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-
-      // Render the page
-      await page.render({
-        canvasContext: context,
-        viewport: viewport,
-      }).promise;
-
-      // Convert canvas to base64 image
-      const src = canvas.toDataURL('image/jpeg', 0.82);
-
-      images.push({
-        id: randomId(),
-        src,
-      });
-    }
-
-    return images;
+    const dataUrls = await renderPdfPagesToDataUrls(arrayBuffer);
+    return dataUrls.map((src) => ({
+      id: randomId(),
+      src,
+    }));
   }
 
   get images() {

@@ -19,6 +19,7 @@
   "js/copio-loader.js",
   "js/copio-row.js",
   "js/export-utils.js",
+  "js/pdf-utils.js",
   "js/sync-service.js",
   "js/register-components.js",
   "js/utils.js",
