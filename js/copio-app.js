@@ -173,147 +173,112 @@ class CopioApp extends LitElement {
     // TinyBase listener updates docsData → Lit re-renders automatically
   }
 
-  async renderMarkdownToImageDataUrl(page) {
-    const rawContent = page.content || '';
-    let htmlContent = window.marked && window.marked.parse ? window.marked.parse(rawContent) : rawContent;
-    const width = 1240;
-    const height = 1754;
+  renderMarkdownToPdf(doc, rawContent) {
+    if (!window.marked || !window.marked.lexer) return;
+    const tokens = window.marked.lexer(rawContent || '');
 
-    // Convert HTML to valid XHTML for SVG XML parser
-    let cleanHtmlContent = htmlContent
-      .replace(/&nbsp;/g, '&#160;')
-      .replace(/&(?!(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;')
-      .replace(/<hr(\s+[^>]*?>|>)/gi, (m) => (m.endsWith('/>') ? m : m.slice(0, -1) + '/>'))
-      .replace(/<br(\s+[^>]*?>|>)/gi, (m) => (m.endsWith('/>') ? m : m.slice(0, -1) + '/>'))
-      .replace(/<input(\s+[^>]*?>|>)/gi, (m) => (m.endsWith('/>') ? m : m.slice(0, -1) + '/>'));
+    function cleanText(txt) {
+      if (!txt) return '';
+      return txt
+        .replace(/✅/g, 'Yes')
+        .replace(/❌/g, 'No')
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/`(.*?)`/g, '$1')
+        .trim();
+    }
 
-    // Handle <img> tags for SVG foreignObject
-    cleanHtmlContent = cleanHtmlContent.replace(/<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi, (match, src) => {
-      if (src.startsWith('data:')) {
-        return `<img src="${src}" style="max-width:100%;height:auto;border-radius:6px;" />`;
+    function ensureSpace(neededHeight = 30) {
+      if (doc.y + neededHeight > doc.page.height - doc.page.margins.bottom) {
+        doc.addPage({ size: 'A4', margin: 40 });
       }
-      return '<div style="padding:16px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;color:#475569;font-weight:600;font-size:1em;text-align:center;margin:1em 0;">📷 Image Attachment</div>';
-    });
+    }
 
-    try {
-      const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-          <foreignObject width="100%" height="100%">
-            <div xmlns="http://www.w3.org/1999/xhtml">
-              <style>
-                .pdf-md-container {
-                  width: ${width}px;
-                  min-height: ${height}px;
-                  padding: 50px;
-                  box-sizing: border-box;
-                  background: #ffffff;
-                  color: #0f172a;
-                  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                  line-height: 1.6;
-                }
-                .pdf-md-container h1, .pdf-md-container h2, .pdf-md-container h3, .pdf-md-container h4 {
-                  color: #0f172a;
-                  margin-top: 1.3em;
-                  margin-bottom: 0.4em;
-                  font-weight: 700;
-                  line-height: 1.25;
-                  border-bottom: 1px solid #e2e8f0;
-                  padding-bottom: 0.3em;
-                }
-                .pdf-md-container h1 { font-size: 2.2em; }
-                .pdf-md-container h2 { font-size: 1.6em; }
-                .pdf-md-container h3 { font-size: 1.3em; }
-                .pdf-md-container p { margin-top: 0; margin-bottom: 1em; font-size: 1.1em; }
-                .pdf-md-container ul, .pdf-md-container ol { padding-left: 2em; margin-bottom: 1em; font-size: 1.1em; }
-                .pdf-md-container li { margin-bottom: 0.3em; }
-                .pdf-md-container code {
-                  background: #f1f5f9;
-                  color: #0f172a;
-                  padding: 0.2em 0.4em;
-                  border-radius: 4px;
-                  font-family: monospace;
-                  font-size: 0.9em;
-                }
-                .pdf-md-container pre {
-                  background: #0f172a;
-                  color: #f8fafc;
-                  padding: 1em;
-                  border-radius: 8px;
-                  overflow-x: auto;
-                }
-                .pdf-md-container pre code { background: none; color: inherit; padding: 0; }
-                .pdf-md-container blockquote {
-                  border-left: 4px solid #0284c7;
-                  margin: 1em 0;
-                  padding-left: 1em;
-                  color: #475569;
-                  font-style: italic;
-                }
-                .pdf-md-container table {
-                  border-collapse: collapse;
-                  width: 100%;
-                  margin-bottom: 1em;
-                }
-                .pdf-md-container th, .pdf-md-container td {
-                  border: 1px solid #cbd5e1;
-                  padding: 8px 12px;
-                  text-align: left;
-                }
-                .pdf-md-container th {
-                  background: #f1f5f9;
-                  font-weight: 600;
-                }
-                .pdf-md-container img {
-                  max-width: 100%;
-                  height: auto;
-                  border-radius: 6px;
-                }
-              </style>
-              <div class="pdf-md-container">
-                ${cleanHtmlContent}
-              </div>
-            </div>
-          </foreignObject>
-        </svg>
-      `;
+    doc.addPage({ size: 'A4', margin: 40 });
 
-      const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = svgUrl;
-      });
+    for (const token of tokens) {
+      if (token.type === 'heading') {
+        ensureSpace(40);
+        doc.moveDown(0.3);
+        const size = token.depth === 1 ? 20 : token.depth === 2 ? 15 : 12;
+        doc.font('Helvetica-Bold').fontSize(size).fillColor('#0f172a').text(cleanText(token.text));
+        doc.moveDown(0.2);
+      } else if (token.type === 'paragraph') {
+        const imgToken = token.tokens && token.tokens.find((t) => t.type === 'image');
+        if (imgToken && imgToken.href && imgToken.href.startsWith('data:')) {
+          try {
+            ensureSpace(180);
+            doc.moveDown(0.4);
+            doc.image(imgToken.href, { fit: [515, 300], align: 'center' });
+            doc.moveDown(0.4);
+          } catch (e) {
+            console.error('Error rendering embedded image to PDF:', e);
+          }
+        } else {
+          ensureSpace(20);
+          doc.font('Helvetica').fontSize(10.5).fillColor('#334155').text(cleanText(token.text), { lineGap: 3 });
+          doc.moveDown(0.4);
+        }
+      } else if (token.type === 'hr') {
+        ensureSpace(15);
+        doc.moveDown(0.2);
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(40, doc.y).lineTo(555, doc.y).stroke();
+        doc.moveDown(0.4);
+      } else if (token.type === 'list') {
+        for (let i = 0; i < token.items.length; i++) {
+          const item = token.items[i];
+          ensureSpace(18);
+          let bullet = '• ';
+          if (token.ordered) bullet = `${i + 1}. `;
+          else if (item.task) bullet = item.checked ? '[x] ' : '[ ] ';
+          doc.font('Helvetica').fontSize(10.5).fillColor('#334155').text(bullet + cleanText(item.text), { indent: 10, lineGap: 2 });
+        }
+        doc.moveDown(0.4);
+      } else if (token.type === 'blockquote') {
+        ensureSpace(35);
+        const startY = doc.y;
+        doc.font('Helvetica-Oblique').fontSize(10).fillColor('#475569').text(cleanText(token.text), 50, startY, { width: 495 });
+        const endY = doc.y;
+        doc.strokeColor('#0284c7').lineWidth(3).moveTo(42, startY).lineTo(42, endY).stroke();
+        doc.x = 40;
+        doc.moveDown(0.4);
+      } else if (token.type === 'code') {
+        ensureSpace(50);
+        const codeText = token.text;
+        const startY = doc.y;
+        doc.font('Courier').fontSize(9).fillColor('#0f172a');
+        const height = doc.heightOfString(codeText, { width: 495 }) + 16;
+        doc.rect(40, startY, 515, height).fill('#f1f5f9');
+        doc.fillColor('#0f172a').text(codeText, 50, startY + 8, { width: 495 });
+        doc.x = 40;
+        doc.y = startY + height + 10;
+      } else if (token.type === 'table') {
+        ensureSpace(50);
+        const cols = token.header.length;
+        const colWidth = 515 / cols;
+        let startY = doc.y;
 
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
+        doc.rect(40, startY, 515, 22).fill('#f1f5f9');
+        doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#0f172a');
+        token.header.forEach((h, idx) => {
+          doc.text(cleanText(h.text), 45 + idx * colWidth, startY + 6, { width: colWidth - 10, align: 'left' });
+        });
+        doc.y = startY + 22;
 
-      return canvas.toDataURL('image/jpeg', 0.85);
-    } catch (err) {
-      console.warn('SVG foreignObject render failed, using Canvas fallback:', err);
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 32px sans-serif';
-      ctx.fillText(page.name || 'Markdown Note', 60, 80);
-      ctx.font = '22px sans-serif';
-      const lines = rawContent.split('\n');
-      let y = 140;
-      for (const line of lines) {
-        if (y > canvas.height - 80) break;
-        ctx.fillText(line.slice(0, 75), 60, y);
-        y += 34;
+        doc.font('Helvetica').fontSize(9).fillColor('#334155');
+        token.rows.forEach((row, rIdx) => {
+          ensureSpace(20);
+          const rowY = doc.y;
+          if (rIdx % 2 === 1) doc.rect(40, rowY, 515, 20).fill('#f8fafc');
+          doc.fillColor('#334155');
+          row.forEach((cell, idx) => {
+            doc.text(cleanText(cell.text), 45 + idx * colWidth, rowY + 5, { width: colWidth - 10, align: 'left' });
+          });
+          doc.y = rowY + 20;
+        });
+        doc.moveDown(0.5);
       }
-      return canvas.toDataURL('image/jpeg', 0.85);
     }
   }
 
@@ -349,39 +314,38 @@ class CopioApp extends LitElement {
       });
 
       for (const page of pages) {
-        let imgSrc = page.src;
         if (page.type === 'markdown') {
-          imgSrc = await this.renderMarkdownToImageDataUrl(page);
+          this.renderMarkdownToPdf(doc, page.content);
+        } else {
+          const img = new Image();
+          await new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = (err) => {
+              console.warn('Page image failed to load for PDF:', err);
+              resolve();
+            };
+            img.src = page.src;
+          });
+
+          if (!img.width || !img.height) continue;
+
+          doc.addPage({ size: 'A4' });
+
+          const scaleX = A4_WIDTH / img.width;
+          const scaleY = A4_HEIGHT / img.height;
+          const scale = Math.min(scaleX, scaleY);
+
+          const scaledWidth = img.width * scale;
+          const scaledHeight = img.height * scale;
+
+          const x = (A4_WIDTH - scaledWidth) / 2;
+          const y = (A4_HEIGHT - scaledHeight) / 2;
+
+          doc.image(page.src, x, y, {
+            width: scaledWidth,
+            height: scaledHeight,
+          });
         }
-
-        const img = new Image();
-        await new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = (err) => {
-            console.warn('Page image failed to load for PDF:', err);
-            resolve();
-          };
-          img.src = imgSrc;
-        });
-
-        if (!img.width || !img.height) continue;
-
-        doc.addPage({ size: 'A4' });
-
-        const scaleX = A4_WIDTH / img.width;
-        const scaleY = A4_HEIGHT / img.height;
-        const scale = Math.min(scaleX, scaleY);
-
-        const scaledWidth = img.width * scale;
-        const scaledHeight = img.height * scale;
-
-        const x = (A4_WIDTH - scaledWidth) / 2;
-        const y = (A4_HEIGHT - scaledHeight) / 2;
-
-        doc.image(imgSrc, x, y, {
-          width: scaledWidth,
-          height: scaledHeight,
-        });
       }
 
       doc.end();
@@ -407,7 +371,7 @@ class CopioApp extends LitElement {
       const sanitize = (str) => str.replace(/[/\\?%*:|"<>]/g, '_');
       const safeName = sanitize(docName) || 'document';
 
-      if (pages.length === 1) {
+      if (pages.length === 1 && pages[0].type !== 'markdown') {
         const page = pages[0];
         let ext = 'jpg';
         if (page.src.startsWith('data:')) {
@@ -432,38 +396,49 @@ class CopioApp extends LitElement {
         if (shouldRevoke) URL.revokeObjectURL(downloadUrl);
       } else {
         const zip = new JSZip();
-        const padLen = Math.max(2, String(pages.length).length);
+        let exportIdx = 0;
 
         for (let index = 0; index < pages.length; index++) {
           const page = pages[index];
-          let ext = 'jpg';
-          let base64Data = '';
+          let pageDataUrls = [];
 
           if (page.type === 'markdown') {
-            const dataUrl = await this.renderMarkdownToImageDataUrl(page);
-            ext = 'jpg';
-            base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
-          } else if (page.src && page.src.startsWith('data:')) {
-            const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
-            if (match) {
-              if (match[1].includes('png')) ext = 'png';
-              base64Data = match[2];
-            } else {
-              base64Data = page.src.replace(/^data:[^;]+;base64,/, '');
-            }
+            pageDataUrls = await this.renderMarkdownToPageDataUrls(page);
           } else {
-            const response = await fetch(page.src);
-            const blob = await response.blob();
-            const arrayBuf = await blob.arrayBuffer();
-            const pageNum = String(index + 1).padStart(padLen, '0');
-            const fileName = `${safeName}-${pageNum}.${ext}`;
-            zip.file(fileName, arrayBuf);
-            continue;
+            pageDataUrls = [page.src];
           }
 
-          const pageNum = String(index + 1).padStart(padLen, '0');
-          const fileName = `${safeName}-${pageNum}.${ext}`;
-          zip.file(fileName, base64Data, { base64: true });
+          const padLen = Math.max(2, String(pages.length * pageDataUrls.length).length);
+
+          for (let subIdx = 0; subIdx < pageDataUrls.length; subIdx++) {
+            const dataUrl = pageDataUrls[subIdx];
+            let ext = 'jpg';
+            let base64Data = '';
+
+            if (dataUrl && dataUrl.startsWith('data:')) {
+              const match = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
+              if (match) {
+                if (match[1].includes('png')) ext = 'png';
+                base64Data = match[2];
+              } else {
+                base64Data = dataUrl.replace(/^data:[^;]+;base64,/, '');
+              }
+            } else {
+              const response = await fetch(dataUrl);
+              const blob = await response.blob();
+              const arrayBuf = await blob.arrayBuffer();
+              const pageNum = String(exportIdx + 1).padStart(padLen, '0');
+              const fileName = `${safeName}-${pageNum}.${ext}`;
+              zip.file(fileName, arrayBuf);
+              exportIdx++;
+              continue;
+            }
+
+            const pageNum = String(exportIdx + 1).padStart(padLen, '0');
+            const fileName = `${safeName}-${pageNum}.${ext}`;
+            zip.file(fileName, base64Data, { base64: true });
+            exportIdx++;
+          }
         }
 
         const blob = await zip.generateAsync({ type: 'blob' });
