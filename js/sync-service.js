@@ -24,6 +24,8 @@ export class SyncManager {
   }
 
   startHost() {
+    if (this.#peer && this.#syncState?.mode === 'host') return;
+
     if (!navigator.onLine) {
       const alert = Object.assign(document.createElement('sl-alert'), {
         variant: 'warning',
@@ -70,6 +72,8 @@ export class SyncManager {
   }
 
   startJoiner(remotePeerId) {
+    if (this.#peer && this.#syncState?.mode === 'joiner') return;
+
     this.#setState({ mode: 'joiner', step: 'connecting' });
     try {
       this.#peer = new Peer();
@@ -104,10 +108,12 @@ export class SyncManager {
     conn.on('data', (raw) => {
       const rows = JSON.parse(raw);
       let added = 0;
-      for (const [id, row] of Object.entries(rows)) {
-        if (!this.#store.hasRow('docs', id)) added++;
-        this.#store.setRow('docs', id, row);
-      }
+      this.#store.transaction(() => {
+        for (const [id, row] of Object.entries(rows)) {
+          if (!this.#store.hasRow('docs', id)) added++;
+          this.#store.setRow('docs', id, row);
+        }
+      });
       this.#setState({ ...this.#syncState, step: 'done', added });
     });
   }

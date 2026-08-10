@@ -1,4 +1,5 @@
 import { LitElement, html } from './lib/lit-core.min.js';
+import { SimpleRouter } from './router.js';
 import { randomId } from './utils.js';
 import { createStore } from './lib/tinybase.6.5.2.js';
 import { createIndexedDbPersister } from './lib/tinybase-persister-indexed-db.js';
@@ -7,6 +8,7 @@ import { SyncManager } from './sync-service.js';
 
 class CopioApp extends LitElement {
   #syncManager = null;
+  #router = null;
 
   static properties = {
     docsData: { type: Object, state: true },
@@ -35,16 +37,67 @@ class CopioApp extends LitElement {
     this.persister.startAutoLoad();
     this.persister.startAutoSave();
 
-    // Bridge TinyBase reactivity to Lit - critical integration pattern
+    // Bridge TinyBase reactivity to Lit
     this.store.addTableListener('docs', () => {
       this.docsData = this.store.getTable('docs');
-      // Lit detects property change and automatically queues re-render
+      const currentPath = this.#router?.getHashPath() || '';
+      if (currentPath.startsWith('/doc/')) {
+        this.#router.handleRoute();
+      }
     });
 
     // Initialize PeerJS sync service
     this.#syncManager = new SyncManager(this.store, (state) => {
       this.syncState = state;
     });
+
+    // Initialize Zero-Dependency Hash Router
+    this.#router = new SimpleRouter([
+      {
+        path: '/',
+        render: () => {
+          this.showCarousel = false;
+        },
+      },
+      {
+        path: '/add',
+        render: () => {
+          this.showCarousel = false;
+          setTimeout(() => this.#openAddDialog(), 50);
+        },
+      },
+      {
+        path: '/doc/:id',
+        render: ({ id }) => {
+          this.#loadCarouselDoc(id);
+        },
+      },
+      {
+        path: '/doc/:id/edit',
+        render: ({ id }) => {
+          this.showCarousel = false;
+          setTimeout(() => this.#loadEditDoc(id), 50);
+        },
+      },
+      {
+        path: '/sync',
+        render: () => {
+          this.showCarousel = false;
+          setTimeout(() => this.#syncManager.startHost(), 50);
+        },
+      },
+      {
+        path: '/sync/:peer',
+        render: ({ peer }) => {
+          this.showCarousel = false;
+          setTimeout(() => this.#syncManager.startJoiner(peer), 50);
+        },
+      },
+    ]);
+  }
+
+  #navigate(path) {
+    this.#router.navigate(path);
   }
 
   // Runs after first render - replaces connectedCallback
@@ -57,7 +110,9 @@ class CopioApp extends LitElement {
     const peerId = new URLSearchParams(window.location.search).get('peer');
     if (peerId) {
       history.replaceState({}, '', window.location.pathname);
-      this.startSyncAsJoiner(peerId);
+      this.#navigate(`/sync/${peerId}`);
+    } else {
+      this.#router.handleRoute();
     }
   }
 
@@ -86,12 +141,17 @@ class CopioApp extends LitElement {
     }
   };
 
-  handleAddNew() {
+  #openAddDialog() {
     const dialog = this.querySelector('.dialog-add-edit');
+    if (!dialog) return;
     dialog.show();
     setTimeout(() => {
       this.querySelector('.dialog-add-edit-input-name')?.focus();
     }, 100);
+  }
+
+  handleAddNew() {
+    this.#navigate('/add');
   }
 
   handleAddEditSave() {
@@ -122,10 +182,10 @@ class CopioApp extends LitElement {
     });
 
     this.querySelector('.dialog-add-edit').hide();
+    this.#navigate('/');
   }
 
   handleAddEditHide(event) {
-    // Clear form when dialog closes
     if (event.target !== event.currentTarget) return;
 
     const inputId = this.querySelector('.dialog-add-edit-input-id');
@@ -135,14 +195,18 @@ class CopioApp extends LitElement {
     inputId.value = '';
     inputName.value = '';
     copioImages.images = [];
+
+    if (this.#router.getHashPath() !== '/') {
+      this.#navigate('/');
+    }
   }
 
-  async handleRowEdit(e) {
-    const id = e.detail?.id;
+  async #loadEditDoc(id) {
     const vals = this.store.getRow('docs', id);
     if (!vals) return;
 
     const dialog = this.querySelector('.dialog-add-edit');
+    if (!dialog) return;
     dialog.show();
 
     const inputId = this.querySelector('.dialog-add-edit-input-id');
@@ -160,22 +224,34 @@ class CopioApp extends LitElement {
     copioImages.images = pages.map(({ id, src, exif, type, name, content }) => ({ id, src, exif, type, name, content }));
   }
 
-  handleRowView(e) {
+  handleRowEdit(e) {
     const id = e.detail?.id;
+    if (id) this.#navigate(`/doc/${id}/edit`);
+  }
+
+  #loadCarouselDoc(id) {
     const vals = this.store.getRow('docs', id);
     if (!vals) return;
 
     const carousel = this.querySelector('copio-carousel');
-    const pages = JSON.parse(vals.pages || '[]');
-    carousel.images = pages;
+    if (carousel) {
+      const pages = JSON.parse(vals.pages || '[]');
+      carousel.images = pages;
+      this.showCarousel = true;
+    }
+  }
 
-    this.showCarousel = true; // Reactive property triggers re-render
+  handleRowView(e) {
+    const id = e.detail?.id;
+    if (id) this.#navigate(`/doc/${id}`);
   }
 
   handleRowDelete(e) {
     const id = e.detail?.id;
     this.store.delRow('docs', id);
-    // TinyBase listener updates docsData → Lit re-renders automatically
+    if (this.#router.getHashPath().startsWith(`/doc/${id}`)) {
+      this.#navigate('/');
+    }
   }
 
   async handleRowDownload(e) {
@@ -206,19 +282,22 @@ class CopioApp extends LitElement {
   }
 
   handleCarouselClose() {
-    this.showCarousel = false; // Triggers re-render
+    this.#navigate('/');
   }
 
   startSyncAsHost = () => {
-    this.#syncManager.startHost();
+    this.#navigate('/sync');
   };
 
   startSyncAsJoiner = (remotePeerId) => {
-    this.#syncManager.startJoiner(remotePeerId);
+    this.#navigate(`/sync/${remotePeerId}`);
   };
 
   closeSyncDialog = () => {
     this.#syncManager.close();
+    if (this.#router.getHashPath().startsWith('/sync')) {
+      this.#navigate('/');
+    }
   };
 
   renderSyncDialog() {
@@ -258,7 +337,6 @@ class CopioApp extends LitElement {
   }
 
   renderRows() {
-    // this.docsData is reactive - automatically updated by TinyBase listener
     if (!this.docsData || Object.keys(this.docsData).length === 0) {
       return html`
         <style>
@@ -326,7 +404,6 @@ class CopioApp extends LitElement {
       `;
     }
 
-    // Lit's .map() pattern for lists
     return html`
       ${Object.entries(this.docsData).map(
         ([id, { name }]) => html`
