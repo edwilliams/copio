@@ -1,4 +1,4 @@
-import exifr from './exifr.js';
+import exifr from './lib/exifr.js';
 
 export async function extractExif(file) {
   try {

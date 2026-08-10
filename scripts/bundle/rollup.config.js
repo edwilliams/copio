@@ -146,7 +146,7 @@ export default {
         },
         {
           src: path.resolve(__dirname, 'dist/shoelace.js'),
-          dest: path.resolve(__dirname, '../../js'),
+          dest: path.resolve(__dirname, '../../js/lib'),
         },
         {
           src: path.resolve(

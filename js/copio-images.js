@@ -9,10 +9,10 @@ the element was and creates a duplicate — the moved node becomes orphaned.
 // this component creates ids for new images
 
 // Import PDF.js for PDF processing
-import * as pdfjsLib from './pdf.min.mjs';
-pdfjsLib.GlobalWorkerOptions.workerSrc = './js/pdf.worker.min.mjs';
+import * as pdfjsLib from './lib/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = './js/lib/pdf.worker.min.mjs';
 
-import Sortable from './sortable.esm.js';
+import Sortable from './lib/sortable.esm.js';
 import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif } from './utils.js';
 
 class CopioImages extends HTMLElement {

@@ -1,4 +1,4 @@
-import { LitElement, html, css } from './lit-core.min.js';
+import { LitElement, html, css } from './lib/lit-core.min.js';
 
 class CopioLoader extends LitElement {
   // todo: make the circle around the logo animate
