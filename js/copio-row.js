@@ -46,9 +46,20 @@ class CopioRow extends LitElement {
     const selected = e.detail.item.value;
     if (selected === 'delete') this.handleDelete();
     if (selected === 'edit') this.handleEdit();
+    if (selected === 'extract-ocr') this.handleExtractOcr();
     if (selected === 'download') this.handleDownload();
     if (selected === 'download-images') this.handleDownloadImages();
     if (selected === 'download-markdown') this.handleDownloadMarkdown();
+  }
+
+  handleExtractOcr() {
+    this.dispatchEvent(
+      new CustomEvent('copio-row:extract-ocr', {
+        bubbles: true,
+        composed: true,
+        detail: { id: this.getAttribute('id') },
+      }),
+    );
   }
 
   handleView() {
@@ -130,9 +141,14 @@ class CopioRow extends LitElement {
           </sl-button>
           <sl-menu @sl-select=${this.#handleMenuSelect}>
             <sl-menu-item value="edit">Edit</sl-menu-item>
+            <sl-menu-item value="extract-ocr">
+              <sl-icon slot="prefix" name="card-text"></sl-icon>
+              Extract All Text (OCR)
+            </sl-menu-item>
             <sl-menu-item value="download">Download as PDF</sl-menu-item>
             <sl-menu-item value="download-images">Download as Images</sl-menu-item>
             <sl-menu-item value="download-markdown">Download as Markdown</sl-menu-item>
+            <sl-divider></sl-divider>
             <sl-menu-item value="delete">Delete</sl-menu-item>
           </sl-menu>
         </sl-dropdown>

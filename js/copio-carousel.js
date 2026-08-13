@@ -1,8 +1,11 @@
 import { LitElement, html, css } from './lib/lit-core.min.js';
+import { recognizeImageText, SUPPORTED_LANGUAGES } from './ocr-service.js';
 
 class CopioCarousel extends LitElement {
   static properties = {
     images: { type: Array },
+    activeSlideIndex: { type: Number, state: true },
+    ocrState: { type: Object, state: true },
   };
 
   static styles = css`
@@ -28,6 +31,7 @@ class CopioCarousel extends LitElement {
     .back {
       position: absolute;
       top: 0;
+      left: 0;
       z-index: 5;
       padding: 8px 32px;
       font-size: 48px;
@@ -35,6 +39,15 @@ class CopioCarousel extends LitElement {
       appearance: none;
       background: none;
       border: none;
+    }
+    .carousel-top-actions {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      z-index: 5;
+      display: flex;
+      gap: 8px;
+      align-items: center;
     }
     .markdown-container {
       width: 100%;
@@ -111,6 +124,8 @@ class CopioCarousel extends LitElement {
   constructor() {
     super();
     this.images = [];
+    this.activeSlideIndex = 0;
+    this.ocrState = null;
   }
 
   handleBackClick() {
@@ -120,6 +135,98 @@ class CopioCarousel extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  handleSlideChange(e) {
+    this.activeSlideIndex = e.detail?.index || 0;
+  }
+
+  async handleOcrClick() {
+    const currentImg = this.images[this.activeSlideIndex];
+    if (!currentImg || currentImg.type === 'markdown' || !currentImg.src) return;
+
+    this.ocrState = {
+      isOpen: true,
+      lang: 'eng',
+      step: 'processing',
+      progress: 0,
+      statusMessage: 'Starting OCR...',
+      resultText: '',
+      confidence: 0,
+      copied: false,
+    };
+
+    this.runSlideOcr(currentImg.src, 'eng');
+  }
+
+  async runSlideOcr(src, lang) {
+    try {
+      const result = await recognizeImageText(src, {
+        lang,
+        onProgress: ({ progress, message }) => {
+          if (this.ocrState && this.ocrState.isOpen) {
+            this.ocrState = {
+              ...this.ocrState,
+              progress: Math.round((progress || 0) * 100),
+              statusMessage: message || 'Processing...',
+            };
+          }
+        },
+      });
+
+      if (this.ocrState && this.ocrState.isOpen) {
+        this.ocrState = {
+          ...this.ocrState,
+          step: 'done',
+          resultText: result.text || '',
+          confidence: result.confidence || 0,
+        };
+      }
+    } catch (err) {
+      console.error('Slide OCR Error:', err);
+      if (this.ocrState && this.ocrState.isOpen) {
+        this.ocrState = {
+          ...this.ocrState,
+          step: 'error',
+          statusMessage: err.message || 'Recognition failed',
+        };
+      }
+    }
+  }
+
+  handleOcrLangChange(e) {
+    const newLang = e.target.value;
+    const currentImg = this.images[this.activeSlideIndex];
+    if (!currentImg || !currentImg.src) return;
+
+    this.ocrState = {
+      ...this.ocrState,
+      lang: newLang,
+      step: 'processing',
+      progress: 0,
+      statusMessage: 'Initializing OCR...',
+    };
+
+    this.runSlideOcr(currentImg.src, newLang);
+  }
+
+  async copyOcrText() {
+    if (!this.ocrState?.resultText) return;
+    try {
+      await navigator.clipboard.writeText(this.ocrState.resultText);
+      this.ocrState = { ...this.ocrState, copied: true };
+      setTimeout(() => {
+        if (this.ocrState) {
+          this.ocrState = { ...this.ocrState, copied: false };
+        }
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  }
+
+  closeOcrModal() {
+    this.ocrState = null;
   }
 
   renderItem(img) {
@@ -141,12 +248,124 @@ class CopioCarousel extends LitElement {
     `;
   }
 
+  renderOcrDialog() {
+    if (!this.ocrState || !this.ocrState.isOpen) return '';
+
+    const currentImg = this.images[this.activeSlideIndex];
+    const isImage = currentImg && currentImg.type !== 'markdown';
+
+    return html`
+      <sl-dialog
+        label="Extract Text (OCR) — Page ${this.activeSlideIndex + 1}"
+        open
+        style="--width: 80vw"
+        @sl-after-hide=${this.closeOcrModal}
+      >
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px;">
+          <sl-select
+            size="small"
+            value=${this.ocrState.lang}
+            @sl-change=${this.handleOcrLangChange}
+            style="min-width: 180px;"
+          >
+            ${SUPPORTED_LANGUAGES.map(
+              (l) => html`<sl-option value=${l.code}>${l.flag} ${l.label}</sl-option>`,
+            )}
+          </sl-select>
+
+          ${this.ocrState.step === 'done'
+            ? html`
+                <sl-badge
+                  variant=${this.ocrState.confidence >= 75
+                    ? 'success'
+                    : this.ocrState.confidence >= 50
+                      ? 'warning'
+                      : 'danger'}
+                >
+                  ${this.ocrState.confidence}% Confidence
+                </sl-badge>
+              `
+            : ''}
+        </div>
+
+        ${this.ocrState.step === 'processing'
+          ? html`
+              <div style="padding: 2rem 0; text-align: center;">
+                <div style="font-size: 1rem; color: #0284c7; font-weight: 600; margin-bottom: 1rem;">
+                  ${this.ocrState.statusMessage}
+                </div>
+                <sl-progress-bar value=${this.ocrState.progress}></sl-progress-bar>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.6rem;">
+                  Client-side WebAssembly text recognition
+                </div>
+              </div>
+            `
+          : ''}
+
+        ${this.ocrState.step === 'error'
+          ? html`
+              <div style="padding: 1.5rem; text-align: center; color: #ef4444;">
+                <sl-icon name="x-circle-fill" style="font-size: 2rem;"></sl-icon>
+                <p>${this.ocrState.statusMessage}</p>
+              </div>
+            `
+          : ''}
+
+        ${this.ocrState.step === 'done'
+          ? html`
+              <div>
+                <sl-textarea
+                  rows="10"
+                  .value=${this.ocrState.resultText}
+                  @input=${(e) => {
+                    this.ocrState = { ...this.ocrState, resultText: e.target.value };
+                  }}
+                  placeholder="Extracted text..."
+                ></sl-textarea>
+              </div>
+            `
+          : ''}
+
+        <sl-button slot="footer" variant="default" @click=${this.closeOcrModal}>Close</sl-button>
+        ${this.ocrState.step === 'done'
+          ? html`
+              <sl-button slot="footer" variant="primary" @click=${this.copyOcrText}>
+                <sl-icon slot="prefix" name=${this.ocrState.copied ? 'check' : 'clipboard'}></sl-icon>
+                ${this.ocrState.copied ? 'Copied!' : 'Copy Text'}
+              </sl-button>
+            `
+          : ''}
+      </sl-dialog>
+    `;
+  }
+
   render() {
+    const currentImg = this.images[this.activeSlideIndex];
+    const isImage = currentImg && currentImg.type !== 'markdown';
+
     return html`
       <button class="back" @click=${this.handleBackClick}>←</button>
-      <sl-carousel class="sl-carousel" orientation="vertical">
+
+      ${isImage
+        ? html`
+            <div class="carousel-top-actions">
+              <sl-button size="small" variant="default" pill @click=${this.handleOcrClick}>
+                <sl-icon slot="prefix" name="card-text"></sl-icon>
+                OCR
+              </sl-button>
+            </div>
+          `
+        : ''}
+
+      <sl-carousel
+        class="sl-carousel"
+        orientation="vertical"
+        @sl-slide-change=${this.handleSlideChange}
+      >
         ${this.images.map((img) => this.renderItem(img))}
       </sl-carousel>
+
+      ${this.renderOcrDialog()}
     `;
   }
 }

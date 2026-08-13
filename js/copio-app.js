@@ -5,6 +5,7 @@ import { createStore } from './lib/tinybase.6.5.2.js';
 import { createIndexedDbPersister } from './lib/tinybase-persister-indexed-db.js';
 import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from './export-utils.js';
 import { SyncManager } from './sync-service.js';
+import { recognizeDocumentPages, SUPPORTED_LANGUAGES } from './ocr-service.js';
 
 class CopioApp extends LitElement {
   #syncManager = null;
@@ -14,6 +15,7 @@ class CopioApp extends LitElement {
     docsData: { type: Object, state: true },
     showCarousel: { type: Boolean, state: true },
     syncState: { type: Object, state: true },
+    ocrDocState: { type: Object, state: true },
   };
 
   createRenderRoot() {
@@ -27,6 +29,7 @@ class CopioApp extends LitElement {
     this.docsData = {};
     this.showCarousel = false;
     this.syncState = null;
+    this.ocrDocState = null;
     this.hideLoaderTimer = null;
 
     // Setup TinyBase store
@@ -281,6 +284,158 @@ class CopioApp extends LitElement {
     exportDocumentAsMarkdown(vals.name, pages);
   }
 
+  // Document OCR Handlers
+  handleRowExtractOcr(e) {
+    const id = e.detail?.id;
+    const vals = this.store.getRow('docs', id);
+    if (!vals) return;
+
+    const pages = JSON.parse(vals.pages || '[]');
+    const imagePages = pages.filter((p) => p.type !== 'markdown' && p.src);
+
+    if (imagePages.length === 0) {
+      alert('This document does not contain any image pages to perform text recognition on.');
+      return;
+    }
+
+    this.ocrDocState = {
+      isOpen: true,
+      docId: id,
+      docName: vals.name,
+      lang: 'eng',
+      step: 'processing',
+      progress: 0,
+      statusMessage: 'Starting OCR engine...',
+      resultText: '',
+      confidence: 0,
+      copied: false,
+    };
+
+    this.startDocOcr(id, vals.name, pages, 'eng');
+  }
+
+  async startDocOcr(docId, docName, pages, lang = 'eng') {
+    try {
+      const result = await recognizeDocumentPages(pages, {
+        lang,
+        onPageProgress: ({ pageNumber, totalPages, overallProgress, message }) => {
+          if (this.ocrDocState && this.ocrDocState.isOpen) {
+            this.ocrDocState = {
+              ...this.ocrDocState,
+              progress: Math.round((overallProgress || 0) * 100),
+              statusMessage: message,
+            };
+          }
+        },
+      });
+
+      if (this.ocrDocState && this.ocrDocState.isOpen) {
+        this.ocrDocState = {
+          ...this.ocrDocState,
+          step: 'done',
+          resultText: result.combinedText || '',
+          confidence: result.averageConfidence || 0,
+        };
+      }
+    } catch (err) {
+      console.error('Document OCR Error:', err);
+      if (this.ocrDocState && this.ocrDocState.isOpen) {
+        this.ocrDocState = {
+          ...this.ocrDocState,
+          step: 'error',
+          statusMessage: err.message || 'Text recognition failed',
+        };
+      }
+    }
+  }
+
+  handleDocOcrLangChange(e) {
+    const newLang = e.target.value;
+    if (!this.ocrDocState) return;
+
+    const docId = this.ocrDocState.docId;
+    const vals = this.store.getRow('docs', docId);
+    if (!vals) return;
+
+    const pages = JSON.parse(vals.pages || '[]');
+
+    this.ocrDocState = {
+      ...this.ocrDocState,
+      lang: newLang,
+      step: 'processing',
+      progress: 0,
+      statusMessage: 'Starting OCR engine with new language...',
+    };
+
+    this.startDocOcr(docId, vals.name, pages, newLang);
+  }
+
+  async copyDocOcrText() {
+    if (!this.ocrDocState?.resultText) return;
+    try {
+      await navigator.clipboard.writeText(this.ocrDocState.resultText);
+      this.ocrDocState = { ...this.ocrDocState, copied: true };
+      setTimeout(() => {
+        if (this.ocrDocState) {
+          this.ocrDocState = { ...this.ocrDocState, copied: false };
+        }
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  }
+
+  downloadDocOcrMarkdown() {
+    if (!this.ocrDocState?.resultText) return;
+    const safeName = (this.ocrDocState.docName || 'document').replace(/[/\\?%*:|"<>]/g, '_');
+    const blob = new Blob([this.ocrDocState.resultText], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}-ocr.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  downloadDocOcrText() {
+    if (!this.ocrDocState?.resultText) return;
+    const safeName = (this.ocrDocState.docName || 'document').replace(/[/\\?%*:|"<>]/g, '_');
+    const blob = new Blob([this.ocrDocState.resultText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}-ocr.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  saveDocOcrAsNote() {
+    if (!this.ocrDocState?.resultText || !this.ocrDocState?.docId) return;
+    const docId = this.ocrDocState.docId;
+    const vals = this.store.getRow('docs', docId);
+    if (!vals) return;
+
+    const pages = JSON.parse(vals.pages || '[]');
+    pages.push({
+      id: randomId(),
+      type: 'markdown',
+      name: 'OCR Full Transcript',
+      content: this.ocrDocState.resultText,
+    });
+
+    this.store.setRow('docs', docId, {
+      ...vals,
+      pages: JSON.stringify(pages),
+    });
+
+    alert('OCR Transcript saved as a Markdown Note in this document!');
+    this.closeDocumentOcrDialog();
+  }
+
+  closeDocumentOcrDialog() {
+    this.ocrDocState = null;
+  }
+
   handleCarouselClose() {
     this.#navigate('/');
   }
@@ -332,6 +487,104 @@ class CopioApp extends LitElement {
         <sl-button slot="footer" @click=${this.closeSyncDialog}
           >Close</sl-button
         >
+      </sl-dialog>
+    `;
+  }
+
+  renderDocumentOcrDialog() {
+    if (!this.ocrDocState || !this.ocrDocState.isOpen) return '';
+
+    return html`
+      <sl-dialog
+        label="Extract All Text (OCR) — ${this.ocrDocState.docName}"
+        open
+        style="--width: 85vw"
+        @sl-after-hide=${this.closeDocumentOcrDialog}
+      >
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px;">
+          <sl-select
+            size="small"
+            value=${this.ocrDocState.lang}
+            @sl-change=${this.handleDocOcrLangChange}
+            style="min-width: 180px;"
+          >
+            ${SUPPORTED_LANGUAGES.map(
+              (l) => html`<sl-option value=${l.code}>${l.flag} ${l.label}</sl-option>`,
+            )}
+          </sl-select>
+
+          ${this.ocrDocState.step === 'done'
+            ? html`
+                <sl-badge
+                  variant=${this.ocrDocState.confidence >= 75
+                    ? 'success'
+                    : this.ocrDocState.confidence >= 50
+                      ? 'warning'
+                      : 'danger'}
+                >
+                  ${this.ocrDocState.confidence}% Avg Confidence
+                </sl-badge>
+              `
+            : ''}
+        </div>
+
+        ${this.ocrDocState.step === 'processing'
+          ? html`
+              <div style="padding: 2.5rem 1rem; text-align: center;">
+                <div style="font-size: 1.1rem; color: #0284c7; font-weight: 600; margin-bottom: 1rem;">
+                  ${this.ocrDocState.statusMessage}
+                </div>
+                <sl-progress-bar value=${this.ocrDocState.progress}></sl-progress-bar>
+                <div style="font-size: 0.82rem; color: #64748b; margin-top: 0.75rem;">
+                  100% Client-Side WebAssembly OCR — zero cloud servers
+                </div>
+              </div>
+            `
+          : ''}
+
+        ${this.ocrDocState.step === 'error'
+          ? html`
+              <div style="padding: 2rem; text-align: center; color: #ef4444;">
+                <sl-icon name="x-circle-fill" style="font-size: 2rem;"></sl-icon>
+                <p style="margin-top: 0.5rem;">${this.ocrDocState.statusMessage}</p>
+              </div>
+            `
+          : ''}
+
+        ${this.ocrDocState.step === 'done'
+          ? html`
+              <div>
+                <sl-textarea
+                  rows="14"
+                  .value=${this.ocrDocState.resultText}
+                  @input=${(e) => {
+                    this.ocrDocState = { ...this.ocrDocState, resultText: e.target.value };
+                  }}
+                  placeholder="Extracted transcript..."
+                ></sl-textarea>
+              </div>
+            `
+          : ''}
+
+        <sl-button slot="footer" variant="default" @click=${this.closeDocumentOcrDialog}>
+          Close
+        </sl-button>
+        ${this.ocrDocState.step === 'done'
+          ? html`
+              <sl-button slot="footer" variant="default" @click=${this.copyDocOcrText}>
+                <sl-icon slot="prefix" name=${this.ocrDocState.copied ? 'check' : 'clipboard'}></sl-icon>
+                ${this.ocrDocState.copied ? 'Copied!' : 'Copy All'}
+              </sl-button>
+              <sl-button slot="footer" variant="default" @click=${this.downloadDocOcrMarkdown}>
+                <sl-icon slot="prefix" name="download"></sl-icon>
+                Download .md
+              </sl-button>
+              <sl-button slot="footer" variant="primary" @click=${this.saveDocOcrAsNote}>
+                <sl-icon slot="prefix" name="file-earmark-plus"></sl-icon>
+                Save as Note
+              </sl-button>
+            `
+          : ''}
       </sl-dialog>
     `;
   }
@@ -412,6 +665,7 @@ class CopioApp extends LitElement {
             name=${name}
             @copio-row:edit=${this.handleRowEdit}
             @copio-row:view=${this.handleRowView}
+            @copio-row:extract-ocr=${this.handleRowExtractOcr}
             @copio-row:delete=${this.handleRowDelete}
             @copio-row:download=${this.handleRowDownload}
             @copio-row:download-images=${this.handleRowDownloadImages}
@@ -491,6 +745,7 @@ class CopioApp extends LitElement {
       ></copio-carousel>
 
       ${this.renderSyncDialog()}
+      ${this.renderDocumentOcrDialog()}
     `;
   }
 }

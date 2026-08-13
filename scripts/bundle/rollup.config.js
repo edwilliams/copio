@@ -29,7 +29,7 @@ const staticFiles = [
   'copio.svg',
 ];
 
-const directoriesToScan = ['css', 'js', 'fonts'];
+const directoriesToScan = ['css', 'js', 'fonts', 'assets/tessdata'];
 
 async function getFilesRecursively(dir) {
   const files = [];
