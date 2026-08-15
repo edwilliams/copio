@@ -1,14 +1,31 @@
 /**
  * Lightweight, zero-dependency client-side Hash Router for Copio SPA.
  */
+
+export const ROUTES = [
+  { path: '/', name: 'home' },
+  { path: '/add', name: 'add' },
+  { path: '/doc/:id', name: 'doc-view' },
+  { path: '/doc/:id/edit', name: 'doc-edit' },
+  { path: '/sync', name: 'sync-host' },
+  { path: '/sync/:peer', name: 'sync-join' },
+];
+
 export class SimpleRouter {
   #routes = [];
+  #listeners = new Set();
+  #currentRoute = null;
 
-  constructor(routes = []) {
+  constructor(routes = ROUTES) {
     this.#routes = routes;
 
     window.addEventListener('hashchange', () => this.handleRoute());
     window.addEventListener('popstate', () => this.handleRoute());
+  }
+
+  onRouteChange(listener) {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
   }
 
   getHashPath() {
@@ -34,10 +51,25 @@ export class SimpleRouter {
     for (const route of this.#routes) {
       const params = this.#matchRoute(route.path, currentPath);
       if (params !== null) {
-        route.render(params);
-        return;
+        const routeData = {
+          name: route.name,
+          path: currentPath,
+          params,
+        };
+        this.#currentRoute = routeData;
+        for (const listener of this.#listeners) {
+          listener(routeData);
+        }
+        return routeData;
       }
     }
+
+    const fallback = { name: 'home', path: '/', params: {} };
+    this.#currentRoute = fallback;
+    for (const listener of this.#listeners) {
+      listener(fallback);
+    }
+    return fallback;
   }
 
   #matchRoute(pattern, path) {
@@ -58,3 +90,5 @@ export class SimpleRouter {
     return params;
   }
 }
+
+export const router = new SimpleRouter(ROUTES);

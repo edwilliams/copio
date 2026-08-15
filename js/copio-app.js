@@ -1,5 +1,5 @@
 import { LitElement, html } from './lib/lit-core.min.js';
-import { SimpleRouter } from './router.js';
+import { router } from './router.js';
 import { randomId } from './utils.js';
 import { createStore } from './lib/tinybase.6.5.2.js';
 import { createIndexedDbPersister } from './lib/tinybase-persister-indexed-db.js';
@@ -8,7 +8,7 @@ import { SyncManager } from './sync-service.js';
 
 class CopioApp extends LitElement {
   #syncManager = null;
-  #router = null;
+  #unsubscribeRouter = null;
 
   static properties = {
     docsData: { type: Object, state: true },
@@ -40,9 +40,9 @@ class CopioApp extends LitElement {
     // Bridge TinyBase reactivity to Lit
     this.store.addTableListener('docs', () => {
       this.docsData = this.store.getTable('docs');
-      const currentPath = this.#router?.getHashPath() || '';
+      const currentPath = router.getHashPath();
       if (currentPath.startsWith('/doc/')) {
-        this.#router.handleRoute();
+        router.handleRoute();
       }
     });
 
@@ -50,54 +50,6 @@ class CopioApp extends LitElement {
     this.#syncManager = new SyncManager(this.store, (state) => {
       this.syncState = state;
     });
-
-    // Initialize Zero-Dependency Hash Router
-    this.#router = new SimpleRouter([
-      {
-        path: '/',
-        render: () => {
-          this.showCarousel = false;
-        },
-      },
-      {
-        path: '/add',
-        render: () => {
-          this.showCarousel = false;
-          setTimeout(() => this.#openAddDialog(), 50);
-        },
-      },
-      {
-        path: '/doc/:id',
-        render: ({ id }) => {
-          this.#loadCarouselDoc(id);
-        },
-      },
-      {
-        path: '/doc/:id/edit',
-        render: ({ id }) => {
-          this.showCarousel = false;
-          setTimeout(() => this.#loadEditDoc(id), 50);
-        },
-      },
-      {
-        path: '/sync',
-        render: () => {
-          this.showCarousel = false;
-          setTimeout(() => this.#syncManager.startHost(), 50);
-        },
-      },
-      {
-        path: '/sync/:peer',
-        render: ({ peer }) => {
-          this.showCarousel = false;
-          setTimeout(() => this.#syncManager.startJoiner(peer), 50);
-        },
-      },
-    ]);
-  }
-
-  #navigate(path) {
-    this.#router.navigate(path);
   }
 
   // Runs after first render - replaces connectedCallback
@@ -107,12 +59,16 @@ class CopioApp extends LitElement {
     // Load persisted data - triggers TinyBase listener → updates docsData → Lit re-renders
     this.persister.load();
 
+    this.#unsubscribeRouter = router.onRouteChange((route) => {
+      this.#handleRouteChange(route);
+    });
+
     const peerId = new URLSearchParams(window.location.search).get('peer');
     if (peerId) {
       history.replaceState({}, '', window.location.pathname);
-      this.#navigate(`/sync/${peerId}`);
+      router.navigate(`/sync/${peerId}`);
     } else {
-      this.#router.handleRoute();
+      router.handleRoute();
     }
   }
 
@@ -120,6 +76,7 @@ class CopioApp extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     clearTimeout(this.hideLoaderTimer);
+    this.#unsubscribeRouter?.();
     this.#syncManager?.close();
   }
 
@@ -133,6 +90,32 @@ class CopioApp extends LitElement {
     }, 800);
   }
 
+  async #handleRouteChange({ name, params }) {
+    if (name !== 'doc-view') {
+      this.showCarousel = false;
+    }
+
+    switch (name) {
+      case 'home':
+        break;
+      case 'add':
+        await this.#openAddDialog();
+        break;
+      case 'doc-view':
+        this.#loadCarouselDoc(params.id);
+        break;
+      case 'doc-edit':
+        await this.#loadEditDoc(params.id);
+        break;
+      case 'sync-host':
+        await this.#startSyncHost();
+        break;
+      case 'sync-join':
+        await this.#startSyncJoiner(params.peer);
+        break;
+    }
+  }
+
   #handleDialogKeydown = (e) => {
     if (e.key === 'Enter') {
       if (e.target?.tagName === 'SL-BUTTON' || e.target?.tagName === 'BUTTON') return;
@@ -141,17 +124,16 @@ class CopioApp extends LitElement {
     }
   };
 
-  #openAddDialog() {
+  async #openAddDialog() {
+    await this.updateComplete;
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
-    dialog.show();
-    setTimeout(() => {
-      this.querySelector('.dialog-add-edit-input-name')?.focus();
-    }, 100);
+    await dialog.show();
+    this.querySelector('.dialog-add-edit-input-name')?.focus();
   }
 
   handleAddNew() {
-    this.#navigate('/add');
+    router.navigate('/add');
   }
 
   handleAddEditSave() {
@@ -182,7 +164,7 @@ class CopioApp extends LitElement {
     });
 
     this.querySelector('.dialog-add-edit').hide();
-    this.#navigate('/');
+    router.navigate('/');
   }
 
   handleAddEditHide(event) {
@@ -196,8 +178,8 @@ class CopioApp extends LitElement {
     inputName.value = '';
     copioImages.images = [];
 
-    if (this.#router.getHashPath() !== '/') {
-      this.#navigate('/');
+    if (router.getHashPath() !== '/') {
+      router.navigate('/');
     }
   }
 
@@ -205,9 +187,10 @@ class CopioApp extends LitElement {
     const vals = this.store.getRow('docs', id);
     if (!vals) return;
 
+    await this.updateComplete;
+
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
-    dialog.show();
 
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
@@ -215,18 +198,28 @@ class CopioApp extends LitElement {
 
     inputId.value = id;
     inputName.value = vals.name;
-    setTimeout(() => {
-      inputName.focus();
-    }, 100);
 
     await customElements.whenDefined('copio-images');
     const pages = JSON.parse(vals.pages || '[]');
     copioImages.images = pages.map(({ id, src, exif, type, name, content }) => ({ id, src, exif, type, name, content }));
+
+    await dialog.show();
+    inputName.focus();
+  }
+
+  async #startSyncHost() {
+    await this.updateComplete;
+    this.#syncManager.startHost();
+  }
+
+  async #startSyncJoiner(peer) {
+    await this.updateComplete;
+    this.#syncManager.startJoiner(peer);
   }
 
   handleRowEdit(e) {
     const id = e.detail?.id;
-    if (id) this.#navigate(`/doc/${id}/edit`);
+    if (id) router.navigate(`/doc/${id}/edit`);
   }
 
   #loadCarouselDoc(id) {
@@ -243,14 +236,14 @@ class CopioApp extends LitElement {
 
   handleRowView(e) {
     const id = e.detail?.id;
-    if (id) this.#navigate(`/doc/${id}`);
+    if (id) router.navigate(`/doc/${id}`);
   }
 
   handleRowDelete(e) {
     const id = e.detail?.id;
     this.store.delRow('docs', id);
-    if (this.#router.getHashPath().startsWith(`/doc/${id}`)) {
-      this.#navigate('/');
+    if (router.getHashPath().startsWith(`/doc/${id}`)) {
+      router.navigate('/');
     }
   }
 
@@ -323,21 +316,21 @@ class CopioApp extends LitElement {
   }
 
   handleCarouselClose() {
-    this.#navigate('/');
+    router.navigate('/');
   }
 
   startSyncAsHost = () => {
-    this.#navigate('/sync');
+    router.navigate('/sync');
   };
 
   startSyncAsJoiner = (remotePeerId) => {
-    this.#navigate(`/sync/${remotePeerId}`);
+    router.navigate(`/sync/${remotePeerId}`);
   };
 
   closeSyncDialog = () => {
     this.#syncManager.close();
-    if (this.#router.getHashPath().startsWith('/sync')) {
-      this.#navigate('/');
+    if (router.getHashPath().startsWith('/sync')) {
+      router.navigate('/');
     }
   };
 
