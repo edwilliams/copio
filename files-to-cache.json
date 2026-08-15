@@ -14,6 +14,7 @@
   "css/utils.css",
   "js/copio-app.js",
   "js/copio-carousel.js",
+  "js/copio-doc-ocr-dialog.js",
   "js/copio-header.js",
   "js/copio-images.js",
   "js/copio-loader.js",

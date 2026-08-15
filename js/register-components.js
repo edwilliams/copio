@@ -4,6 +4,7 @@ import './copio-header.js';
 import './copio-row.js';
 import './copio-images.js';
 import './copio-carousel.js';
+import './copio-doc-ocr-dialog.js';
 
 // =============================================
 // Show UI when custom components are ready
@@ -44,6 +45,7 @@ await Promise.allSettled([
   customElements.whenDefined('copio-row'),
   customElements.whenDefined('copio-images'),
   customElements.whenDefined('copio-carousel'),
+  customElements.whenDefined('copio-doc-ocr-dialog'),
 ]);
 
 document.body.classList.add('ready');
