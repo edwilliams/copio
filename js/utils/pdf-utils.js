@@ -1,4 +1,4 @@
-import * as pdfjsLib from './lib/pdf.min.mjs';
+import * as pdfjsLib from '../lib/pdf.min.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = './js/lib/pdf.worker.min.mjs';
 
 /**

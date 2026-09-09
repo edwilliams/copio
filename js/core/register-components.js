@@ -1,10 +1,12 @@
-import './copio-app.js';
-import './copio-loader.js';
-import './copio-header.js';
-import './copio-row.js';
-import './copio-images.js';
-import './copio-carousel.js';
-import './copio-doc-ocr-dialog.js';
+import '../components/copio-app.js';
+import '../components/copio-loader.js';
+import '../components/copio-header.js';
+import '../routes/home/copio-row.js';
+import '../routes/doc/copio-images.js';
+import '../routes/doc/copio-carousel.js';
+import '../routes/ocr/copio-doc-ocr-dialog.js';
+import '../routes/sync/copio-sync-dialog.js';
+import '../routes/add-edit/copio-add-edit-dialog.js';
 
 // =============================================
 // Show UI when custom components are ready
@@ -46,6 +48,8 @@ await Promise.allSettled([
   customElements.whenDefined('copio-images'),
   customElements.whenDefined('copio-carousel'),
   customElements.whenDefined('copio-doc-ocr-dialog'),
+  customElements.whenDefined('copio-sync-dialog'),
+  customElements.whenDefined('copio-add-edit-dialog'),
 ]);
 
 document.body.classList.add('ready');

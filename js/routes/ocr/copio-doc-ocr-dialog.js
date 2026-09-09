@@ -1,5 +1,5 @@
-import { LitElement, html } from './lib/lit-core.min.js';
-import { recognizeDocumentPages, SUPPORTED_LANGUAGES } from './ocr-service.js';
+import { LitElement, html } from '../../lib/lit-core.min.js';
+import { recognizeDocumentPages, SUPPORTED_LANGUAGES } from '../../services/ocr-service.js';
 
 class CopioDocOcrDialog extends LitElement {
   static properties = {

@@ -1,4 +1,4 @@
-import { renderPdfPagesToDataUrls } from './pdf-utils.js';
+import { renderPdfPagesToDataUrls } from '../utils/pdf-utils.js';
 
 /**
  * Clean text from markdown formatting and emojis for PDF kit rendering.

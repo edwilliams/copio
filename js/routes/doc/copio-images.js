@@ -5,10 +5,10 @@ leaves lit-html's comment markers (used to track ChildParts) in their original p
 the element was and creates a duplicate — the moved node becomes orphaned.
 */
 
-import Sortable from './lib/sortable.esm.js';
-import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from './utils.js';
-import { renderPdfPagesToDataUrls } from './pdf-utils.js';
-import { recognizeImageText, SUPPORTED_LANGUAGES } from './ocr-service.js';
+import Sortable from '../../lib/sortable.esm.js';
+import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from '../../utils/utils.js';
+import { renderPdfPagesToDataUrls } from '../../utils/pdf-utils.js';
+import { recognizeImageText, SUPPORTED_LANGUAGES } from '../../services/ocr-service.js';
 
 class CopioImages extends HTMLElement {
   #images = [];

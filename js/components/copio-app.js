@@ -1,10 +1,9 @@
-import { LitElement, html } from './lib/lit-core.min.js';
-import { router } from './router.js';
-import { randomId } from './utils.js';
-import { createStore } from './lib/tinybase.6.5.2.js';
-import { createIndexedDbPersister } from './lib/tinybase-persister-indexed-db.js';
-import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from './export-utils.js';
-import { SyncManager } from './sync-service.js';
+import { LitElement, html } from '../lib/lit-core.min.js';
+import { router } from '../core/router.js';
+import { randomId } from '../utils/utils.js';
+import { store, persister } from '../core/store.js';
+import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../services/export-utils.js';
+import { SyncManager } from '../services/sync-service.js';
 
 class CopioApp extends LitElement {
   #syncManager = null;
@@ -30,12 +29,8 @@ class CopioApp extends LitElement {
     this.hideLoaderTimer = null;
 
     // Setup TinyBase store
-    this.store = createStore();
-    this.store.setTable('docs', {});
-
-    this.persister = createIndexedDbPersister(this.store, 'copio-db');
-    this.persister.startAutoLoad();
-    this.persister.startAutoSave();
+    this.store = store;
+    this.persister = persister;
 
     // Bridge TinyBase reactivity to Lit
     this.store.addTableListener('docs', () => {
@@ -116,68 +111,25 @@ class CopioApp extends LitElement {
     }
   }
 
-  #handleDialogKeydown = (e) => {
-    if (e.key === 'Enter') {
-      if (e.target?.tagName === 'SL-BUTTON' || e.target?.tagName === 'BUTTON') return;
-      e.preventDefault();
-      this.handleAddEditSave();
-    }
-  };
-
   async #openAddDialog() {
-    await this.updateComplete;
-    const dialog = this.querySelector('.dialog-add-edit');
-    if (!dialog) return;
-    await dialog.show();
-    this.querySelector('.dialog-add-edit-input-name')?.focus();
+    const dialog = this.querySelector('copio-add-edit-dialog');
+    if (dialog) await dialog.open();
   }
 
   handleAddNew() {
     router.navigate('/add');
   }
 
-  handleAddEditSave() {
-    const inputId = this.querySelector('.dialog-add-edit-input-id');
-    const inputName = this.querySelector('.dialog-add-edit-input-name');
-    const copioImages = this.querySelector('copio-images');
-
-    if (!inputName.value) {
-      const name = prompt('Please enter a name');
-      if (!name) return;
-      inputName.value = name;
-    }
-
-    const pages = copioImages.images.map(({ id, src, exif, type, name, content }) => ({
-      id,
-      src,
-      exif,
-      type,
-      name,
-      content,
-    }));
-
-    const id = inputId?.value || randomId();
-
+  handleAddEditSave(e) {
+    const { id, name, pages } = e.detail;
     this.store.setRow('docs', id, {
-      name: inputName.value,
+      name,
       pages: JSON.stringify(pages),
     });
-
-    this.querySelector('.dialog-add-edit').hide();
     router.navigate('/');
   }
 
-  handleAddEditHide(event) {
-    if (event.target !== event.currentTarget) return;
-
-    const inputId = this.querySelector('.dialog-add-edit-input-id');
-    const inputName = this.querySelector('.dialog-add-edit-input-name');
-    const copioImages = this.querySelector('copio-images');
-
-    inputId.value = '';
-    inputName.value = '';
-    copioImages.images = [];
-
+  handleAddEditHide() {
     if (router.getHashPath() !== '/') {
       router.navigate('/');
     }
@@ -186,25 +138,9 @@ class CopioApp extends LitElement {
   async #loadEditDoc(id) {
     const vals = this.store.getRow('docs', id);
     if (!vals) return;
-
-    await this.updateComplete;
-
-    const dialog = this.querySelector('.dialog-add-edit');
-    if (!dialog) return;
-
-    const inputId = this.querySelector('.dialog-add-edit-input-id');
-    const inputName = this.querySelector('.dialog-add-edit-input-name');
-    const copioImages = this.querySelector('copio-images');
-
-    inputId.value = id;
-    inputName.value = vals.name;
-
-    await customElements.whenDefined('copio-images');
     const pages = JSON.parse(vals.pages || '[]');
-    copioImages.images = pages.map(({ id, src, exif, type, name, content }) => ({ id, src, exif, type, name, content }));
-
-    await dialog.show();
-    inputName.focus();
+    const dialog = this.querySelector('copio-add-edit-dialog');
+    if (dialog) await dialog.openEdit(id, vals.name, pages);
   }
 
   async #startSyncHost() {
@@ -334,41 +270,7 @@ class CopioApp extends LitElement {
     }
   };
 
-  renderSyncDialog() {
-    if (!this.syncState) return '';
-    const { step, qrSvg, added, message } = this.syncState;
-    let body;
-    if (step === 'init') {
-      body = html`<sl-spinner></sl-spinner> Setting up…`;
-    } else if (step === 'waiting') {
-      body = html`<div .innerHTML=${qrSvg}></div>
-        <p>Waiting for other device…</p>`;
-    } else if (step === 'connecting') {
-      body = html`<sl-spinner></sl-spinner> Connecting…`;
-    } else if (step === 'syncing') {
-      body = html`<sl-spinner></sl-spinner> Syncing…`;
-    } else if (step === 'done') {
-      body = html`<p>
-        Sync complete — ${added} doc${added !== 1 ? 's' : ''} added.
-      </p>`;
-    } else if (step === 'error') {
-      body = html`<p style="color:var(--sl-color-danger-600)">
-        Error: ${message}
-      </p>`;
-    }
-    return html`
-      <sl-dialog
-        label="Link Device"
-        open
-        @sl-after-hide=${this.closeSyncDialog}
-      >
-        <div style="text-align:center;padding:1rem">${body}</div>
-        <sl-button slot="footer" @click=${this.closeSyncDialog}
-          >Close</sl-button
-        >
-      </sl-dialog>
-    `;
-  }
+  
 
 
   renderRows() {
@@ -474,41 +376,10 @@ class CopioApp extends LitElement {
 
         <div id="copio-rows">${this.renderRows()}</div>
 
-        <sl-dialog
-          label="Add / Edit"
-          class="dialog-add-edit"
-          style="--width: 90vw"
-          @sl-hide=${this.handleAddEditHide}
-          @keydown=${this.#handleDialogKeydown}
-        >
-          <div class="relative" style="min-height: 65vh">
-            <sl-input
-              disabled
-              class="dialog-add-edit-input-id"
-              placeholder="id"
-              style="display: none"
-            ></sl-input>
-            <sl-input
-              class="dialog-add-edit-input-name"
-              placeholder="Enter name of document or image"
-              style="max-width: 300px"
-            ></sl-input>
-
-            <copio-images
-              style="display: block; margin-top: 1.5rem"
-            ></copio-images>
-
-            <br />
-
-            <sl-button
-              class="dialog-add-edit-savebtn abm w-full"
-              slot="footer"
-              variant="primary"
-              @click=${this.handleAddEditSave}
-              >Save</sl-button
-            >
-          </div>
-        </sl-dialog>
+        <copio-add-edit-dialog
+          @copio-add-edit-dialog:save=${this.handleAddEditSave}
+          @copio-add-edit-dialog:hide=${this.handleAddEditHide}
+        ></copio-add-edit-dialog>
 
         <div class="mr2 mb2 fixed bottom-0 right-0 z4">
           <sl-icon-button
@@ -526,7 +397,9 @@ class CopioApp extends LitElement {
         @copio-carousel:close=${this.handleCarouselClose}
       ></copio-carousel>
 
-      ${this.renderSyncDialog()}
+      ${this.syncState ? html`<copio-sync-dialog
+        .syncState=${this.syncState}
+      ></copio-sync-dialog>` : ''}
       <copio-doc-ocr-dialog
         @copio-ocr:save-note=${this.handleOcrSaveNote}
       ></copio-doc-ocr-dialog>

@@ -1,5 +1,5 @@
-import { LitElement, html, css } from './lib/lit-core.min.js';
-import { recognizeImageText, SUPPORTED_LANGUAGES } from './ocr-service.js';
+import { LitElement, html, css } from '../../lib/lit-core.min.js';
+import { recognizeImageText, SUPPORTED_LANGUAGES } from '../../services/ocr-service.js';
 
 class CopioCarousel extends LitElement {
   static properties = {
