@@ -1,3 +1,6 @@
+[build.environment]
+  GIT_SUBMODULE_STRATEGY = "none"
+
 [[headers]]
   for = "/.well-known/assetlinks.json"
   [headers.values]
