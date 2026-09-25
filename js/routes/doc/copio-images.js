@@ -8,16 +8,11 @@ the element was and creates a duplicate — the moved node becomes orphaned.
 import Sortable from '../../lib/sortable.esm.js';
 import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from '../../utils/utils.js';
 import { renderPdfPagesToDataUrls } from '../../utils/pdf-utils.js';
-import { recognizeImageText, SUPPORTED_LANGUAGES } from '../../services/ocr-service.js';
-
 class CopioImages extends HTMLElement {
   #images = [];
   #cropper = null;
   #cropIndex = null;
   #textIndex = null;
-  #ocrIndex = null;
-  #ocrLang = 'eng';
-  #ocrResult = null;
   #isInitialized = false;
 
   constructor() {
@@ -51,10 +46,6 @@ class CopioImages extends HTMLElement {
   }
 
   #initShell() {
-    const langOptions = SUPPORTED_LANGUAGES.map(
-      (l) => `<sl-option value="${l.code}">${l.flag} ${l.label}</sl-option>`,
-    ).join('');
-
     const styles = `
       <link rel="stylesheet" href="css/cropper.css">
       <style>
@@ -146,11 +137,20 @@ class CopioImages extends HTMLElement {
         button.add-btn {
           width: 100%;
           aspect-ratio: 1;
-          font-size: 2rem;
+          font-size: 1.6rem;
           border: 2px dashed #888;
           border-radius: 4px;
           background: none;
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #64748b;
+          transition: border-color 0.15s, color 0.15s;
+        }
+        button.add-btn:hover {
+          border-color: #3b82f6;
+          color: #3b82f6;
         }
         dialog {
           border: none;
@@ -159,39 +159,6 @@ class CopioImages extends HTMLElement {
         }
         dialog::backdrop {
           background: rgba(0, 0, 0, 0.3);
-        }
-        .ocr-controls {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-bottom: 1rem;
-          padding-bottom: 0.75rem;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        .ocr-progress-box {
-          padding: 2rem 1rem;
-          text-align: center;
-        }
-        .ocr-status-text {
-          font-size: 1rem;
-          margin-bottom: 1rem;
-          color: #0284c7;
-          font-weight: 600;
-        }
-        .ocr-subtext {
-          font-size: 0.8rem;
-          color: #64748b;
-          margin-top: 0.6rem;
-        }
-        .ocr-stats {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.82rem;
-          color: #64748b;
-          margin-top: 0.5rem;
-          padding: 0 4px;
         }
       </style>
     `;
@@ -224,42 +191,6 @@ class CopioImages extends HTMLElement {
         </div>
         <sl-button slot="footer" variant="default" class="cancel-crop">Cancel</sl-button>
         <sl-button slot="footer" variant="primary" class="apply-crop">Apply</sl-button>
-      </sl-dialog>
-
-      <sl-dialog label="Text Recognition (OCR)" class="ocr-dialog" style="--width: 85vw">
-        <div class="ocr-controls">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <sl-select class="ocr-lang-select" size="small" value="eng" style="min-width: 190px;">
-              ${langOptions}
-            </sl-select>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <sl-badge variant="neutral" class="ocr-page-badge">Page 1</sl-badge>
-            <sl-badge variant="success" class="ocr-confidence-badge" style="display: none;"></sl-badge>
-          </div>
-        </div>
-
-        <div class="ocr-progress-box">
-          <div class="ocr-status-text">Starting OCR...</div>
-          <sl-progress-bar class="ocr-progress-bar" value="0"></sl-progress-bar>
-          <div class="ocr-subtext">Client-side WebAssembly OCR with zero server upload</div>
-        </div>
-
-        <div class="ocr-result-box" style="display: none;">
-          <sl-textarea class="ocr-text-editor" rows="12" placeholder="Extracted text..."></sl-textarea>
-          <div class="ocr-stats">
-            <span class="ocr-word-count">0 words</span>
-            <span class="ocr-char-count">0 characters</span>
-          </div>
-        </div>
-
-        <sl-button slot="footer" variant="default" class="ocr-close-btn">Close</sl-button>
-        <sl-button slot="footer" variant="default" class="ocr-copy-btn" style="display: none;">
-          <sl-icon slot="prefix" name="clipboard"></sl-icon> Copy Text
-        </sl-button>
-        <sl-button slot="footer" variant="primary" class="ocr-add-md-btn" style="display: none;">
-          <sl-icon slot="prefix" name="file-earmark-plus"></sl-icon> Add as Note Page
-        </sl-button>
       </sl-dialog>
     `;
 
@@ -315,29 +246,8 @@ class CopioImages extends HTMLElement {
       this.#cropIndex = null;
     });
 
-    // OCR Dialog Event Listeners
-    const ocrDialog = this.shadowRoot.querySelector('.ocr-dialog');
-    const ocrLangSelect = this.shadowRoot.querySelector('.ocr-lang-select');
-    const ocrCloseBtn = this.shadowRoot.querySelector('.ocr-close-btn');
-    const ocrCopyBtn = this.shadowRoot.querySelector('.ocr-copy-btn');
-    const ocrAddMdBtn = this.shadowRoot.querySelector('.ocr-add-md-btn');
-
-    ocrCloseBtn.onclick = () => this.closeOcrDialog();
-    ocrCopyBtn.onclick = () => this.copyOcrText();
-    ocrAddMdBtn.onclick = () => this.addOcrAsMarkdownPage();
-
-    ocrLangSelect.addEventListener('sl-change', (e) => {
-      this.#ocrLang = e.target.value;
-      if (this.#ocrIndex !== null) {
-        this.runOcr(this.#ocrIndex, this.#ocrLang);
-      }
-    });
-
-    ocrDialog.addEventListener('sl-hide', () => {
-      this.#ocrIndex = null;
-      this.#ocrResult = null;
-    });
   }
+
 
   #renderGrid() {
     const container = this.shadowRoot.querySelector('.container');
@@ -379,7 +289,7 @@ class CopioImages extends HTMLElement {
               </sl-button>
               <sl-menu>
                 <sl-menu-item value="ocr">
-                  <sl-icon slot="prefix" name="card-text"></sl-icon> Extract Text (OCR)
+                  <sl-icon slot="prefix" name="card-text"></sl-icon> Extract Text
                 </sl-menu-item>
                 <sl-divider></sl-divider>
                 <sl-menu-item value="crop">Crop</sl-menu-item>
@@ -398,11 +308,20 @@ class CopioImages extends HTMLElement {
 
     container.innerHTML = `
       ${imageHtml}
-      <button class="add-btn" title="Add Image">+</button>
+      <button class="add-btn add-image-btn" title="Add image or PDF">
+        <sl-icon name="image"></sl-icon>
+      </button>
+      <button class="add-btn add-note-btn" title="New blank note">
+        <sl-icon name="file-earmark-plus"></sl-icon>
+      </button>
     `;
 
-    container.querySelector('.add-btn').onclick = () => {
+    container.querySelector('.add-image-btn').onclick = () => {
       this.shadowRoot.querySelector('.upload-dialog').show();
+    };
+
+    container.querySelector('.add-note-btn').onclick = () => {
+      this.addBlankNote();
     };
 
     container.querySelectorAll('.image-menu').forEach((dropdown) => {
@@ -414,7 +333,17 @@ class CopioImages extends HTMLElement {
 
         if (action === 'ocr') {
           dropdown.hide();
-          this.openOcrDialog(index);
+          // Bubble up to copio-app, which opens the shared copio-doc-ocr-dialog
+          this.dispatchEvent(
+            new CustomEvent('copio:ocr-page', {
+              bubbles: true,
+              composed: true,
+              detail: {
+                page: this.#images[index],
+                pageIndex: index,
+              },
+            }),
+          );
         } else if (action === 'crop') {
           dropdown.hide();
           this.openCropDialog(index);
@@ -514,119 +443,18 @@ class CopioImages extends HTMLElement {
     this.setAttribute('images', JSON.stringify(this.#images));
   }
 
-  // OCR Methods
-  openOcrDialog(index) {
-    this.#ocrIndex = index;
-    const ocrDialog = this.shadowRoot.querySelector('.ocr-dialog');
-    const pageBadge = this.shadowRoot.querySelector('.ocr-page-badge');
-    const confidenceBadge = this.shadowRoot.querySelector('.ocr-confidence-badge');
-
-    pageBadge.textContent = `Page ${index + 1}`;
-    confidenceBadge.style.display = 'none';
-
-    ocrDialog.show();
-    this.runOcr(index, this.#ocrLang);
-  }
-
-  closeOcrDialog() {
-    const ocrDialog = this.shadowRoot.querySelector('.ocr-dialog');
-    this.#ocrIndex = null;
-    this.#ocrResult = null;
-    ocrDialog.hide();
-  }
-
-  async runOcr(index, lang = 'eng') {
-    const page = this.#images[index];
-    if (!page || !page.src) return;
-
-    const progressBox = this.shadowRoot.querySelector('.ocr-progress-box');
-    const resultBox = this.shadowRoot.querySelector('.ocr-result-box');
-    const statusText = this.shadowRoot.querySelector('.ocr-status-text');
-    const progressBar = this.shadowRoot.querySelector('.ocr-progress-bar');
-    const confidenceBadge = this.shadowRoot.querySelector('.ocr-confidence-badge');
-    const copyBtn = this.shadowRoot.querySelector('.ocr-copy-btn');
-    const addMdBtn = this.shadowRoot.querySelector('.ocr-add-md-btn');
-    const textEditor = this.shadowRoot.querySelector('.ocr-text-editor');
-    const wordCount = this.shadowRoot.querySelector('.ocr-word-count');
-    const charCount = this.shadowRoot.querySelector('.ocr-char-count');
-
-    progressBox.style.display = 'block';
-    resultBox.style.display = 'none';
-    copyBtn.style.display = 'none';
-    addMdBtn.style.display = 'none';
-    confidenceBadge.style.display = 'none';
-    progressBar.value = 0;
-    statusText.textContent = 'Initializing WebAssembly OCR engine...';
-
-    try {
-      const result = await recognizeImageText(page.src, {
-        lang,
-        onProgress: ({ progress, message }) => {
-          progressBar.value = Math.round((progress || 0) * 100);
-          statusText.textContent = message || 'Processing...';
-        },
-      });
-
-      this.#ocrResult = result;
-      textEditor.value = result.text || '';
-
-      const words = (result.text || '').trim().split(/\s+/).filter(Boolean).length;
-      const chars = (result.text || '').length;
-      wordCount.textContent = `${words} word${words !== 1 ? 's' : ''}`;
-      charCount.textContent = `${chars} character${chars !== 1 ? 's' : ''}`;
-
-      confidenceBadge.textContent = `${result.confidence}% Confidence`;
-      confidenceBadge.variant = result.confidence >= 75 ? 'success' : result.confidence >= 50 ? 'warning' : 'danger';
-      confidenceBadge.style.display = 'inline-block';
-
-      progressBox.style.display = 'none';
-      resultBox.style.display = 'block';
-      copyBtn.style.display = 'inline-flex';
-      addMdBtn.style.display = 'inline-flex';
-    } catch (err) {
-      console.error('OCR recognition error:', err);
-      statusText.textContent = `OCR Error: ${err.message || 'Recognition failed'}`;
-      statusText.style.color = '#ef4444';
-      progressBar.value = 0;
-    }
-  }
-
-  async copyOcrText() {
-    const textEditor = this.shadowRoot.querySelector('.ocr-text-editor');
-    const copyBtn = this.shadowRoot.querySelector('.ocr-copy-btn');
-    const text = textEditor.value || '';
-
-    try {
-      await navigator.clipboard.writeText(text);
-      const origHtml = copyBtn.innerHTML;
-      copyBtn.innerHTML = '<sl-icon slot="prefix" name="check"></sl-icon> Copied!';
-      setTimeout(() => {
-        copyBtn.innerHTML = origHtml;
-      }, 2000);
-    } catch (e) {
-      console.error('Failed to copy to clipboard:', e);
-    }
-  }
-
-  addOcrAsMarkdownPage() {
-    const textEditor = this.shadowRoot.querySelector('.ocr-text-editor');
-    const text = textEditor.value || '';
-    if (!text.trim()) return;
-
-    const pageIndex = this.#ocrIndex !== null ? this.#ocrIndex : this.#images.length - 1;
-    const pageNumber = pageIndex + 1;
-
-    const newMarkdownPage = {
+  addBlankNote() {
+    const newNote = {
       id: randomId(),
       type: 'markdown',
-      name: `OCR - Page ${pageNumber}`,
-      content: text,
+      name: 'New Note',
+      content: '',
     };
-
-    // Insert right after the image
-    this.#images.splice(pageIndex + 1, 0, newMarkdownPage);
+    this.#images.push(newNote);
     this.setAttribute('images', JSON.stringify(this.#images));
-    this.closeOcrDialog();
+    // Re-render the grid first, then open the editor on the new note
+    this.#renderGrid();
+    this.openTextDialog(this.#images.length - 1);
   }
 
   downloadImage(index) {
@@ -659,6 +487,7 @@ class CopioImages extends HTMLElement {
     const textDialog = this.shadowRoot.querySelector('.text-dialog');
     const textEditor = this.shadowRoot.querySelector('.text-editor');
     textEditor.value = this.#images[index].content || '';
+    textDialog.label = this.#images[index].name || 'Note';
     textDialog.show();
   }
 

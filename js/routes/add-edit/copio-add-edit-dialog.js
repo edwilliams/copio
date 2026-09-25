@@ -21,11 +21,15 @@ class CopioAddEditDialog extends LitElement {
   };
 
   #handleKeydown = (e) => {
-    if (e.key === 'Enter') {
-      if (e.target?.tagName === 'SL-BUTTON' || e.target?.tagName === 'BUTTON') return;
-      e.preventDefault();
-      this.#handleSave();
-    }
+    if (e.key !== 'Enter') return;
+    // Don't intercept Enter when a nested dialog/modal is open (note editor, cropper, etc.)
+    if (this.querySelector('sl-dialog[open]')) return;
+    // Don't intercept Enter from text inputs or textareas
+    const tag = e.target?.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SL-TEXTAREA' || tag === 'INPUT' || tag === 'SL-INPUT') return;
+    if (e.target?.tagName === 'SL-BUTTON' || e.target?.tagName === 'BUTTON') return;
+    e.preventDefault();
+    this.#handleSave();
   };
 
   async open() {
@@ -40,6 +44,11 @@ class CopioAddEditDialog extends LitElement {
     await this.updateComplete;
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
+
+    // If the dialog is still open (e.g. mid-close animation), wait for it to finish
+    if (dialog.open) {
+      await new Promise((resolve) => dialog.addEventListener('sl-after-hide', resolve, { once: true }));
+    }
 
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
@@ -91,7 +100,7 @@ class CopioAddEditDialog extends LitElement {
         label="Add / Edit"
         class="dialog-add-edit"
         style="--width: 90vw"
-        @sl-hide=${this.#handleHide}
+        @sl-after-hide=${this.#handleHide}
         @keydown=${this.#handleKeydown}
       >
         <div class="relative" style="min-height: 65vh">

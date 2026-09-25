@@ -230,20 +230,66 @@ class CopioApp extends LitElement {
     }
   }
 
+  /**
+   * Handle copio:ocr-page — fired by copio-images (page grid) or copio-carousel.
+   * Determines the current document from the active route and opens the shared
+   * OCR dialog in single-page mode via openPage().
+   */
+  handleOcrPage(e) {
+    const { page, pageIndex } = e.detail || {};
+    if (!page) return;
+
+    // Find the active doc from the current route
+    const currentPath = router.getHashPath();
+    let docId = null;
+
+    // Carousel view route: /doc/:id
+    const viewMatch = currentPath.match(/^\/doc\/([^/]+)$/);
+    // Edit route: /doc/:id/edit
+    const editMatch = currentPath.match(/^\/doc\/([^/]+)\/edit$/);
+
+    if (viewMatch) docId = viewMatch[1];
+    else if (editMatch) docId = editMatch[1];
+
+    if (!docId) return;
+
+    const vals = this.store.getRow('docs', docId);
+    if (!vals) return;
+
+    const ocrDialog = this.querySelector('copio-doc-ocr-dialog');
+    if (ocrDialog) {
+      ocrDialog.openPage(docId, vals.name, page, pageIndex);
+    }
+  }
+
   handleOcrSaveNote(e) {
-    const { docId, content } = e.detail || {};
+    const { docId, content, pageIndex } = e.detail || {};
     if (!docId || !content) return;
 
     const vals = this.store.getRow('docs', docId);
     if (!vals) return;
 
     const pages = JSON.parse(vals.pages || '[]');
-    pages.push({
+
+    const noteName =
+      pageIndex !== null && pageIndex !== undefined
+        ? `OCR — Page ${pageIndex + 1}`
+        : 'OCR Full Transcript';
+
+    const newNote = {
       id: randomId(),
       type: 'markdown',
-      name: 'OCR Full Transcript',
+      name: noteName,
       content,
-    });
+    };
+
+    if (pageIndex !== null && pageIndex !== undefined) {
+      // Insert right after the source image page
+      pages.splice(pageIndex + 1, 0, newNote);
+    } else {
+      // Full-document mode: append at the end
+      pages.push(newNote);
+    }
 
     this.store.setRow('docs', docId, {
       ...vals,
@@ -379,6 +425,7 @@ class CopioApp extends LitElement {
         <copio-add-edit-dialog
           @copio-add-edit-dialog:save=${this.handleAddEditSave}
           @copio-add-edit-dialog:hide=${this.handleAddEditHide}
+          @copio:ocr-page=${this.handleOcrPage}
         ></copio-add-edit-dialog>
 
         <div class="mr2 mb2 fixed bottom-0 right-0 z4">

@@ -33,9 +33,36 @@ class CopioDocOcrDialog extends LitElement {
     this.resultText = '';
     this.confidence = 0;
     this.copied = false;
+    // Set in single-page mode so Save as Note inserts adjacent to the source image
+    this._pageIndex = null;
   }
 
+  /**
+   * Open for a full document (all image pages).
+   * @param {string} docId
+   * @param {string} docName
+   * @param {Array} pages
+   * @param {string} [lang]
+   */
   open(docId, docName, pages, lang = 'eng') {
+    this._pageIndex = null;
+    this._openInternal(docId, docName, pages, lang);
+  }
+
+  /**
+   * Open for a single page (from the page grid or carousel).
+   * @param {string} docId
+   * @param {string} docName
+   * @param {{ id: string, src: string }} page   – the single image page object
+   * @param {number} pageIndex                   – its index in the document pages array
+   * @param {string} [lang]
+   */
+  openPage(docId, docName, page, pageIndex, lang = 'eng') {
+    this._pageIndex = pageIndex;
+    this._openInternal(docId, docName, [page], lang);
+  }
+
+  _openInternal(docId, docName, pages, lang) {
     this.docId = docId;
     this.docName = docName || 'Document';
     this.pages = pages || [];
@@ -141,20 +168,32 @@ class CopioDocOcrDialog extends LitElement {
         detail: {
           docId: this.docId,
           content: this.resultText,
+          // pageIndex is set in single-page mode so the note is inserted adjacent to the source image
+          pageIndex: this._pageIndex,
         },
       }),
     );
 
-    alert('OCR Transcript saved as a Markdown Note in this document!');
     this.close();
   };
+
+  get _isSinglePage() {
+    return this._pageIndex !== null;
+  }
+
+  get _dialogLabel() {
+    if (this._isSinglePage) {
+      return `Extract Text — ${this.docName} (Page ${this._pageIndex + 1})`;
+    }
+    return `Extract All Text — ${this.docName}`;
+  }
 
   render() {
     if (!this.isOpen) return '';
 
     return html`
       <sl-dialog
-        label="Extract All Text (OCR) — ${this.docName}"
+        label="${this._dialogLabel}"
         open
         style="--width: 85vw"
         @sl-after-hide=${this.close}
@@ -230,6 +269,10 @@ class CopioDocOcrDialog extends LitElement {
               <sl-button slot="footer" variant="default" @click=${this.copyText}>
                 <sl-icon slot="prefix" name=${this.copied ? 'check' : 'clipboard'}></sl-icon>
                 ${this.copied ? 'Copied!' : 'Copy All'}
+              </sl-button>
+              <sl-button slot="footer" variant="default" @click=${this.downloadText}>
+                <sl-icon slot="prefix" name="download"></sl-icon>
+                Download .txt
               </sl-button>
               <sl-button slot="footer" variant="default" @click=${this.downloadMarkdown}>
                 <sl-icon slot="prefix" name="download"></sl-icon>
