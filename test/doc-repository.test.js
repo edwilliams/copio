@@ -1,15 +1,15 @@
 import { expect } from '@esm-bundle/chai';
 import { DocRepository } from '../js/services/doc-repository.js';
-import { TinyBaseAdapter } from '../js/services/adapters/tinybase-adapter.js';
+import { IndexedDbAdapter } from '../js/services/adapters/indexed-db-adapter.js';
 import { MemoryAdapter } from '../js/services/adapters/memory-adapter.js';
 
 const adapters = [
-  { name: 'TinyBaseAdapter', create: () => new TinyBaseAdapter() },
+  { name: 'IndexedDbAdapter', create: () => new IndexedDbAdapter() },
   { name: 'MemoryAdapter', create: () => new MemoryAdapter() }
 ];
 
 for (const { name, create } of adapters) {
-  describe(`doc-repository.js with ${name}`, () => {
+  describe(`doc-repository.js with \${name}`, () => {
     let repo;
 
     beforeEach(async () => {
@@ -33,7 +33,7 @@ for (const { name, create } of adapters) {
     it('saveDoc should update document name and pages', () => {
       const docId = repo.createDoc('Initial');
       
-      const pages = [{ id: 'p1', src: 'data:image/png;base64,A==' }];
+      const pages = [{ id: 'p1', type: 'image' }];
       repo.saveDoc(docId, 'Updated', pages);
       
       const doc = repo.getDoc(docId);

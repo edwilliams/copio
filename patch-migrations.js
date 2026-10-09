@@ -1,4 +1,6 @@
-import { createStore } from '../lib/tinybase.6.5.2.js';
+import fs from 'fs';
+
+const content = `import { createStore } from '../lib/tinybase.6.5.2.js';
 import { createIndexedDbPersister } from '../lib/tinybase-persister-indexed-db.js';
 
 export const CURRENT_SCHEMA_VERSION = 2;
@@ -29,9 +31,7 @@ async function migrateV1ToV2(adapter, oldStore) {
 }
 
 export async function runMigrations(adapter) {
-  if (!adapter.getRawStore) return;
   const store = adapter.getRawStore();
-  if (!store) return;
   let currentVersion = store.getValue('schemaVersion') || 0;
 
   if (currentVersion === 0 && Object.keys(store.getTable('docs')).length === 0) {
@@ -64,3 +64,6 @@ export async function runMigrations(adapter) {
     currentVersion = 2;
   }
 }
+`;
+
+fs.writeFileSync('js/core/migrations.js', content);

@@ -1,7 +1,8 @@
-import { randomId } from '../utils/utils.js';
+import fs from 'fs';
+
+const content = `import { randomId } from '../utils/utils.js';
 import { OpfsAdapter } from './adapters/opfs-adapter.js';
 import { IndexedDbAdapter } from './adapters/indexed-db-adapter.js';
-import { runMigrations } from '../core/migrations.js';
 
 export class DocRepository {
   constructor(adapter = null) {
@@ -16,10 +17,7 @@ export class DocRepository {
         this.adapter = new IndexedDbAdapter();
       }
     }
-    const result = await this.adapter.init();
-    this.adapter.persistent = result.persistent;
-    await runMigrations(this);
-    return result;
+    return this.adapter.init();
   }
 
   listDocs() {
@@ -75,3 +73,6 @@ export class DocRepository {
 }
 
 export const docRepository = new DocRepository();
+`;
+
+fs.writeFileSync('js/services/doc-repository.js', content);

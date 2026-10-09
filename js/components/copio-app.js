@@ -6,6 +6,30 @@ import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown }
 import { SyncManager } from '../services/sync-service.js';
 
 class CopioApp extends LitElement {
+
+  #objectUrls = new Set();
+  
+
+  async #hydratePages(id, pages) {
+    return await Promise.all(pages.map(async (p) => {
+      if (p.type === 'markdown') return p;
+      const blob = await this.repo.getPage(id, p.id);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        this.#objectUrls.add(url);
+        return { ...p, src: url };
+      }
+      return p;
+    }));
+  }
+
+  #cleanupObjectUrls() {
+    for (const url of this.#objectUrls) {
+      URL.revokeObjectURL(url);
+    }
+    this.#objectUrls.clear();
+  }
+
   #syncManager = null;
   #unsubscribeRouter = null;
 
@@ -137,13 +161,48 @@ class CopioApp extends LitElement {
     }
   }
 
-  handleAddEditSave(e) {
+  async handleAddEditSave(e) {
     const { id, name, pages } = e.detail;
-    this.repo.saveDoc(id, name, pages);
+    const oldDoc = this.repo.getDoc(id);
+    const oldPageIds = new Set(oldDoc ? oldDoc.pages.map(p => p.id) : []);
+    
+    const newPagesForMeta = [];
+    
+    for (const page of pages) {
+      oldPageIds.delete(page.id);
+      
+      const pMeta = { ...page };
+      
+      if (page.type === 'markdown') {
+        newPagesForMeta.push(pMeta);
+        continue;
+      }
+      
+      if (page.file) {
+        await this.repo.savePage(id, page.id, page.file);
+        delete pMeta.file;
+        delete pMeta.src;
+      } else if (page.src && page.src.startsWith('data:')) {
+        const blob = await (await fetch(page.src)).blob();
+        await this.repo.savePage(id, page.id, blob);
+        delete pMeta.src;
+      } else {
+        delete pMeta.src;
+      }
+      newPagesForMeta.push(pMeta);
+    }
+    
+    for (const deletedId of oldPageIds) {
+      await this.repo.deletePage(id, deletedId);
+    }
+    
+    this.repo.saveDoc(id, name, newPagesForMeta);
+    this.#cleanupObjectUrls();
     router.navigate('/');
   }
 
   handleAddEditHide() {
+    this.#cleanupObjectUrls();
     if (router.getHashPath() !== '/') {
       router.navigate('/');
     }
@@ -171,13 +230,14 @@ class CopioApp extends LitElement {
     if (id) router.navigate(`/doc/${id}/edit`);
   }
 
-  #loadCarouselDoc(id) {
+  async #loadCarouselDoc(id) {
     const doc = this.repo.getDoc(id);
     if (!doc) return;
 
     const carousel = this.querySelector('copio-carousel');
     if (carousel) {
-      carousel.images = doc.pages;
+      const pagesWithUrls = await this.#hydratePages(id, doc.pages);
+      carousel.images = pagesWithUrls;
       this.showCarousel = true;
     }
   }
@@ -199,14 +259,18 @@ class CopioApp extends LitElement {
     const id = e.detail?.id;
     const doc = this.repo.getDoc(id);
     if (!doc) return;
-    await exportDocumentAsPdf(doc.name, doc.pages);
+    const hydratedPages = await this.#hydratePages(id, doc.pages);
+    await exportDocumentAsPdf(doc.name, hydratedPages);
+    this.#cleanupObjectUrls();
   }
 
   async handleRowDownloadImages(e) {
     const id = e.detail?.id;
     const doc = this.repo.getDoc(id);
     if (!doc) return;
-    await exportDocumentAsImages(doc.name, doc.pages);
+    const hydratedPages = await this.#hydratePages(id, doc.pages);
+    await exportDocumentAsImages(doc.name, hydratedPages);
+    this.#cleanupObjectUrls();
   }
 
   handleRowDownloadMarkdown(e) {
@@ -217,21 +281,29 @@ class CopioApp extends LitElement {
   }
 
   // Document OCR Handlers
-  handleRowExtractOcr(e) {
+  async handleRowExtractOcr(e) {
     const id = e.detail?.id;
     const doc = this.repo.getDoc(id);
     if (!doc) return;
 
-    const imagePages = doc.pages.filter((p) => p.type !== 'markdown' && p.src);
+    const hydratedPages = await this.#hydratePages(id, doc.pages);
+    const imagePages = hydratedPages.filter((p) => p.type !== 'markdown' && p.src);
 
     if (imagePages.length === 0) {
       alert('This document does not contain any image pages to perform text recognition on.');
+      this.#cleanupObjectUrls();
       return;
     }
 
     const ocrDialog = this.querySelector('copio-doc-ocr-dialog');
     if (ocrDialog) {
-      ocrDialog.open(id, doc.name, doc.pages);
+      // Note: we can't cleanup URLs immediately because the dialog stays open
+      ocrDialog.open(id, doc.name, hydratedPages);
+      ocrDialog.addEventListener('sl-after-hide', () => {
+        this.#cleanupObjectUrls();
+      }, { once: true });
+    } else {
+      this.#cleanupObjectUrls();
     }
   }
 
@@ -300,6 +372,7 @@ class CopioApp extends LitElement {
   }
 
   handleCarouselClose() {
+    this.#cleanupObjectUrls();
     router.navigate('/');
   }
 
@@ -414,6 +487,7 @@ class CopioApp extends LitElement {
         style="display: ${this.hideLoaderTimer === null ? 'none' : 'block'}"
       ></copio-loader>
 
+
       <article
         class="copio-items"
         style="display: ${this.showCarousel ? 'none' : 'block'}"
@@ -421,6 +495,14 @@ class CopioApp extends LitElement {
         <copio-header
           @copio-header:link-device=${this.startSyncAsHost}
         ></copio-header>
+
+        ${(!this.hideLoaderTimer && this.repo.adapter && (this.repo.adapter.constructor.name === 'IndexedDbAdapter' || !this.repo.adapter.persistent)) ? html`
+          <sl-alert variant="warning" closable open style="margin: 1rem;" class="durability-notice">
+            <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+            <strong>Storage Warning:</strong> This browser may delete your documents if storage runs low.
+            Export or <a href="#" @click=${(e) => { e.preventDefault(); this.startSyncAsHost(); }}>sync</a> important documents to keep a copy.
+          </sl-alert>
+        ` : ''}
 
         <div id="copio-rows">${this.renderRows()}</div>
 
