@@ -18,13 +18,16 @@ export function createOpfsPersister(store, path) {
         
         const fileHandle = await currentDir.getFileHandle(filename);
         const file = await fileHandle.getFile();
-        return await file.text();
+        const text = await file.text();
+        return JSON.parse(text);
       } catch (e) {
         return undefined;
       }
     },
     async (getContent) => {
-      const text = getContent();
+      const data = await getContent();
+      const text = JSON.stringify(data);
+      // console.log('SAVING TO OPFS, text:', text);
       const dir = await navigator.storage.getDirectory();
       
       const parts = path.split('/');
