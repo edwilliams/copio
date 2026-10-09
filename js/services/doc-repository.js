@@ -6,6 +6,7 @@ import { runMigrations } from '../core/migrations.js';
 export class DocRepository {
   constructor(adapter = null) {
     this.adapter = adapter;
+    this.listeners = new Set();
   }
 
   async init() {
@@ -19,6 +20,11 @@ export class DocRepository {
     const result = await this.adapter.init();
     this.adapter.persistent = result.persistent;
     await runMigrations(this);
+    this.adapter.subscribe(() => {
+      for (const cb of this.listeners) cb();
+    });
+    // Trigger listeners initially so UI gets the loaded data
+    for (const cb of this.listeners) cb();
     return result;
   }
 
@@ -57,7 +63,8 @@ export class DocRepository {
   }
 
   subscribe(callback) {
-    return this.adapter?.subscribe(callback);
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
   }
   
   unsubscribe(unsubscribeFn) {
