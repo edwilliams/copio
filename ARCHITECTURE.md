@@ -199,3 +199,11 @@ Globals are loaded as classic `<script>` tags in `index.html` before the module 
 - **OCR workers are long-lived** — `ocr-service.js` caches the active Tesseract worker; switching language terminates and recreates it
 - **P2P sync requires internet** — PeerJS needs its signalling server; `sync-service.js` checks `navigator.onLine` before attempting
 - **Tesseract and PDF.js worker paths** in `ocr-service.js` and `pdf-utils.js` are hardcoded as absolute paths from the site root — they don't need updating if those service files move
+
+---
+
+## Deployment & Feature Branches
+
+- **Main Branch**: `master` is deployed directly to production on Netlify.
+- **Feature Branches & Deploy Previews**: Work on tickets should be pushed to dedicated feature branches (`feature/CPO-xxx`) with a GitHub Pull Request. Netlify automatically creates an ephemeral **Deploy Preview** URL (e.g. `https://deploy-preview-12--copio.netlify.app`) for each PR, posting the link as a GitHub PR comment for live testing before merging into `master`.
+
