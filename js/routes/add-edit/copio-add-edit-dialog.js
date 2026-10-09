@@ -45,11 +45,6 @@ class CopioAddEditDialog extends LitElement {
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
 
-    // If the dialog is still open (e.g. mid-close animation), wait for it to finish
-    if (dialog.open) {
-      await new Promise((resolve) => dialog.addEventListener('sl-after-hide', resolve, { once: true }));
-    }
-
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const copioImages = this.querySelector('copio-images');
@@ -60,8 +55,10 @@ class CopioAddEditDialog extends LitElement {
     await customElements.whenDefined('copio-images');
     copioImages.images = pages.map(({ id, src, exif, type, name, content }) => ({ id, src, exif, type, name, content }));
 
-    await dialog.show();
-    inputName.focus();
+    if (!dialog.open) {
+      await dialog.show();
+      inputName.focus();
+    }
   }
 
   #handleSave = () => {

@@ -52,7 +52,7 @@ class CopioApp extends LitElement {
     this.hideLoader();
 
     // Load persisted data - triggers TinyBase listener → updates docsData → Lit re-renders
-    this.persister.load();
+    await this.persister.load();
 
     this.#unsubscribeRouter = router.onRouteChange((route) => {
       this.#handleRouteChange(route);
@@ -149,7 +149,7 @@ class CopioApp extends LitElement {
 
   async #loadEditDoc(id) {
     const vals = this.store.getRow('docs', id);
-    if (!vals) return;
+    if (!vals || Object.keys(vals).length === 0) return;
     const pages = JSON.parse(vals.pages || '[]');
     const dialog = this.querySelector('copio-add-edit-dialog');
     if (dialog) await dialog.openEdit(id, vals.name, pages);
@@ -172,7 +172,7 @@ class CopioApp extends LitElement {
 
   #loadCarouselDoc(id) {
     const vals = this.store.getRow('docs', id);
-    if (!vals) return;
+    if (!vals || Object.keys(vals).length === 0) return;
 
     const carousel = this.querySelector('copio-carousel');
     if (carousel) {
