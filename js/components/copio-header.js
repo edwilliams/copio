@@ -25,6 +25,32 @@ class CopioHeader extends LitElement {
     }
   `;
 
+  static properties = {
+    _storageEstimate: { state: true },
+    _isPersisted: { state: true },
+  };
+
+  async connectedCallback() {
+    super.connectedCallback();
+    if (navigator.storage) {
+      if (navigator.storage.persisted) {
+        this._isPersisted = await navigator.storage.persisted();
+      }
+      if (navigator.storage.estimate) {
+        this._storageEstimate = await navigator.storage.estimate();
+      }
+    }
+  }
+
+  _formatBytes(bytes) {
+    if (bytes === undefined || bytes === null) return 'Unknown';
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
   async #handleSelect(e) {
     if (e.detail.item.value === 'link-device') {
       this.dispatchEvent(new CustomEvent('copio-header:link-device', { bubbles: true, composed: true }));
@@ -55,6 +81,11 @@ class CopioHeader extends LitElement {
             <sl-menu @sl-select=${this.#handleSelect}>
               <sl-menu-item value="link-device">Link another device</sl-menu-item>
               <sl-menu-item value="clear-cache">Clear cache &amp; update</sl-menu-item>
+              <sl-divider></sl-divider>
+              <sl-menu-item disabled>
+                Storage: ${this._formatBytes(this._storageEstimate?.usage)} 
+                (${this._isPersisted ? 'Persisted' : 'Volatile'})
+              </sl-menu-item>
             </sl-menu>
           </sl-dropdown>
         </div>

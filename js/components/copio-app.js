@@ -48,8 +48,18 @@ class CopioApp extends LitElement {
   }
 
   // Runs after first render - replaces connectedCallback
-  firstUpdated() {
+  async firstUpdated() {
     this.hideLoader();
+
+    // Request persistent storage
+    if (navigator.storage && navigator.storage.persist) {
+      try {
+        const isPersisted = await navigator.storage.persist();
+        console.log(`[Storage] Persist granted: ${isPersisted}`);
+      } catch (err) {
+        console.warn(`[Storage] Persist request failed:`, err);
+      }
+    }
 
     // Load persisted data - triggers TinyBase listener → updates docsData → Lit re-renders
     this.persister.load();
