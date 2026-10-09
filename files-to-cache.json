@@ -71,6 +71,8 @@
   "js/routes/home/copio-row.js",
   "js/routes/ocr/copio-doc-ocr-dialog.js",
   "js/routes/sync/copio-sync-dialog.js",
+  "js/services/adapters/memory-adapter.js",
+  "js/services/adapters/tinybase-adapter.js",
   "js/services/doc-repository.js",
   "js/services/export-utils.js",
   "js/services/ocr-service.js",

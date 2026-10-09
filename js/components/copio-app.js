@@ -57,7 +57,7 @@ class CopioApp extends LitElement {
     this.hideLoader();
 
     // Load persisted data - triggers TinyBase listener → updates docsData → Lit re-renders
-    this.repo.load();
+    await this.repo.init();
 
     this.#unsubscribeRouter = router.onRouteChange((route) => {
       this.#handleRouteChange(route);
