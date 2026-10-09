@@ -1,46 +1,60 @@
 import { expect } from '@esm-bundle/chai';
-import { docRepository } from '../js/services/doc-repository.js';
+import { DocRepository } from '../js/services/doc-repository.js';
+import { TinyBaseAdapter } from '../js/services/adapters/tinybase-adapter.js';
+import { MemoryAdapter } from '../js/services/adapters/memory-adapter.js';
 
-describe('doc-repository.js', () => {
-  beforeEach(async () => {
-    // Clear out the docs table before each test
-    docRepository.store.delTable('docs');
-  });
+const adapters = [
+  { name: 'TinyBaseAdapter', create: () => new TinyBaseAdapter() },
+  { name: 'MemoryAdapter', create: () => new MemoryAdapter() }
+];
 
-  it('createDoc should create a new document with given name and empty pages', () => {
-    const docId = docRepository.createDoc('My Doc');
-    const doc = docRepository.getDoc(docId);
-    
-    expect(doc).to.exist;
-    expect(doc.id).to.equal(docId);
-    expect(doc.name).to.equal('My Doc');
-    expect(doc.pages).to.deep.equal([]);
-  });
+for (const { name, create } of adapters) {
+  describe(`doc-repository.js with ${name}`, () => {
+    let repo;
 
-  it('saveDoc should update document name and pages', () => {
-    const docId = docRepository.createDoc('Initial');
-    
-    const pages = [{ id: 'p1', src: 'data:image/png;base64,A==' }];
-    docRepository.saveDoc(docId, 'Updated', pages);
-    
-    const doc = docRepository.getDoc(docId);
-    expect(doc.name).to.equal('Updated');
-    expect(doc.pages).to.deep.equal(pages);
-  });
+    beforeEach(async () => {
+      repo = new DocRepository(create());
+      await repo.init();
+      if (repo.getRawStore()) {
+        repo.getRawStore().delTable('docs');
+      }
+    });
 
-  it('deleteDoc should remove the document', () => {
-    const docId = docRepository.createDoc('To Delete');
-    expect(docRepository.getDoc(docId)).to.exist;
-    
-    docRepository.deleteDoc(docId);
-    expect(docRepository.getDoc(docId)).to.be.null;
-  });
+    it('createDoc should create a new document with given name and empty pages', () => {
+      const docId = repo.createDoc('My Doc');
+      const doc = repo.getDoc(docId);
+      
+      expect(doc).to.exist;
+      expect(doc.id).to.equal(docId);
+      expect(doc.name).to.equal('My Doc');
+      expect(doc.pages).to.deep.equal([]);
+    });
 
-  it('listDocs should return all documents', () => {
-    docRepository.createDoc('Doc 1');
-    docRepository.createDoc('Doc 2');
-    
-    const docs = docRepository.listDocs();
-    expect(Object.keys(docs).length).to.equal(2);
+    it('saveDoc should update document name and pages', () => {
+      const docId = repo.createDoc('Initial');
+      
+      const pages = [{ id: 'p1', src: 'data:image/png;base64,A==' }];
+      repo.saveDoc(docId, 'Updated', pages);
+      
+      const doc = repo.getDoc(docId);
+      expect(doc.name).to.equal('Updated');
+      expect(doc.pages).to.deep.equal(pages);
+    });
+
+    it('deleteDoc should remove the document', () => {
+      const docId = repo.createDoc('To Delete');
+      expect(repo.getDoc(docId)).to.exist;
+      
+      repo.deleteDoc(docId);
+      expect(repo.getDoc(docId)).to.be.null;
+    });
+
+    it('listDocs should return all documents', () => {
+      repo.createDoc('Doc 1');
+      repo.createDoc('Doc 2');
+      
+      const docs = repo.listDocs();
+      expect(Object.keys(docs).length).to.equal(2);
+    });
   });
-});
+}

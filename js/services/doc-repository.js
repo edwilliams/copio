@@ -1,35 +1,25 @@
-import { store, persister } from '../core/store.js';
 import { randomId } from '../utils/utils.js';
+import { TinyBaseAdapter } from './adapters/tinybase-adapter.js';
 
 export class DocRepository {
-  constructor() {
-    this.store = store;
-    this.persister = persister;
+  constructor(adapter) {
+    this.adapter = adapter;
   }
 
-  load() {
-    return this.persister.load();
+  async init() {
+    return this.adapter.init();
   }
 
   listDocs() {
-    return this.store.getTable('docs');
+    return this.adapter.listDocs();
   }
 
   getDoc(id) {
-    const vals = this.store.getRow('docs', id);
-    if (!vals || Object.keys(vals).length === 0) return null;
-    return {
-      id,
-      name: vals.name,
-      pages: JSON.parse(vals.pages || '[]')
-    };
+    return this.adapter.getDoc(id);
   }
 
   saveDoc(id, name, pages) {
-    this.store.setRow('docs', id, {
-      name,
-      pages: JSON.stringify(pages || [])
-    });
+    this.adapter.saveDoc({ id, name, pages });
   }
 
   createDoc(name, pages = []) {
@@ -39,21 +29,27 @@ export class DocRepository {
   }
 
   deleteDoc(id) {
-    this.store.delRow('docs', id);
+    this.adapter.deleteDoc(id);
   }
 
   subscribe(callback) {
-    return this.store.addTableListener('docs', callback);
+    return this.adapter.subscribe(callback);
   }
   
-  unsubscribe(listenerId) {
-    this.store.delListener(listenerId);
+  unsubscribe(unsubscribeFn) {
+    if (typeof unsubscribeFn === 'function') {
+      unsubscribeFn();
+    }
   }
 
   // To support sync-service
   getRawStore() {
-    return this.store;
+    if (this.adapter.getRawStore) {
+      return this.adapter.getRawStore();
+    }
+    return null;
   }
 }
 
-export const docRepository = new DocRepository();
+// Temporary: hardcode the default adapter until CPO-012 builds the factory
+export const docRepository = new DocRepository(new TinyBaseAdapter());
