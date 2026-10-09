@@ -32,6 +32,10 @@ class CopioHeader extends LitElement {
 
   async connectedCallback() {
     super.connectedCallback();
+    await this.#updateStorageInfo();
+  }
+
+  async #updateStorageInfo() {
     if (navigator.storage) {
       if (navigator.storage.persisted) {
         this._isPersisted = await navigator.storage.persisted();
@@ -71,7 +75,7 @@ class CopioHeader extends LitElement {
     return html`
       <header>
         <div class="header-left">
-          <sl-dropdown>
+          <sl-dropdown @sl-show=${this.#updateStorageInfo}>
             <sl-icon-button
               slot="trigger"
               name="list"
