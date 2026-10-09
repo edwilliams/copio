@@ -20,22 +20,6 @@ class CopioImages extends HTMLElement {
     this.attachShadow({ mode: 'open' });
   }
 
-  static get observedAttributes() {
-    return ['images'];
-  }
-
-  attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'images') {
-      try {
-        this.#images = JSON.parse(newValue) || [];
-      } catch {
-        this.#images = [];
-      }
-      if (this.#isInitialized) {
-        this.#renderGrid();
-      }
-    }
-  }
 
   connectedCallback() {
     if (!this.#isInitialized) {
@@ -43,6 +27,17 @@ class CopioImages extends HTMLElement {
       this.#isInitialized = true;
     }
     this.#renderGrid();
+  }
+
+  #dispatchChange() {
+    this.dispatchEvent(new CustomEvent('copio-images:change', { bubbles: true, composed: true }));
+  }
+
+  #updateState() {
+    if (this.#isInitialized) {
+      this.#renderGrid();
+    }
+    this.#dispatchChange();
   }
 
   #initShell() {
@@ -229,7 +224,7 @@ class CopioImages extends HTMLElement {
       }
 
       this.#images.push(...allImages);
-      this.setAttribute('images', JSON.stringify(this.#images));
+      this.#updateState();
     };
 
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
@@ -361,7 +356,7 @@ class CopioImages extends HTMLElement {
           this.downloadImage(index);
         } else if (action === 'delete') {
           this.#images.splice(index, 1);
-          this.setAttribute('images', JSON.stringify(this.#images));
+          this.#updateState();
         }
       });
     });
@@ -385,7 +380,7 @@ class CopioImages extends HTMLElement {
         const dragged = this.#images[oldIdx];
         this.#images.splice(oldIdx, 1);
         this.#images.splice(newIdx, 0, dragged);
-        this.setAttribute('images', JSON.stringify(this.#images));
+        this.#updateState();
       },
     });
   }
@@ -425,7 +420,7 @@ class CopioImages extends HTMLElement {
       const croppedSrc = getCroppedSrc(this.#cropper, originalSrc);
 
       this.#images[this.#cropIndex].src = croppedSrc;
-      this.setAttribute('images', JSON.stringify(this.#images));
+      this.#updateState();
 
       this.closeCropDialog();
     }
@@ -434,13 +429,13 @@ class CopioImages extends HTMLElement {
   async rotateImage(index) {
     const rotatedSrc = await rotateSrc(this.#images[index].src);
     this.#images[index].src = rotatedSrc;
-    this.setAttribute('images', JSON.stringify(this.#images));
+    this.#updateState();
   }
 
   async thresholdImage(index) {
     const thresholdedSrc = await thresholdSrc(this.#images[index].src);
     this.#images[index].src = thresholdedSrc;
-    this.setAttribute('images', JSON.stringify(this.#images));
+    this.#updateState();
   }
 
   addBlankNote() {
@@ -451,7 +446,7 @@ class CopioImages extends HTMLElement {
       content: '',
     };
     this.#images.push(newNote);
-    this.setAttribute('images', JSON.stringify(this.#images));
+    this.#updateState();
     // Re-render the grid first, then open the editor on the new note
     this.#renderGrid();
     this.openTextDialog(this.#images.length - 1);
@@ -495,7 +490,7 @@ class CopioImages extends HTMLElement {
     if (this.#textIndex !== null && this.#images[this.#textIndex]) {
       const textEditor = this.shadowRoot.querySelector('.text-editor');
       this.#images[this.#textIndex].content = textEditor.value;
-      this.setAttribute('images', JSON.stringify(this.#images));
+      this.#updateState();
       this.closeTextDialog();
     }
   }
@@ -540,8 +535,8 @@ class CopioImages extends HTMLElement {
   }
 
   set images(val) {
-    this.#images = val;
-    this.setAttribute('images', JSON.stringify(val));
+    this.#images = val || [];
+    this.#updateState();
   }
 }
 
