@@ -1,43 +1,25 @@
 import { randomId } from '../utils/utils.js';
-import { OpfsAdapter } from './adapters/opfs-adapter.js';
-import { IndexedDbAdapter } from './adapters/indexed-db-adapter.js';
-import { runMigrations } from '../core/migrations.js';
+import { TinyBaseAdapter } from './adapters/tinybase-adapter.js';
 
 export class DocRepository {
-  constructor(adapter = null) {
+  constructor(adapter) {
     this.adapter = adapter;
-    this.listeners = new Set();
   }
 
   async init() {
-    if (!this.adapter) {
-      if (await OpfsAdapter.isSupported()) {
-        this.adapter = new OpfsAdapter();
-      } else {
-        this.adapter = new IndexedDbAdapter();
-      }
-    }
-    const result = await this.adapter.init();
-    this.adapter.persistent = result.persistent;
-    await runMigrations(this);
-    this.adapter.subscribe(() => {
-      for (const cb of this.listeners) cb();
-    });
-    // Trigger listeners initially so UI gets the loaded data
-    for (const cb of this.listeners) cb();
-    return result;
+    return this.adapter.init();
   }
 
   listDocs() {
-    return this.adapter?.listDocs() || {};
+    return this.adapter.listDocs();
   }
 
   getDoc(id) {
-    return this.adapter?.getDoc(id) || null;
+    return this.adapter.getDoc(id);
   }
 
   saveDoc(id, name, pages) {
-    this.adapter?.saveDoc({ id, name, pages });
+    this.adapter.saveDoc({ id, name, pages });
   }
 
   createDoc(name, pages = []) {
@@ -47,24 +29,11 @@ export class DocRepository {
   }
 
   deleteDoc(id) {
-    this.adapter?.deleteDoc(id);
-  }
-
-  async getPage(docId, pageId) {
-    return this.adapter?.getPage(docId, pageId);
-  }
-
-  async savePage(docId, pageId, blob) {
-    return this.adapter?.savePage(docId, pageId, blob);
-  }
-
-  async deletePage(docId, pageId) {
-    return this.adapter?.deletePage(docId, pageId);
+    this.adapter.deleteDoc(id);
   }
 
   subscribe(callback) {
-    this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
+    return this.adapter.subscribe(callback);
   }
   
   unsubscribe(unsubscribeFn) {
@@ -73,12 +42,14 @@ export class DocRepository {
     }
   }
 
+  // To support sync-service
   getRawStore() {
-    if (this.adapter?.getRawStore) {
+    if (this.adapter.getRawStore) {
       return this.adapter.getRawStore();
     }
     return null;
   }
 }
 
-export const docRepository = new DocRepository();
+// Temporary: hardcode the default adapter until CPO-012 builds the factory
+export const docRepository = new DocRepository(new TinyBaseAdapter());

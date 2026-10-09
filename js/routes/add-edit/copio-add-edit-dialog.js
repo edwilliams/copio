@@ -75,10 +75,9 @@ class CopioAddEditDialog extends LitElement {
       inputName.value = name;
     }
 
-    const pages = copioImages.images.map(({ id, src, file, exif, type, name, content }) => ({
+    const pages = copioImages.images.map(({ id, src, exif, type, name, content }) => ({
       id,
       src,
-      file,
       exif,
       type,
       name,

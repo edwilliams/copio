@@ -1,5 +1,4 @@
 import { LitElement, html, css } from '../lib/lit-core.min.js';
-import { docRepository } from '../services/doc-repository.js';
 
 class CopioHeader extends LitElement {
   static styles = css`
@@ -29,7 +28,6 @@ class CopioHeader extends LitElement {
   static properties = {
     _storageEstimate: { state: true },
     _isPersisted: { state: true },
-    _storageKind: { state: true },
   };
 
   async connectedCallback() {
@@ -45,9 +43,6 @@ class CopioHeader extends LitElement {
       if (navigator.storage.estimate) {
         this._storageEstimate = await navigator.storage.estimate();
       }
-    }
-    if (docRepository && docRepository.adapter) {
-       this._storageKind = docRepository.adapter.constructor.name.replace('Adapter', '');
     }
   }
 
@@ -93,7 +88,7 @@ class CopioHeader extends LitElement {
               <sl-divider></sl-divider>
               <sl-menu-item disabled>
                 Storage: ${this._formatBytes(this._storageEstimate?.usage)} 
-                (${this._isPersisted ? 'Persisted' : 'Volatile'} - ${this._storageKind || 'Unknown'})
+                (${this._isPersisted ? 'Persisted' : 'Volatile'})
               </sl-menu-item>
             </sl-menu>
           </sl-dropdown>

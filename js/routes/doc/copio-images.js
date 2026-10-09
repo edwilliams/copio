@@ -214,11 +214,12 @@ class CopioImages extends HTMLElement {
             content,
           });
         } else {
-          const exif = await extractExif(file);
-          const src = URL.createObjectURL(file);
-          allImages.push({ id: randomId(), src, file, exif });
-          continue; // skip the old push
-
+          const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
+          allImages.push({
+            id: randomId(),
+            src,
+            exif,
+          });
         }
       }
 
