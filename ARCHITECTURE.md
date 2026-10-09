@@ -64,49 +64,30 @@ createRenderRoot() { return this; }
 ```
 This opts into **Light DOM** so Shoelace's global CSS custom properties and `sl-*` components work without crossing shadow boundaries. This is intentional and should be preserved on any new component.
 
-### 2. Pluggable Storage (doc-repository)
+### 2. Store is a singleton
 
-Data is accessed entirely through `js/services/doc-repository.js`, which acts as a headless wrapper around a pluggable Storage Adapter.
-Components never access IndexedDB or TinyBase directly.
-
-The default adapter is `TinyBaseAdapter` (which wraps TinyBase `store.js`), but `MemoryAdapter` is also available, and `OpfsAdapter` is coming.
-
-**Adapter Contract:**
-```js
-{
-  init() → Promise<{ kind, persistent: boolean }>
-  listDocs() → Record<string, Doc>
-  getDoc(id) → Doc
-  saveDoc(doc)
-  deleteDoc(id)
-  
-  // Blob storage (implemented in CPO-012)
-  savePage(docId, pageId, blob) → Promise<void>
-  getPage(docId, pageId) → Promise<Blob>
-  deletePage(docId, pageId) → Promise<void>
-  
-  subscribe(callback) → unsubscribeFn
-}
-```
-A custom adapter stub can be implemented by satisfying this interface.
+`js/core/store.js` exports a single `store` and `persister` instance. Any component needing data imports from there — never creates its own store. TinyBase auto-persists to IndexedDB (`copio-db`) on every change via `startAutoSave()`.
 
 ### 3. Data model
 
-A `Doc` object looks like this:
+The store has one table: **`docs`**. Each row:
 ```js
 {
-  id: "abc1234",
-  name: "My Document",
-  pages: [
-    // Image page (v1: src is base64; v2: src will be Blob URL)
-    { id, src, exif, type: 'image'|'pdf', name },
-    // Markdown page
-    { id, type: 'markdown', name, content }
-  ]
+  name: "My Document",       // string
+  pages: "[ ... ]"           // JSON.stringify'd array of page objects
 }
 ```
 
-Behind the scenes in `TinyBaseAdapter`, `pages` is currently stringified to JSON in IndexedDB to keep the schema flat. `doc-repository.js` transparently handles the conversion.
+Each page object:
+```js
+// Image page
+{ id, src, exif, type: 'image'|'pdf', name }
+
+// Markdown page
+{ id, type: 'markdown', name, content }
+```
+
+`pages` is stored as a JSON string (not a nested TinyBase table) to keep the schema flat. Always `JSON.parse(vals.pages || '[]')` before use.
 
 ### 4. Router
 
@@ -213,6 +194,7 @@ Globals are loaded as classic `<script>` tags in `index.html` before the module 
 
 ## Gotchas
 
+- **`pages` is always a JSON string in the store** — parse before use, stringify before saving
 - **Shoelace dialogs are async** — `await dialog.show()` before trying to focus inputs
 - **OCR workers are long-lived** — `ocr-service.js` caches the active Tesseract worker; switching language terminates and recreates it
 - **P2P sync requires internet** — PeerJS needs its signalling server; `sync-service.js` checks `navigator.onLine` before attempting
