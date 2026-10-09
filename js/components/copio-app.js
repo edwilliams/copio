@@ -34,6 +34,12 @@ class CopioApp extends LitElement {
     // Bridge TinyBase reactivity to Lit
     this.repo.subscribe(() => {
       this.docsData = this.repo.listDocs();
+      
+      const header = this.querySelector('copio-header');
+      if (header && header.updateStorageInfo) {
+        header.updateStorageInfo();
+      }
+
       const currentPath = router.getHashPath();
       if (currentPath.startsWith('/doc/')) {
         router.handleRoute();
