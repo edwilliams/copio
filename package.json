@@ -1,5 +1,11 @@
 {
   "scripts": {
-    "build": "npm run build --prefix scripts/bundle"
+    "build": "npm run build --prefix scripts/bundle",
+    "test": "web-test-runner test/**/*.test.js --node-resolve"
+  },
+  "devDependencies": {
+    "@esm-bundle/chai": "^4.3.4-fix.0",
+    "@web/test-runner": "^1.0.0",
+    "@web/test-runner-playwright": "^1.0.0"
   }
 }
