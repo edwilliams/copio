@@ -202,35 +202,32 @@ class CopioImages extends HTMLElement {
       this.shadowRoot.querySelector('.data-dialog').hide();
     };
 
-    this.shadowRoot.querySelector('input[type="file"]').onchange = async (event) => {
-      const files = Array.from(event.target.files);
-      const allImages = [];
-
-      for (const file of files) {
-        if (file.type === 'application/pdf') {
-          const pdfImages = await this.pdfToImages(file);
-          allImages.push(...pdfImages);
-        } else if (file.name.endsWith('.md') || file.name.endsWith('.markdown') || file.type === 'text/markdown' || file.type === 'text/plain') {
-          const content = await file.text();
-          allImages.push({
-            id: randomId(),
-            type: 'markdown',
-            name: file.name,
-            content,
-          });
-        } else {
-          const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
-          allImages.push({
-            id: randomId(),
-            src,
-            exif,
-          });
-        }
-      }
-
-      this.#images.push(...allImages);
-      this.setAttribute('images', JSON.stringify(this.#images));
+    const fileInput = this.shadowRoot.querySelector('input[type="file"]');
+    fileInput.onchange = async (event) => {
+      const files = Array.from(event.target.files || []);
+      await this.addFiles(files);
     };
+
+    const handleDragOver = (event) => {
+      const types = event.dataTransfer?.types;
+      if (types && (Array.from(types).includes('Files') || types.includes?.('Files'))) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const handleDrop = async (event) => {
+      const files = event.dataTransfer?.files || event.detail?.files;
+      if (files && files.length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        await this.addFiles(Array.from(files));
+      }
+    };
+
+    const container = this.shadowRoot.querySelector('.container');
+    container.addEventListener('dragover', handleDragOver);
+    container.addEventListener('drop', handleDrop);
 
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
     this.shadowRoot.querySelector('.cancel-crop').onclick = () => this.closeCropDialog();
@@ -533,6 +530,41 @@ class CopioImages extends HTMLElement {
       id: randomId(),
       src,
     }));
+  }
+
+  async addFiles(files) {
+    if (!files || files.length === 0) return;
+    const allImages = [];
+
+    for (const file of files) {
+      if (file.type === 'application/pdf') {
+        const pdfImages = await this.pdfToImages(file);
+        allImages.push(...pdfImages);
+      } else if (
+        file.name?.endsWith('.md') ||
+        file.name?.endsWith('.markdown') ||
+        file.type === 'text/markdown' ||
+        file.type === 'text/plain'
+      ) {
+        const content = await file.text();
+        allImages.push({
+          id: randomId(),
+          type: 'markdown',
+          name: file.name,
+          content,
+        });
+      } else {
+        const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
+        allImages.push({
+          id: randomId(),
+          src,
+          exif,
+        });
+      }
+    }
+
+    this.#images.push(...allImages);
+    this.setAttribute('images', JSON.stringify(this.#images));
   }
 
   get images() {
