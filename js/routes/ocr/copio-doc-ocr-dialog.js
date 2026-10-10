@@ -2,6 +2,8 @@ import { LitElement, html } from '../../lib/lit-core.min.js';
 import { recognizeDocumentPages, SUPPORTED_LANGUAGES } from '../../services/ocr-service.js';
 
 class CopioDocOcrDialog extends LitElement {
+  #abortController = null;
+
   static properties = {
     isOpen: { type: Boolean, state: true },
     docId: { type: String, state: true },
@@ -35,6 +37,7 @@ class CopioDocOcrDialog extends LitElement {
     this.copied = false;
     // Set in single-page mode so Save as Note inserts adjacent to the source image
     this._pageIndex = null;
+    this.#abortController = null;
   }
 
   /**
@@ -63,47 +66,91 @@ class CopioDocOcrDialog extends LitElement {
   }
 
   _openInternal(docId, docName, pages, lang) {
+    // Abort any ongoing run first
+    if (this.#abortController) {
+      this.#abortController.abort();
+      this.#abortController = null;
+    }
+
     this.docId = docId;
     this.docName = docName || 'Document';
     this.pages = pages || [];
     this.lang = lang;
-    this.step = 'processing';
     this.progress = 0;
-    this.statusMessage = 'Starting OCR engine...';
     this.resultText = '';
     this.confidence = 0;
     this.copied = false;
+
+    const imagePages = (this.pages || []).filter((p) => p.type !== 'markdown' && p.src);
+    if (imagePages.length === 0) {
+      this.step = 'empty';
+      this.statusMessage = 'This document does not contain any image pages for text recognition.';
+      this.isOpen = true;
+      return;
+    }
+
+    this.step = 'processing';
+    this.statusMessage = 'Starting OCR engine...';
     this.isOpen = true;
 
     this.startOcr(lang);
   }
 
+  cancel = () => {
+    if (this.#abortController) {
+      this.#abortController.abort();
+      this.#abortController = null;
+    }
+    this.close();
+  };
+
   close = () => {
+    if (this.#abortController) {
+      this.#abortController.abort();
+      this.#abortController = null;
+    }
     this.isOpen = false;
   };
 
   async startOcr(lang = 'eng') {
+    if (this.#abortController) {
+      this.#abortController.abort();
+      this.#abortController = null;
+    }
+
+    this.#abortController = new AbortController();
+    const { signal } = this.#abortController;
+
     try {
       const result = await recognizeDocumentPages(this.pages, {
         lang,
+        abortSignal: signal,
         onPageProgress: ({ overallProgress, message }) => {
-          if (this.isOpen) {
+          if (this.isOpen && !signal.aborted) {
             this.progress = Math.round((overallProgress || 0) * 100);
             this.statusMessage = message;
           }
         },
       });
 
-      if (this.isOpen) {
+      if (this.isOpen && !signal.aborted) {
         this.step = 'done';
         this.resultText = result.combinedText || '';
         this.confidence = result.averageConfidence || 0;
       }
     } catch (err) {
+      if (err.name === 'AbortError' || signal.aborted) {
+        // Cancelled by user - do not display as error
+        return;
+      }
       console.error('Document OCR Error:', err);
       if (this.isOpen) {
         this.step = 'error';
         this.statusMessage = err.message || 'Text recognition failed';
+      }
+    } finally {
+      if (this.#abortController?.signal === signal) {
+        this.#abortController = null;
       }
     }
   }
@@ -225,6 +272,16 @@ class CopioDocOcrDialog extends LitElement {
             : ''}
         </div>
 
+        ${this.step === 'empty'
+          ? html`
+              <div style="padding: 2.5rem 1rem; text-align: center; color: #64748b;">
+                <sl-icon name="file-earmark-x" style="font-size: 2.5rem; margin-bottom: 0.5rem; color: #94a3b8;"></sl-icon>
+                <p style="margin: 0; font-size: 1rem; color: #334155; font-weight: 500;">${this.statusMessage}</p>
+                <p style="font-size: 0.85rem; margin-top: 0.5rem; color: #64748b;">Add or import an image page before extracting text.</p>
+              </div>
+            `
+          : ''}
+
         ${this.step === 'processing'
           ? html`
               <div style="padding: 2.5rem 1rem; text-align: center;">
@@ -261,11 +318,26 @@ class CopioDocOcrDialog extends LitElement {
             `
           : ''}
 
-        <sl-button slot="footer" variant="default" @click=${this.close}>
-          Close
-        </sl-button>
+        ${this.step === 'processing'
+          ? html`
+              <sl-button slot="footer" variant="default" @click=${this.cancel}>
+                <sl-icon slot="prefix" name="x-lg"></sl-icon>
+                Cancel
+              </sl-button>
+            `
+          : ''}
+        ${this.step === 'empty' || this.step === 'error'
+          ? html`
+              <sl-button slot="footer" variant="default" @click=${this.close}>
+                Close
+              </sl-button>
+            `
+          : ''}
         ${this.step === 'done'
           ? html`
+              <sl-button slot="footer" variant="default" @click=${this.close}>
+                Close
+              </sl-button>
               <sl-button slot="footer" variant="default" @click=${this.copyText}>
                 <sl-icon slot="prefix" name=${this.copied ? 'check' : 'clipboard'}></sl-icon>
                 ${this.copied ? 'Copied!' : 'Copy All'}

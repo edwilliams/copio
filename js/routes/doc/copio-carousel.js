@@ -108,6 +108,28 @@ class CopioCarousel extends LitElement {
       height: auto;
       border-radius: 6px;
     }
+    .ocr-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 5;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .ocr-btn:hover {
+      background: rgba(15, 23, 42, 0.95);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
   `;
 
   constructor() {
@@ -121,6 +143,22 @@ class CopioCarousel extends LitElement {
       new CustomEvent('copio-carousel:close', {
         bubbles: true,
         composed: true,
+      }),
+    );
+  }
+
+  handleOcrClick() {
+    const activePage = this.images[this.activeSlideIndex];
+    if (!activePage || activePage.type === 'markdown' || !activePage.src) return;
+
+    this.dispatchEvent(
+      new CustomEvent('copio:ocr-page', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          page: activePage,
+          pageIndex: this.activeSlideIndex,
+        },
       }),
     );
   }
@@ -149,8 +187,20 @@ class CopioCarousel extends LitElement {
   }
 
   render() {
+    const activePage = this.images[this.activeSlideIndex];
+    const canOcr = activePage && activePage.type !== 'markdown' && !!activePage.src;
+
     return html`
-      <button class="back" @click=${this.handleBackClick}>←</button>
+      <button class="back" @click=${this.handleBackClick} aria-label="Back">←</button>
+
+      ${canOcr
+        ? html`
+            <button class="ocr-btn" @click=${this.handleOcrClick} aria-label="Extract text">
+              <sl-icon name="card-text"></sl-icon>
+              <span>Extract Text</span>
+            </button>
+          `
+        : ''}
 
       <sl-carousel
         class="sl-carousel"

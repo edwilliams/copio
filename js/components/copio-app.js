@@ -229,13 +229,6 @@ class CopioApp extends LitElement {
     if (!vals) return;
 
     const pages = JSON.parse(vals.pages || '[]');
-    const imagePages = pages.filter((p) => p.type !== 'markdown' && p.src);
-
-    if (imagePages.length === 0) {
-      alert('This document does not contain any image pages to perform text recognition on.');
-      return;
-    }
-
     const ocrDialog = this.querySelector('copio-doc-ocr-dialog');
     if (ocrDialog) {
       ocrDialog.open(id, vals.name, pages);
@@ -454,6 +447,7 @@ class CopioApp extends LitElement {
       <copio-carousel
         style="display: ${this.showCarousel ? 'block' : 'none'}"
         @copio-carousel:close=${this.handleCarouselClose}
+        @copio:ocr-page=${this.handleOcrPage}
       ></copio-carousel>
 
       ${this.syncState ? html`<copio-sync-dialog
