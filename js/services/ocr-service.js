@@ -118,12 +118,19 @@ export async function getOcrWorker(lang = 'eng', onProgress = null) {
  * Recognize text from a single image (Data URL, Blob, File, or Image element)
  * @param {string|Blob|File|HTMLImageElement|HTMLCanvasElement} image
  * @param {Object} options
- * @param {string} options.lang - Language code (e.g. 'eng', 'spa', 'fra')
- * @param {Function} options.onProgress - Progress callback ({ status, progress, message })
+ * @param {string} [options.lang='eng'] - Language code (e.g. 'eng', 'spa', 'fra')
+ * @param {Function} [options.onProgress] - Progress callback ({ status, progress, message })
+ * @param {AbortSignal} [options.abortSignal] - Signal to cancel recognition
  * @returns {Promise<{ text: string, confidence: number, words: Array, lines: Array, paragraphs: Array }>}
  */
 export async function recognizeImageText(image, options = {}) {
-  const { lang = 'eng', onProgress = null } = options;
+  const { lang = 'eng', onProgress = null, abortSignal = null } = options;
+
+  if (abortSignal?.aborted) {
+    const err = new Error('OCR operation cancelled by user');
+    err.name = 'AbortError';
+    throw err;
+  }
 
   if (onProgress) {
     onProgress({
@@ -135,6 +142,12 @@ export async function recognizeImageText(image, options = {}) {
 
   const worker = await getOcrWorker(lang, onProgress);
 
+  if (abortSignal?.aborted) {
+    const err = new Error('OCR operation cancelled by user');
+    err.name = 'AbortError';
+    throw err;
+  }
+
   if (onProgress) {
     onProgress({
       status: 'recognizing text',
@@ -143,40 +156,63 @@ export async function recognizeImageText(image, options = {}) {
     });
   }
 
-  const result = await worker.recognize(image);
-  const data = result?.data || {};
+  let onAbort = null;
+  const abortPromise = new Promise((_, reject) => {
+    if (abortSignal) {
+      onAbort = () => {
+        terminateOcrWorker();
+        const err = new Error('OCR operation cancelled by user');
+        err.name = 'AbortError';
+        reject(err);
+      };
+      abortSignal.addEventListener('abort', onAbort, { once: true });
+    }
+  });
 
-  const cleanText = (data.text || '').trim();
-  const confidence = Math.round(data.confidence || 0);
+  try {
+    const result = await Promise.race([
+      worker.recognize(image),
+      abortPromise,
+    ]);
 
-  if (onProgress) {
-    onProgress({
-      status: 'done',
-      progress: 1,
-      message: 'Text recognition complete!',
-    });
+    const data = result?.data || {};
+    const cleanText = (data.text || '').trim();
+    const confidence = Math.round(data.confidence || 0);
+
+    if (onProgress) {
+      onProgress({
+        status: 'done',
+        progress: 1,
+        message: 'Text recognition complete!',
+      });
+    }
+
+    return {
+      text: cleanText,
+      confidence,
+      words: data.words || [],
+      lines: data.lines || [],
+      paragraphs: data.paragraphs || [],
+      hocr: data.hocr || '',
+    };
+  } finally {
+    if (abortSignal && onAbort) {
+      abortSignal.removeEventListener('abort', onAbort);
+    }
   }
-
-  return {
-    text: cleanText,
-    confidence,
-    words: data.words || [],
-    lines: data.lines || [],
-    paragraphs: data.paragraphs || [],
-    hocr: data.hocr || '',
-  };
 }
 
 /**
  * Batch recognize text from multiple pages
  * @param {Array<{ id: string, src?: string, type?: string, content?: string, name?: string }>} pages
  * @param {Object} options
- * @param {string} options.lang
- * @param {Function} options.onPageProgress - ({ pageIndex, totalPages, pageProgress, overallProgress, message })
- * @returns {Promise<{ pagesResults: Array, combinedText: string, averageConfidence: number }>}
+ * @param {string} [options.lang='eng']
+ * @param {Function} [options.onPageProgress] - ({ pageIndex, totalPages, pageProgress, overallProgress, message })
+ * @param {AbortSignal} [options.abortSignal] - Signal to cancel recognition
+ * @returns {Promise<{ pagesResults: Array, combinedText: string, averageConfidence: number, empty?: boolean }>}
  */
 export async function recognizeDocumentPages(pages, options = {}) {
-  const { lang = 'eng', onPageProgress = null } = options;
+  const { lang = 'eng', onPageProgress = null, abortSignal = null } = options;
   const imagePages = (pages || []).filter((p) => p.type !== 'markdown' && p.src);
 
   if (imagePages.length === 0) {
@@ -184,6 +220,7 @@ export async function recognizeDocumentPages(pages, options = {}) {
       pagesResults: [],
       combinedText: '',
       averageConfidence: 0,
+      empty: true,
     };
   }
 
@@ -191,12 +228,19 @@ export async function recognizeDocumentPages(pages, options = {}) {
   let totalConfidence = 0;
 
   for (let i = 0; i < imagePages.length; i++) {
+    if (abortSignal?.aborted) {
+      const err = new Error('OCR operation cancelled by user');
+      err.name = 'AbortError';
+      throw err;
+    }
+
     const page = imagePages[i];
     const pageNum = i + 1;
     const total = imagePages.length;
 
     const pageResult = await recognizeImageText(page.src, {
       lang,
+      abortSignal,
       onProgress: (p) => {
         if (onPageProgress) {
           const overallProgress = (i + (p.progress || 0)) / total;
