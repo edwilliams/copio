@@ -212,26 +212,47 @@ class CopioImages extends HTMLElement {
     const fileInput = this.shadowRoot.querySelector('.file-input');
     const cameraInput = this.shadowRoot.querySelector('.camera-input');
 
+    let isProcessingFiles = false;
     const handleFileChange = async (event) => {
+      if (isProcessingFiles) return;
       const files = Array.from(event.target?.files || []);
-      if (files.length > 0) {
+      if (files.length === 0) return;
+      isProcessingFiles = true;
+      try {
         await this.addFiles(files);
-      }
-      if (event.target) {
-        event.target.value = '';
+      } finally {
+        if (event.target) {
+          event.target.value = '';
+        }
+        isProcessingFiles = false;
       }
     };
 
-    fileInput.addEventListener('change', handleFileChange);
     fileInput.onchange = handleFileChange;
-    cameraInput.addEventListener('change', handleFileChange);
     cameraInput.onchange = handleFileChange;
 
     let dragCounter = 0;
 
+    const isPotentialFileDrag = (event) => {
+      const dt = event.dataTransfer;
+      if (!dt) return false;
+      if (!dt.types || dt.types.length === 0) return true;
+      const types = Array.from(dt.types);
+      return (
+        types.includes('Files') ||
+        types.some(
+          (t) =>
+            t.startsWith('image/') ||
+            t.startsWith('public.') ||
+            t.includes('pdf') ||
+            t.includes('file') ||
+            t === 'text/uri-list',
+        )
+      );
+    };
+
     const handleDragEnter = (event) => {
-      const types = event.dataTransfer?.types;
-      if (types && (Array.from(types).includes('Files') || types.includes?.('Files'))) {
+      if (isPotentialFileDrag(event)) {
         event.preventDefault();
         dragCounter++;
         container.classList.add('drag-over');
@@ -239,8 +260,7 @@ class CopioImages extends HTMLElement {
     };
 
     const handleDragOver = (event) => {
-      const types = event.dataTransfer?.types;
-      if (types && (Array.from(types).includes('Files') || types.includes?.('Files'))) {
+      if (isPotentialFileDrag(event)) {
         event.preventDefault();
         event.stopPropagation();
         if (event.dataTransfer) {
@@ -261,11 +281,25 @@ class CopioImages extends HTMLElement {
     const handleDrop = async (event) => {
       dragCounter = 0;
       container.classList.remove('drag-over');
-      const files = event.dataTransfer?.files || event.detail?.files;
-      if (files && files.length > 0) {
-        event.preventDefault();
-        event.stopPropagation();
-        await this.addFiles(Array.from(files));
+      event.preventDefault();
+      event.stopPropagation();
+
+      let files = [];
+      if (event.dataTransfer?.files?.length > 0) {
+        files = Array.from(event.dataTransfer.files);
+      } else if (event.dataTransfer?.items?.length > 0) {
+        for (const item of event.dataTransfer.items) {
+          if (item.kind === 'file') {
+            const f = item.getAsFile();
+            if (f) files.push(f);
+          }
+        }
+      } else if (event.detail?.files) {
+        files = Array.from(event.detail.files);
+      }
+
+      if (files.length > 0) {
+        await this.addFiles(files);
       }
     };
 
@@ -277,6 +311,12 @@ class CopioImages extends HTMLElement {
     container.addEventListener('dragend', () => {
       dragCounter = 0;
       container.classList.remove('drag-over');
+    });
+
+    container.addEventListener('click', (event) => {
+      if (event.target === container) {
+        fileInput.click();
+      }
     });
 
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
@@ -440,6 +480,9 @@ class CopioImages extends HTMLElement {
       ghostClass: 'sortable-ghost',
       filter: 'sl-dropdown',
       preventOnFilter: false,
+      delay: 150,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
       onEnd: (evt) => {
         if (evt.to !== container) return;
         const oldIdx = evt.oldDraggableIndex;

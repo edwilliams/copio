@@ -102,6 +102,62 @@ describe('Streamline Add/Import UX & Direct File/Camera Picker (CPO-027)', funct
 
       expect(container.classList.contains('drag-over')).to.be.false;
     });
+
+    it('selecting an image via fileInput adds exactly one copy (no duplicate upload)', async () => {
+      // 1x1 transparent PNG data
+      const base64Data = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const binary = atob(base64Data);
+      const array = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+      const file = new File([array], 'sample.png', { type: 'image/png' });
+
+      const fileInput = imagesEl.shadowRoot.querySelector('.file-input');
+      expect(fileInput).to.exist;
+
+      // Simulate file selection
+      fileInput.onchange({ target: { files: [file] } });
+
+      // Wait for image to be added
+      const start = Date.now();
+      while (imagesEl.images.length === 0 && Date.now() - start < 3000) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+
+      // Must be EXACTLY 1 image, not 2
+      expect(imagesEl.images).to.have.lengthOf(1);
+    });
+
+    it('supports mobile/WebKit drag data types on .container', async () => {
+      const container = imagesEl.shadowRoot.querySelector('.container');
+
+      // iOS Safari sends public.jpeg or image/jpeg during drag
+      const mobileDragEvent = new Event('dragenter', { bubbles: true, cancelable: true });
+      mobileDragEvent.dataTransfer = { types: ['public.jpeg', 'image/jpeg'] };
+      container.dispatchEvent(mobileDragEvent);
+
+      expect(container.classList.contains('drag-over')).to.be.true;
+
+      const dragLeaveEvent = new Event('dragleave', { bubbles: true, cancelable: true });
+      container.dispatchEvent(dragLeaveEvent);
+      expect(container.classList.contains('drag-over')).to.be.false;
+    });
+
+    it('tapping empty container background triggers file picker', async () => {
+      const container = imagesEl.shadowRoot.querySelector('.container');
+      const fileInput = imagesEl.shadowRoot.querySelector('.file-input');
+
+      let clicked = false;
+      const clickListener = () => {
+        clicked = true;
+      };
+      fileInput.addEventListener('click', clickListener);
+
+      // Click directly on container surface
+      container.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      expect(clicked).to.be.true;
+      fileInput.removeEventListener('click', clickListener);
+    });
   });
 
   describe('copio-add-edit-dialog: title validation without prompt()', () => {
