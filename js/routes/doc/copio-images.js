@@ -8,6 +8,7 @@ the element was and creates a duplicate — the moved node becomes orphaned.
 import Sortable from '../../lib/sortable.esm.js';
 import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from '../../utils/utils.js';
 import { renderPdfPagesToDataUrls } from '../../utils/pdf-utils.js';
+import { notify } from '../../services/notify.js';
 class CopioImages extends HTMLElement {
   #images = [];
   #cropper = null;
@@ -461,10 +462,12 @@ class CopioImages extends HTMLElement {
       const blob = new Blob([page.content || ''], { type: 'text/markdown;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
+      const filename = page.name || `document-${index + 1}.md`;
       a.href = url;
-      a.download = page.name || `document-${index + 1}.md`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+      notify.success(`Downloaded "${filename}"`);
       return;
     }
     if (!page.src) return;
@@ -474,9 +477,11 @@ class CopioImages extends HTMLElement {
       if (match && match[1].includes('png')) ext = 'png';
     }
     const a = document.createElement('a');
+    const filename = `image-${index + 1}.${ext}`;
     a.href = page.src;
-    a.download = `image-${index + 1}.${ext}`;
+    a.download = filename;
     a.click();
+    notify.success(`Downloaded "${filename}"`);
   }
 
   openTextDialog(index) {
@@ -536,35 +541,42 @@ class CopioImages extends HTMLElement {
     if (!files || files.length === 0) return;
     const allImages = [];
 
-    for (const file of files) {
-      if (file.type === 'application/pdf') {
-        const pdfImages = await this.pdfToImages(file);
-        allImages.push(...pdfImages);
-      } else if (
-        file.name?.endsWith('.md') ||
-        file.name?.endsWith('.markdown') ||
-        file.type === 'text/markdown' ||
-        file.type === 'text/plain'
-      ) {
-        const content = await file.text();
-        allImages.push({
-          id: randomId(),
-          type: 'markdown',
-          name: file.name,
-          content,
-        });
-      } else {
-        const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
-        allImages.push({
-          id: randomId(),
-          src,
-          exif,
-        });
+    try {
+      for (const file of files) {
+        if (file.type === 'application/pdf') {
+          const pdfImages = await this.pdfToImages(file);
+          allImages.push(...pdfImages);
+        } else if (
+          file.name?.endsWith('.md') ||
+          file.name?.endsWith('.markdown') ||
+          file.type === 'text/markdown' ||
+          file.type === 'text/plain'
+        ) {
+          const content = await file.text();
+          allImages.push({
+            id: randomId(),
+            type: 'markdown',
+            name: file.name,
+            content,
+          });
+        } else {
+          const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
+          allImages.push({
+            id: randomId(),
+            src,
+            exif,
+          });
+        }
       }
-    }
 
-    this.#images.push(...allImages);
-    this.setAttribute('images', JSON.stringify(this.#images));
+      this.#images.push(...allImages);
+      this.setAttribute('images', JSON.stringify(this.#images));
+      const count = allImages.length;
+      notify.success(`Imported ${count} page${count !== 1 ? 's' : ''}`);
+    } catch (err) {
+      console.error('Failed to import files:', err);
+      notify.error('Failed to import files');
+    }
   }
 
   get images() {

@@ -1,5 +1,6 @@
 import { LitElement, html } from '../../lib/lit-core.min.js';
 import { recognizeDocumentPages, SUPPORTED_LANGUAGES } from '../../services/ocr-service.js';
+import { notify } from '../../services/notify.js';
 
 class CopioDocOcrDialog extends LitElement {
   #abortController = null;
@@ -137,6 +138,7 @@ class CopioDocOcrDialog extends LitElement {
         this.step = 'done';
         this.resultText = result.combinedText || '';
         this.confidence = result.averageConfidence || 0;
+        notify.success('Text recognition complete');
       }
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
@@ -147,6 +149,7 @@ class CopioDocOcrDialog extends LitElement {
       if (this.isOpen) {
         this.step = 'error';
         this.statusMessage = err.message || 'Text recognition failed';
+        notify.error(err.message || 'Text recognition failed');
       }
     } finally {
       if (this.#abortController?.signal === signal) {
@@ -173,11 +176,13 @@ class CopioDocOcrDialog extends LitElement {
     try {
       await navigator.clipboard.writeText(this.resultText);
       this.copied = true;
+      notify.success('Copied text to clipboard');
       setTimeout(() => {
         this.copied = false;
       }, 2000);
     } catch (err) {
       console.error('Failed to copy text:', err);
+      notify.error('Failed to copy text to clipboard');
     }
   };
 
@@ -191,6 +196,7 @@ class CopioDocOcrDialog extends LitElement {
     a.download = `${safeName}-ocr.md`;
     a.click();
     URL.revokeObjectURL(url);
+    notify.success(`Exported OCR markdown (${safeName}-ocr.md)`);
   };
 
   downloadText = () => {
@@ -203,6 +209,7 @@ class CopioDocOcrDialog extends LitElement {
     a.download = `${safeName}-ocr.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    notify.success(`Exported OCR text (${safeName}-ocr.txt)`);
   };
 
   saveAsNote = () => {
@@ -221,6 +228,7 @@ class CopioDocOcrDialog extends LitElement {
       }),
     );
 
+    notify.success('Saved OCR text as note');
     this.close();
   };
 

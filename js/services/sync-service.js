@@ -1,3 +1,5 @@
+import { notify } from './notify.js';
+
 /**
  * Handles PeerJS peer-to-peer sync between host and joiner devices for TinyBase store.
  */
@@ -27,15 +29,10 @@ export class SyncManager {
     if (this.#peer && this.#syncState?.mode === 'host') return;
 
     if (!navigator.onLine) {
-      const alert = Object.assign(document.createElement('sl-alert'), {
-        variant: 'warning',
-        closable: true,
+      notify.warning('An internet connection is needed to link devices.', {
+        icon: 'wifi-off',
         duration: 4000,
-        innerHTML:
-          '<sl-icon name="wifi-off" slot="icon"></sl-icon> An internet connection is needed to link devices.',
       });
-      document.body.appendChild(alert);
-      alert.toast();
       return;
     }
 
@@ -115,6 +112,7 @@ export class SyncManager {
         }
       });
       this.#setState({ ...this.#syncState, step: 'done', added });
+      notify.success(`Sync complete — ${added} doc${added !== 1 ? 's' : ''} added`);
     });
   }
 
