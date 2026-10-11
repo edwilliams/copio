@@ -6,9 +6,30 @@ class CopioAddEditDialog extends LitElement {
     return this;
   }
 
+  #clearValidation = () => {
+    const inputName = this.querySelector('.dialog-add-edit-input-name');
+    const nameError = this.querySelector('.dialog-name-error');
+    if (nameError) nameError.style.display = 'none';
+    if (inputName) {
+      inputName.classList.remove('input-invalid');
+      inputName.style.removeProperty('--sl-input-border-color');
+      inputName.style.removeProperty('--sl-input-border-color-focus');
+      if (typeof inputName.setCustomValidity === 'function') {
+        inputName.setCustomValidity('');
+      }
+    }
+  };
+
+  #handleNameInput = (e) => {
+    if (e.target?.value?.trim()) {
+      this.#clearValidation();
+    }
+  };
+
   #handleHide = (event) => {
     if (event.target !== event.currentTarget) return;
     
+    this.#clearValidation();
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const copioImages = this.querySelector('copio-images');
@@ -24,6 +45,11 @@ class CopioAddEditDialog extends LitElement {
     if (e.key !== 'Enter') return;
     // Don't intercept Enter when a nested dialog/modal is open (note editor, cropper, etc.)
     if (this.querySelector('sl-dialog[open]')) return;
+    if (e.target?.classList?.contains('dialog-add-edit-input-name')) {
+      e.preventDefault();
+      this.#handleSave();
+      return;
+    }
     // Don't intercept Enter from text inputs or textareas
     const tag = e.target?.tagName;
     if (tag === 'TEXTAREA' || tag === 'SL-TEXTAREA' || tag === 'INPUT' || tag === 'SL-INPUT') return;
@@ -34,6 +60,7 @@ class CopioAddEditDialog extends LitElement {
 
   async open() {
     await this.updateComplete;
+    this.#clearValidation();
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
     await dialog.show();
@@ -42,6 +69,7 @@ class CopioAddEditDialog extends LitElement {
 
   async openEdit(id, name, pages) {
     await this.updateComplete;
+    this.#clearValidation();
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
 
@@ -64,15 +92,28 @@ class CopioAddEditDialog extends LitElement {
   #handleSave = () => {
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
+    const nameError = this.querySelector('.dialog-name-error');
     const copioImages = this.querySelector('copio-images');
 
-    if (!inputName.value) {
-      const name = prompt('Please enter a name');
-      if (!name) return;
-      inputName.value = name;
+    const name = inputName?.value?.trim();
+    if (!name) {
+      if (nameError) {
+        nameError.style.display = 'block';
+      }
+      if (inputName) {
+        inputName.classList.add('input-invalid');
+        inputName.style.setProperty('--sl-input-border-color', '#ef4444');
+        inputName.style.setProperty('--sl-input-border-color-focus', '#ef4444');
+        if (typeof inputName.setCustomValidity === 'function') {
+          inputName.setCustomValidity('Please enter a document name');
+          inputName.reportValidity?.();
+        }
+        inputName.focus();
+      }
+      return;
     }
 
-    const pages = copioImages.images.map(({ id, src, exif, type, name, content }) => ({
+    const pages = (copioImages?.images || []).map(({ id, src, exif, type, name, content }) => ({
       id,
       src,
       exif,
@@ -85,10 +126,10 @@ class CopioAddEditDialog extends LitElement {
 
     this.dispatchEvent(new CustomEvent('copio-add-edit-dialog:save', {
       bubbles: true,
-      detail: { id, name: inputName.value, pages }
+      detail: { id, name, pages }
     }));
 
-    this.querySelector('.dialog-add-edit').hide();
+    this.querySelector('.dialog-add-edit')?.hide();
   };
 
   render() {
@@ -107,11 +148,19 @@ class CopioAddEditDialog extends LitElement {
             placeholder="id"
             style="display: none"
           ></sl-input>
-          <sl-input
-            class="dialog-add-edit-input-name"
-            placeholder="Enter name of document or image"
-            style="max-width: 300px"
-          ></sl-input>
+          <div class="dialog-name-field" style="max-width: 300px">
+            <sl-input
+              class="dialog-add-edit-input-name"
+              placeholder="Enter name of document or image"
+              @sl-input=${this.#handleNameInput}
+            ></sl-input>
+            <div
+              class="dialog-name-error"
+              style="color: #ef4444; font-size: 0.8rem; margin-top: 4px; display: none;"
+            >
+              Please enter a document name
+            </div>
+          </div>
 
           <copio-images
             style="display: block; margin-top: 1.5rem"

@@ -55,6 +55,17 @@ class CopioImages extends HTMLElement {
           grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
           gap: 0.75rem;
           max-width: 100%;
+          min-height: 140px;
+          padding: 0.5rem;
+          border-radius: 8px;
+          border: 2px dashed transparent;
+          box-sizing: border-box;
+          transition: border-color 0.2s, background-color 0.2s;
+        }
+        .container.drag-over {
+          border-color: #3b82f6;
+          background-color: rgba(59, 130, 246, 0.08);
+          box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
         }
         @media (min-width: 640px) {
           .container {
@@ -147,11 +158,12 @@ class CopioImages extends HTMLElement {
           align-items: center;
           justify-content: center;
           color: #64748b;
-          transition: border-color 0.15s, color 0.15s;
+          transition: border-color 0.15s, color 0.15s, background-color 0.15s;
         }
         button.add-btn:hover {
           border-color: #3b82f6;
           color: #3b82f6;
+          background-color: rgba(59, 130, 246, 0.04);
         }
         dialog {
           border: none;
@@ -168,10 +180,8 @@ class CopioImages extends HTMLElement {
       ${styles}
       <div class="container"></div>
 
-      <sl-dialog label="Select image(s), PDF, or Markdown to upload" class="upload-dialog">
-        <input type="file" accept="image/*,application/pdf,.md,.markdown,text/plain" multiple>
-        <sl-button slot="footer" variant="primary" class="close">Close</sl-button>
-      </sl-dialog>
+      <input type="file" class="file-input" accept="image/*,application/pdf,.md,.markdown,text/plain" multiple style="display: none">
+      <input type="file" class="camera-input" accept="image/*" capture="environment" style="display: none">
 
       <sl-dialog label="Edit Markdown Text" class="text-dialog" style="--width: 80vw">
         <div style="margin-bottom: 1rem;">
@@ -195,40 +205,119 @@ class CopioImages extends HTMLElement {
       </sl-dialog>
     `;
 
-    this.shadowRoot.querySelector('.close').onclick = () => {
-      this.shadowRoot.querySelector('.upload-dialog').hide();
-    };
-
     this.shadowRoot.querySelector('.close-data').onclick = () => {
       this.shadowRoot.querySelector('.data-dialog').hide();
     };
 
-    const fileInput = this.shadowRoot.querySelector('input[type="file"]');
-    fileInput.onchange = async (event) => {
-      const files = Array.from(event.target.files || []);
-      await this.addFiles(files);
+    const fileInput = this.shadowRoot.querySelector('.file-input');
+    const cameraInput = this.shadowRoot.querySelector('.camera-input');
+
+    let isProcessingFiles = false;
+    const handleFileChange = async (event) => {
+      if (isProcessingFiles) return;
+      const files = Array.from(event.target?.files || []);
+      if (files.length === 0) return;
+      isProcessingFiles = true;
+      try {
+        await this.addFiles(files);
+      } finally {
+        if (event.target) {
+          event.target.value = '';
+        }
+        isProcessingFiles = false;
+      }
+    };
+
+    fileInput.onchange = handleFileChange;
+    cameraInput.onchange = handleFileChange;
+
+    let dragCounter = 0;
+
+    const isPotentialFileDrag = (event) => {
+      const dt = event.dataTransfer;
+      if (!dt) return false;
+      if (!dt.types || dt.types.length === 0) return true;
+      const types = Array.from(dt.types);
+      return (
+        types.includes('Files') ||
+        types.some(
+          (t) =>
+            t.startsWith('image/') ||
+            t.startsWith('public.') ||
+            t.includes('pdf') ||
+            t.includes('file') ||
+            t === 'text/uri-list',
+        )
+      );
+    };
+
+    const handleDragEnter = (event) => {
+      if (isPotentialFileDrag(event)) {
+        event.preventDefault();
+        dragCounter++;
+        container.classList.add('drag-over');
+      }
     };
 
     const handleDragOver = (event) => {
-      const types = event.dataTransfer?.types;
-      if (types && (Array.from(types).includes('Files') || types.includes?.('Files'))) {
+      if (isPotentialFileDrag(event)) {
         event.preventDefault();
         event.stopPropagation();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = 'copy';
+        }
+        container.classList.add('drag-over');
+      }
+    };
+
+    const handleDragLeave = (event) => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        container.classList.remove('drag-over');
       }
     };
 
     const handleDrop = async (event) => {
-      const files = event.dataTransfer?.files || event.detail?.files;
-      if (files && files.length > 0) {
-        event.preventDefault();
-        event.stopPropagation();
-        await this.addFiles(Array.from(files));
+      dragCounter = 0;
+      container.classList.remove('drag-over');
+      event.preventDefault();
+      event.stopPropagation();
+
+      let files = [];
+      if (event.dataTransfer?.files?.length > 0) {
+        files = Array.from(event.dataTransfer.files);
+      } else if (event.dataTransfer?.items?.length > 0) {
+        for (const item of event.dataTransfer.items) {
+          if (item.kind === 'file') {
+            const f = item.getAsFile();
+            if (f) files.push(f);
+          }
+        }
+      } else if (event.detail?.files) {
+        files = Array.from(event.detail.files);
+      }
+
+      if (files.length > 0) {
+        await this.addFiles(files);
       }
     };
 
     const container = this.shadowRoot.querySelector('.container');
+    container.addEventListener('dragenter', handleDragEnter);
     container.addEventListener('dragover', handleDragOver);
+    container.addEventListener('dragleave', handleDragLeave);
     container.addEventListener('drop', handleDrop);
+    container.addEventListener('dragend', () => {
+      dragCounter = 0;
+      container.classList.remove('drag-over');
+    });
+
+    container.addEventListener('click', (event) => {
+      if (event.target === container) {
+        fileInput.click();
+      }
+    });
 
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
     this.shadowRoot.querySelector('.cancel-crop').onclick = () => this.closeCropDialog();
@@ -306,21 +395,37 @@ class CopioImages extends HTMLElement {
 
     container.innerHTML = `
       ${imageHtml}
-      <button class="add-btn add-image-btn" title="Add image or PDF">
-        <sl-icon name="image"></sl-icon>
+      <button class="add-btn add-image-btn" title="Add image, PDF, or Markdown" aria-label="Add image or PDF">
+        <sl-icon name="plus-lg"></sl-icon>
       </button>
-      <button class="add-btn add-note-btn" title="New blank note">
+      <button class="add-btn add-camera-btn" title="Capture from camera" aria-label="Capture from camera">
+        <sl-icon name="camera"></sl-icon>
+      </button>
+      <button class="add-btn add-note-btn" title="New blank note" aria-label="New blank note">
         <sl-icon name="file-earmark-plus"></sl-icon>
       </button>
     `;
 
-    container.querySelector('.add-image-btn').onclick = () => {
-      this.shadowRoot.querySelector('.upload-dialog').show();
-    };
+    const addImageBtn = container.querySelector('.add-image-btn');
+    if (addImageBtn) {
+      addImageBtn.onclick = () => {
+        this.shadowRoot.querySelector('.file-input').click();
+      };
+    }
 
-    container.querySelector('.add-note-btn').onclick = () => {
-      this.addBlankNote();
-    };
+    const addCameraBtn = container.querySelector('.add-camera-btn');
+    if (addCameraBtn) {
+      addCameraBtn.onclick = () => {
+        this.shadowRoot.querySelector('.camera-input').click();
+      };
+    }
+
+    const addNoteBtn = container.querySelector('.add-note-btn');
+    if (addNoteBtn) {
+      addNoteBtn.onclick = () => {
+        this.addBlankNote();
+      };
+    }
 
     container.querySelectorAll('.image-menu').forEach((dropdown) => {
       const menu = dropdown.querySelector('sl-menu');
@@ -375,6 +480,9 @@ class CopioImages extends HTMLElement {
       ghostClass: 'sortable-ghost',
       filter: 'sl-dropdown',
       preventOnFilter: false,
+      delay: 150,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
       onEnd: (evt) => {
         if (evt.to !== container) return;
         const oldIdx = evt.oldDraggableIndex;

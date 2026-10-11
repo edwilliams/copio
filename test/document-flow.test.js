@@ -19,6 +19,9 @@ describe('Document Flow: create and view a document', () => {
     app = document.createElement('copio-app');
     document.body.appendChild(app);
     await app.updateComplete;
+    while (app.persister.getStatus() !== 0) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
   });
 
   afterEach(async () => {
@@ -180,6 +183,9 @@ describe('Document Flow: create and view a document', () => {
 
     // Simulate page reload via persister.load()
     await app.persister.load();
+    while (app.persister.getStatus() !== 0) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
     await app.updateComplete;
 
     // Resume autoSave
