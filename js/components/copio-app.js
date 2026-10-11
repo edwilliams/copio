@@ -4,6 +4,7 @@ import { randomId } from '../utils/utils.js';
 import { store, persister } from '../core/store.js';
 import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../services/export-utils.js';
 import { SyncManager } from '../services/sync-service.js';
+import { notify } from '../services/notify.js';
 
 class CopioApp extends LitElement {
   #syncManager = null;
@@ -138,6 +139,7 @@ class CopioApp extends LitElement {
       name,
       pages: JSON.stringify(pages),
     });
+    notify.success(`Saved "${name || 'document'}"`);
     router.navigate('/');
   }
 
@@ -189,7 +191,9 @@ class CopioApp extends LitElement {
 
   handleRowDelete(e) {
     const id = e.detail?.id;
+    const docName = this.store.getCell('docs', id, 'name');
     this.store.delRow('docs', id);
+    notify.info(`Deleted "${docName || 'document'}"`);
     if (router.getHashPath().startsWith(`/doc/${id}`)) {
       router.navigate('/');
     }

@@ -1,5 +1,6 @@
 import { expect } from '@esm-bundle/chai';
 import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../js/services/export-utils.js';
+import notify from '../js/services/notify.js';
 
 function createTestImageDataUrl(width = 30, height = 30, color = '#38bdf8') {
   const canvas = document.createElement('canvas');
@@ -17,18 +18,18 @@ describe('Export Smoke Tests', () => {
   let originalCreateObjectURL;
   let originalRevokeObjectURL;
   let originalAnchorClick;
-  let alertMessages = [];
-  let originalAlert;
+  let notifyMessages = [];
+  let originalNotifyShow;
 
   beforeEach(() => {
     createdBlobs = [];
     downloadedFilenames = [];
-    alertMessages = [];
+    notifyMessages = [];
 
     originalCreateObjectURL = URL.createObjectURL;
     originalRevokeObjectURL = URL.revokeObjectURL;
     originalAnchorClick = HTMLAnchorElement.prototype.click;
-    originalAlert = window.alert;
+    originalNotifyShow = notify.show;
 
     URL.createObjectURL = (blob) => {
       createdBlobs.push(blob);
@@ -40,8 +41,10 @@ describe('Export Smoke Tests', () => {
       downloadedFilenames.push(this.download);
     };
 
-    window.alert = (msg) => {
-      alertMessages.push(msg);
+    notify.show = (msgOrOpts, opts) => {
+      const msg = typeof msgOrOpts === 'string' ? msgOrOpts : msgOrOpts?.message;
+      if (msg) notifyMessages.push(msg);
+      return originalNotifyShow(msgOrOpts, opts);
     };
   });
 
@@ -49,7 +52,8 @@ describe('Export Smoke Tests', () => {
     URL.createObjectURL = originalCreateObjectURL;
     URL.revokeObjectURL = originalRevokeObjectURL;
     HTMLAnchorElement.prototype.click = originalAnchorClick;
-    window.alert = originalAlert;
+    notify.show = originalNotifyShow;
+    notify.clear();
   });
 
   it('exportDocumentAsPdf produces a valid PDF blob without throwing', async () => {
@@ -131,12 +135,12 @@ describe('Export Smoke Tests', () => {
 
   it('handles empty page export gracefully without unhandled exceptions', async () => {
     await exportDocumentAsPdf('Empty', []);
-    expect(alertMessages).to.include('No images to export');
+    expect(notifyMessages).to.include('No images to export');
 
     await exportDocumentAsImages('Empty', []);
-    expect(alertMessages).to.include('No images to export');
+    expect(notifyMessages).to.include('No images to export');
 
     exportDocumentAsMarkdown('Empty', []);
-    expect(alertMessages).to.include('No markdown text in this document');
+    expect(notifyMessages).to.include('No markdown text in this document');
   });
 });

@@ -1,4 +1,5 @@
 import { renderPdfPagesToDataUrls } from '../utils/pdf-utils.js';
+import { notify } from './notify.js';
 
 /**
  * Clean text from markdown formatting and emojis for PDF kit rendering.
@@ -148,7 +149,7 @@ export async function renderMarkdownToPageDataUrls(page) {
  */
 export async function exportDocumentAsPdf(docName, pages) {
   if (!pages || pages.length === 0) {
-    alert('No images to export');
+    notify.warning('No images to export');
     return;
   }
 
@@ -169,6 +170,7 @@ export async function exportDocumentAsPdf(docName, pages) {
       a.download = `${docName || 'document'}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      notify.success(`Exported "${docName || 'document'}.pdf"`);
     });
 
     for (const page of pages) {
@@ -209,7 +211,7 @@ export async function exportDocumentAsPdf(docName, pages) {
     doc.end();
   } catch (error) {
     console.error('Error generating PDF:', error);
-    alert('Failed to generate PDF');
+    notify.error('Failed to generate PDF');
   }
 }
 
@@ -218,7 +220,7 @@ export async function exportDocumentAsPdf(docName, pages) {
  */
 export async function exportDocumentAsImages(docName, pages) {
   if (!pages || pages.length === 0) {
-    alert('No images to export');
+    notify.warning('No images to export');
     return;
   }
 
@@ -250,6 +252,7 @@ export async function exportDocumentAsImages(docName, pages) {
       a.download = `${safeName}.${ext}`;
       a.click();
       if (shouldRevoke) URL.revokeObjectURL(downloadUrl);
+      notify.success(`Exported "${safeName}.${ext}"`);
     } else {
       const zip = new JSZip();
       let exportIdx = 0;
@@ -304,10 +307,11 @@ export async function exportDocumentAsImages(docName, pages) {
       a.download = `${safeName}.zip`;
       a.click();
       URL.revokeObjectURL(url);
+      notify.success(`Exported "${safeName}.zip"`);
     }
   } catch (error) {
     console.error('Error downloading images:', error);
-    alert('Failed to download images');
+    notify.error('Failed to download images');
   }
 }
 
@@ -319,7 +323,7 @@ export function exportDocumentAsMarkdown(docName, pages) {
   const mdPages = pages.filter((p) => p.type === 'markdown');
 
   if (mdPages.length === 0) {
-    alert('No markdown text in this document');
+    notify.warning('No markdown text in this document');
     return;
   }
 
@@ -339,4 +343,5 @@ export function exportDocumentAsMarkdown(docName, pages) {
   a.download = `${safeName}.md`;
   a.click();
   URL.revokeObjectURL(url);
+  notify.success(`Exported "${safeName}.md"`);
 }
