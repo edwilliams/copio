@@ -1,4 +1,7 @@
 import { notify } from './notify.js';
+import { getIceServers } from './ice-servers.js';
+
+const CONNECT_TIMEOUT_MS = 30000;
 
 /**
  * Handles PeerJS peer-to-peer sync between host and joiner devices for TinyBase store.
@@ -8,6 +11,8 @@ export class SyncManager {
   #store = null;
   #onStateChange = null;
   #syncState = null;
+  #session = 0;
+  #connectTimer = null;
 
   constructor(store, onStateChange) {
     this.#store = store;
@@ -25,8 +30,62 @@ export class SyncManager {
     }
   }
 
+  #fail(message) {
+    clearTimeout(this.#connectTimer);
+    if (!this.#syncState) return;
+    this.#setState({ ...this.#syncState, step: 'error', message });
+  }
+
+  /**
+   * Creates a Peer configured with working STUN/TURN servers.
+   * PeerJS's built-in TURN servers no longer exist, so cross-device links fail without this.
+   * Returns null if the session was closed while fetching credentials.
+   */
+  async #createPeer() {
+    const session = ++this.#session;
+    const iceServers = await getIceServers();
+    if (session !== this.#session) return null;
+    return new Peer({ config: { iceServers } });
+  }
+
+  /** Logs ICE progress and surfaces ICE failure (otherwise the dialog hangs silently). */
+  #watchConnection(conn) {
+    conn.on('error', (err) => this.#fail(err.message));
+    const pc = conn.peerConnection;
+    if (!pc) return;
+    pc.addEventListener('iceconnectionstatechange', () => {
+      console.log('[Sync] ICE state:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'failed') {
+        this.#fail('Could not connect to the other device. Check both are online and try again.');
+      }
+    });
+  }
+
+  #startConnectTimer() {
+    clearTimeout(this.#connectTimer);
+    this.#connectTimer = setTimeout(() => {
+      const step = this.#syncState?.step;
+      if (step && step !== 'done' && step !== 'error') {
+        this.#fail('Connection timed out. Try again.');
+      }
+    }, CONNECT_TIMEOUT_MS);
+  }
+
+  #onConnOpen(conn) {
+    const setupConn = () => {
+      clearTimeout(this.#connectTimer);
+      this.#setState({ ...this.#syncState, step: 'syncing' });
+      this.#doSync(conn);
+    };
+    if (conn.open) {
+      setupConn();
+    } else {
+      conn.on('open', setupConn);
+    }
+  }
+
   startHost() {
-    if (this.#peer && this.#syncState?.mode === 'host') return;
+    if (this.#syncState?.mode === 'host') return;
 
     if (!navigator.onLine) {
       notify.warning('An internet connection is needed to link devices.', {
@@ -37,86 +96,58 @@ export class SyncManager {
     }
 
     this.#setState({ mode: 'host', step: 'init' });
-    try {
-      this.#peer = new Peer();
-      this.#peer.on('error', (err) => {
-        this.#setState({
-          ...this.#syncState,
-          step: 'error',
-          message: err.message,
-        });
-      });
-      this.#peer.on('open', (id) => {
-        const url = `${location.origin}${location.pathname}?peer=${id}`;
-        const qr = qrcode(0, 'M');
-        qr.addData(url);
-        qr.make();
-        this.#setState({
-          mode: 'host',
-          step: 'waiting',
-          qrSvg: qr.createSvgTag(4, 8),
-          url,
-          peerId: id,
-        });
-      });
-      this.#peer.on('connection', (conn) => {
-        conn.on('error', (err) => {
-          this.#setState({
-            ...this.#syncState,
-            step: 'error',
-            message: err.message,
-          });
-        });
-        const setupConn = () => {
-          this.#setState({ ...this.#syncState, step: 'syncing' });
-          this.#doSync(conn);
-        };
-        if (conn.open) {
-          setupConn();
-        } else {
-          conn.on('open', setupConn);
-        }
-      });
-    } catch (err) {
+    this.#startHostAsync().catch((err) => {
       this.#setState({ mode: 'host', step: 'error', message: err.message });
-    }
+    });
+  }
+
+  async #startHostAsync() {
+    const peer = await this.#createPeer();
+    if (!peer) return;
+    this.#peer = peer;
+
+    peer.on('error', (err) => this.#fail(err.message));
+    peer.on('open', (id) => {
+      const url = `${location.origin}${location.pathname}?peer=${id}`;
+      const qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      this.#setState({
+        mode: 'host',
+        step: 'waiting',
+        qrSvg: qr.createSvgTag(4, 8),
+        url,
+        peerId: id,
+      });
+    });
+    peer.on('connection', (conn) => {
+      this.#startConnectTimer();
+      this.#watchConnection(conn);
+      this.#onConnOpen(conn);
+    });
   }
 
   startJoiner(remotePeerId) {
-    if (this.#peer && this.#syncState?.mode === 'joiner') return;
+    if (this.#syncState?.mode === 'joiner') return;
 
     this.#setState({ mode: 'joiner', step: 'connecting' });
-    try {
-      this.#peer = new Peer();
-      this.#peer.on('error', (err) => {
-        this.#setState({
-          ...this.#syncState,
-          step: 'error',
-          message: err.message,
-        });
-      });
-      this.#peer.on('open', () => {
-        const conn = this.#peer.connect(remotePeerId);
-        conn.on('error', (err) => {
-          this.#setState({
-            ...this.#syncState,
-            step: 'error',
-            message: err.message,
-          });
-        });
-        const setupConn = () => {
-          this.#setState({ ...this.#syncState, step: 'syncing' });
-          this.#doSync(conn);
-        };
-        if (conn.open) {
-          setupConn();
-        } else {
-          conn.on('open', setupConn);
-        }
-      });
-    } catch (err) {
+    this.#startConnectTimer();
+    this.#startJoinerAsync(remotePeerId).catch((err) => {
       this.#setState({ mode: 'joiner', step: 'error', message: err.message });
-    }
+    });
+  }
+
+  async #startJoinerAsync(remotePeerId) {
+    const peer = await this.#createPeer();
+    if (!peer) return;
+    this.#peer = peer;
+
+    peer.on('error', (err) => this.#fail(err.message));
+    peer.on('open', () => {
+      const conn = peer.connect(remotePeerId);
+      this.#watchConnection(conn);
+      this.#onConnOpen(conn);
+    });
   }
 
   #doSync(conn) {
@@ -143,11 +174,13 @@ export class SyncManager {
       conn.send(JSON.stringify(this.#store.getTable('docs')));
     } catch (err) {
       console.error('Failed to send sync data:', err);
-      this.#setState({ ...this.#syncState, step: 'error', message: err.message });
+      this.#fail(err.message);
     }
   }
 
   close() {
+    this.#session++; // invalidate any in-flight peer creation
+    clearTimeout(this.#connectTimer);
     this.#peer?.destroy();
     this.#peer = null;
     this.#setState(null);
