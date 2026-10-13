@@ -71,9 +71,11 @@
   "js/routes/ocr/copio-doc-ocr-dialog.js",
   "js/routes/sync/copio-sync-dialog.js",
   "js/services/export-utils.js",
+  "js/services/notify.js",
   "js/services/ocr-service.js",
   "js/services/sync-service.js",
   "js/utils/pdf-utils.js",
   "js/utils/utils.js",
-  "manifest.webmanifest"
+  "manifest.webmanifest",
+  "sdk/index.js"
 ]

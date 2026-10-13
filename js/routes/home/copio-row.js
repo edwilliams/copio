@@ -1,6 +1,10 @@
 import { LitElement, html, css } from '../../lib/lit-core.min.js';
 
-class CopioRow extends LitElement {
+export class CopioRow extends LitElement {
+  disconnectedCallback() {
+    super.disconnectedCallback();
+  }
+
   static properties = {
     name: { type: String },
   };

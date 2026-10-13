@@ -9,12 +9,16 @@ import Sortable from '../../lib/sortable.esm.js';
 import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from '../../utils/utils.js';
 import { renderPdfPagesToDataUrls } from '../../utils/pdf-utils.js';
 import { notify } from '../../services/notify.js';
-class CopioImages extends HTMLElement {
+export class CopioImages extends HTMLElement {
   #images = [];
   #cropper = null;
+  #sortable = null;
   #cropIndex = null;
   #textIndex = null;
   #isInitialized = false;
+  #abortController = null;
+  #createdObjectUrls = new Set();
+  #activeCameraStream = null;
 
   constructor() {
     super();
@@ -44,6 +48,95 @@ class CopioImages extends HTMLElement {
       this.#isInitialized = true;
     }
     this.#renderGrid();
+  }
+
+  disconnectedCallback() {
+    // 1. Destroy Sortable instance
+    if (this.#sortable) {
+      try {
+        this.#sortable.destroy();
+      } catch (err) {
+        console.warn('Error destroying Sortable:', err);
+      }
+      this.#sortable = null;
+    }
+
+    // 2. Destroy Cropper instance
+    if (this.#cropper) {
+      try {
+        this.#cropper.destroy();
+      } catch (err) {
+        console.warn('Error destroying Cropper:', err);
+      }
+      this.#cropper = null;
+    }
+    this.#cropIndex = null;
+    this.#textIndex = null;
+
+    // 3. Stop camera tracks
+    this.stopCamera();
+
+    // 4. Revoke created object URLs
+    this.#revokeAllObjectUrls();
+
+    // 5. Abort and clean up container and DOM event listeners
+    if (this.#abortController) {
+      this.#abortController.abort();
+      this.#abortController = null;
+    }
+
+    const fileInput = this.shadowRoot.querySelector('.file-input');
+    const cameraInput = this.shadowRoot.querySelector('.camera-input');
+    if (fileInput) fileInput.onchange = null;
+    if (cameraInput) cameraInput.onchange = null;
+
+    this.#isInitialized = false;
+  }
+
+  setCameraStream(stream) {
+    this.stopCamera();
+    this.#activeCameraStream = stream || null;
+  }
+
+  stopCamera() {
+    if (this.#activeCameraStream) {
+      try {
+        const tracks = typeof this.#activeCameraStream.getTracks === 'function'
+          ? this.#activeCameraStream.getTracks()
+          : [];
+        tracks.forEach((track) => {
+          if (typeof track.stop === 'function') track.stop();
+        });
+      } catch (err) {
+        console.warn('Error stopping camera tracks:', err);
+      }
+      this.#activeCameraStream = null;
+    }
+  }
+
+  #trackObjectUrl(url) {
+    if (url && typeof url === 'string' && url.startsWith('blob:')) {
+      this.#createdObjectUrls.add(url);
+    }
+    return url;
+  }
+
+  #revokeObjectUrl(url) {
+    if (this.#createdObjectUrls.has(url)) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+      this.#createdObjectUrls.delete(url);
+    }
+  }
+
+  #revokeAllObjectUrls() {
+    for (const url of this.#createdObjectUrls) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+    }
+    this.#createdObjectUrls.clear();
   }
 
   #initShell() {
@@ -205,9 +298,18 @@ class CopioImages extends HTMLElement {
       </sl-dialog>
     `;
 
-    this.shadowRoot.querySelector('.close-data').onclick = () => {
-      this.shadowRoot.querySelector('.data-dialog').hide();
-    };
+    if (this.#abortController) {
+      this.#abortController.abort();
+    }
+    this.#abortController = new AbortController();
+    const { signal } = this.#abortController;
+
+    const closeDataBtn = this.shadowRoot.querySelector('.close-data');
+    if (closeDataBtn) {
+      closeDataBtn.addEventListener('click', () => {
+        this.shadowRoot.querySelector('.data-dialog')?.hide();
+      }, { signal });
+    }
 
     const fileInput = this.shadowRoot.querySelector('.file-input');
     const cameraInput = this.shadowRoot.querySelector('.camera-input');
@@ -228,8 +330,14 @@ class CopioImages extends HTMLElement {
       }
     };
 
-    fileInput.onchange = handleFileChange;
-    cameraInput.onchange = handleFileChange;
+    if (fileInput) {
+      fileInput.onchange = handleFileChange;
+      fileInput.addEventListener('change', handleFileChange, { signal });
+    }
+    if (cameraInput) {
+      cameraInput.onchange = handleFileChange;
+      cameraInput.addEventListener('change', handleFileChange, { signal });
+    }
 
     let dragCounter = 0;
 
@@ -304,35 +412,43 @@ class CopioImages extends HTMLElement {
     };
 
     const container = this.shadowRoot.querySelector('.container');
-    container.addEventListener('dragenter', handleDragEnter);
-    container.addEventListener('dragover', handleDragOver);
-    container.addEventListener('dragleave', handleDragLeave);
-    container.addEventListener('drop', handleDrop);
-    container.addEventListener('dragend', () => {
-      dragCounter = 0;
-      container.classList.remove('drag-over');
-    });
+    if (container) {
+      container.addEventListener('dragenter', handleDragEnter, { signal });
+      container.addEventListener('dragover', handleDragOver, { signal });
+      container.addEventListener('dragleave', handleDragLeave, { signal });
+      container.addEventListener('drop', handleDrop, { signal });
+      container.addEventListener('dragend', () => {
+        dragCounter = 0;
+        container.classList.remove('drag-over');
+      }, { signal });
 
-    container.addEventListener('click', (event) => {
-      if (event.target === container) {
-        fileInput.click();
-      }
-    });
+      container.addEventListener('click', (event) => {
+        if (event.target === container) {
+          fileInput?.click();
+        }
+      }, { signal });
+    }
+
+    const cancelCropBtn = this.shadowRoot.querySelector('.cancel-crop');
+    const applyCropBtn = this.shadowRoot.querySelector('.apply-crop');
+    const cancelTextBtn = this.shadowRoot.querySelector('.cancel-text');
+    const applyTextBtn = this.shadowRoot.querySelector('.apply-text');
+
+    if (cancelCropBtn) cancelCropBtn.addEventListener('click', () => this.closeCropDialog(), { signal });
+    if (applyCropBtn) applyCropBtn.addEventListener('click', () => this.applyCrop(), { signal });
+    if (cancelTextBtn) cancelTextBtn.addEventListener('click', () => this.closeTextDialog(), { signal });
+    if (applyTextBtn) applyTextBtn.addEventListener('click', () => this.applyTextEdit(), { signal });
 
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
-    this.shadowRoot.querySelector('.cancel-crop').onclick = () => this.closeCropDialog();
-    this.shadowRoot.querySelector('.apply-crop').onclick = () => this.applyCrop();
-    this.shadowRoot.querySelector('.cancel-text').onclick = () => this.closeTextDialog();
-    this.shadowRoot.querySelector('.apply-text').onclick = () => this.applyTextEdit();
-
-    cropDialog.addEventListener('sl-hide', () => {
-      if (this.#cropper) {
-        this.#cropper.destroy();
-        this.#cropper = null;
-      }
-      this.#cropIndex = null;
-    });
-
+    if (cropDialog) {
+      cropDialog.addEventListener('sl-hide', () => {
+        if (this.#cropper) {
+          this.#cropper.destroy();
+          this.#cropper = null;
+        }
+        this.#cropIndex = null;
+      }, { signal });
+    }
   }
 
 
@@ -473,7 +589,16 @@ class CopioImages extends HTMLElement {
   }
 
   #setupSortable(container) {
-    Sortable.create(container, {
+    if (this.#sortable) {
+      try {
+        this.#sortable.destroy();
+      } catch (err) {
+        console.warn('Error destroying Sortable:', err);
+      }
+      this.#sortable = null;
+    }
+
+    this.#sortable = Sortable.create(container, {
       animation: 150,
       draggable: '.image-wrapper',
       chosenClass: 'dragging',
@@ -517,12 +642,20 @@ class CopioImages extends HTMLElement {
 
   closeCropDialog() {
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
+    const cropImage = this.shadowRoot.querySelector('#crop-image');
+    if (cropImage) {
+      cropImage.onload = null;
+    }
     if (this.#cropper) {
-      this.#cropper.destroy();
+      try {
+        this.#cropper.destroy();
+      } catch (err) {
+        console.warn('Error destroying Cropper:', err);
+      }
       this.#cropper = null;
     }
     this.#cropIndex = null;
-    cropDialog.hide();
+    cropDialog?.hide();
   }
 
   applyCrop() {
@@ -568,13 +701,13 @@ class CopioImages extends HTMLElement {
     if (!page) return;
     if (page.type === 'markdown') {
       const blob = new Blob([page.content || ''], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+      const url = this.#trackObjectUrl(URL.createObjectURL(blob));
       const a = document.createElement('a');
       const filename = page.name || `document-${index + 1}.md`;
       a.href = url;
       a.download = filename;
       a.click();
-      URL.revokeObjectURL(url);
+      this.#revokeObjectUrl(url);
       notify.success(`Downloaded "${filename}"`);
       return;
     }
