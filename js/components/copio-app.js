@@ -486,6 +486,7 @@ export class CopioApp extends LitElement {
 
       ${this.syncState ? html`<copio-sync-dialog
         .syncState=${this.syncState}
+        @copio-sync-dialog:close=${this.closeSyncDialog}
       ></copio-sync-dialog>` : ''}
       <copio-doc-ocr-dialog
         @copio-ocr:save-note=${this.handleOcrSaveNote}

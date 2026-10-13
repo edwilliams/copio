@@ -14,19 +14,45 @@ export class CopioSyncDialog extends LitElement {
     this.closeSyncDialog();
   }
 
+  handleCloseClick = () => {
+    const dialog = this.querySelector('sl-dialog');
+    if (dialog && typeof dialog.hide === 'function') {
+      dialog.hide();
+    } else {
+      this.closeSyncDialog();
+    }
+  };
+
   closeSyncDialog = () => {
     this.dispatchEvent(new CustomEvent('copio-sync-dialog:close', { bubbles: true }));
   };
 
   render() {
     if (!this.syncState) return '';
-    const { step, qrSvg, added, message } = this.syncState;
+    const { step, qrSvg, url, added, message } = this.syncState;
     let body;
     if (step === 'init') {
       body = html`<sl-spinner></sl-spinner> Setting up…`;
     } else if (step === 'waiting') {
-      body = html`<div .innerHTML=${qrSvg}></div>
-        <p>Waiting for other device…</p>`;
+      body = html`
+        <div .innerHTML=${qrSvg}></div>
+        ${url
+          ? html`
+              <div style="margin: 0.75rem 0; word-break: break-all;">
+                <a
+                  class="sync-link"
+                  href=${url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="color: var(--sl-color-primary-600, #0284c7); text-decoration: underline; font-size: 0.85rem;"
+                >
+                  ${url}
+                </a>
+              </div>
+            `
+          : ''}
+        <p style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;">Waiting for other device…</p>
+      `;
     } else if (step === 'connecting') {
       body = html`<sl-spinner></sl-spinner> Connecting…`;
     } else if (step === 'syncing') {
@@ -47,7 +73,7 @@ export class CopioSyncDialog extends LitElement {
         @sl-after-hide=${this.closeSyncDialog}
       >
         <div style="text-align:center;padding:1rem">${body}</div>
-        <sl-button slot="footer" @click=${this.closeSyncDialog}
+        <sl-button slot="footer" class="sync-close-btn" @click=${this.handleCloseClick}
           >Close</sl-button
         >
       </sl-dialog>
