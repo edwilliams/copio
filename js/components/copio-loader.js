@@ -1,6 +1,9 @@
 import { LitElement, html, css } from '../lib/lit-core.min.js';
 
-class CopioLoader extends LitElement {
+export class CopioLoader extends LitElement {
+  disconnectedCallback() {
+    super.disconnectedCallback();
+  }
   // todo: make the circle around the logo animate
   static styles = css`
     .lds-roller {

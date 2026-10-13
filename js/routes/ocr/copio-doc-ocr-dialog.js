@@ -1,8 +1,8 @@
 import { LitElement, html } from '../../lib/lit-core.min.js';
-import { recognizeDocumentPages, SUPPORTED_LANGUAGES } from '../../services/ocr-service.js';
+import { recognizeDocumentPages, SUPPORTED_LANGUAGES, terminateOcrWorker } from '../../services/ocr-service.js';
 import { notify } from '../../services/notify.js';
 
-class CopioDocOcrDialog extends LitElement {
+export class CopioDocOcrDialog extends LitElement {
   #abortController = null;
 
   static properties = {
@@ -21,6 +21,16 @@ class CopioDocOcrDialog extends LitElement {
 
   createRenderRoot() {
     return this; // Use Light DOM for Shoelace dialog compatibility
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.#abortController) {
+      this.#abortController.abort();
+      this.#abortController = null;
+    }
+    terminateOcrWorker();
+    this.isOpen = false;
   }
 
   constructor() {

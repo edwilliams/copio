@@ -5,10 +5,12 @@ import { store, persister } from '../core/store.js';
 import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../services/export-utils.js';
 import { SyncManager } from '../services/sync-service.js';
 import { notify } from '../services/notify.js';
+import { terminateOcrWorker } from '../services/ocr-service.js';
 
-class CopioApp extends LitElement {
+export class CopioApp extends LitElement {
   #syncManager = null;
   #unsubscribeRouter = null;
+  #tableListenerId = null;
 
   static properties = {
     docsData: { type: Object, state: true },
@@ -34,7 +36,7 @@ class CopioApp extends LitElement {
     this.persister = persister;
 
     // Bridge TinyBase reactivity to Lit
-    this.store.addTableListener('docs', () => {
+    this.#tableListenerId = this.store.addTableListener('docs', () => {
       this.docsData = this.store.getTable('docs');
       const currentPath = router.getHashPath();
       if (currentPath.startsWith('/doc/')) {
@@ -73,7 +75,12 @@ class CopioApp extends LitElement {
     super.disconnectedCallback();
     clearTimeout(this.hideLoaderTimer);
     this.#unsubscribeRouter?.();
+    if (this.#tableListenerId) {
+      this.store.delListener(this.#tableListenerId);
+      this.#tableListenerId = null;
+    }
     this.#syncManager?.close();
+    terminateOcrWorker();
   }
 
   hideLoader() {
@@ -325,6 +332,28 @@ class CopioApp extends LitElement {
     }
   };
 
+  handleClearCache = async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((r) => r.unregister()));
+      } catch (err) {
+        console.warn('Error unregistering service workers:', err);
+      }
+    }
+
+    if ('caches' in window) {
+      try {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      } catch (err) {
+        console.warn('Error deleting caches:', err);
+      }
+    }
+
+    window.location.reload();
+  };
+
   
 
 
@@ -427,6 +456,7 @@ class CopioApp extends LitElement {
       >
         <copio-header
           @copio-header:link-device=${this.startSyncAsHost}
+          @copio-header:clear-cache=${this.handleClearCache}
         ></copio-header>
 
         <div id="copio-rows">${this.renderRows()}</div>

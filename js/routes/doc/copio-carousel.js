@@ -1,6 +1,11 @@
 import { LitElement, html, css } from '../../lib/lit-core.min.js';
 
-class CopioCarousel extends LitElement {
+export class CopioCarousel extends LitElement {
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.activeSlideIndex = 0;
+  }
+
   static properties = {
     images: { type: Array },
     activeSlideIndex: { type: Number, state: true },

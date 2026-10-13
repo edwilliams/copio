@@ -1,9 +1,14 @@
 import { LitElement, html } from '../../lib/lit-core.min.js';
 import { randomId } from '../../utils/utils.js';
 
-class CopioAddEditDialog extends LitElement {
+export class CopioAddEditDialog extends LitElement {
   createRenderRoot() {
     return this;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.#clearValidation();
   }
 
   #clearValidation = () => {
@@ -15,7 +20,9 @@ class CopioAddEditDialog extends LitElement {
       inputName.style.removeProperty('--sl-input-border-color');
       inputName.style.removeProperty('--sl-input-border-color-focus');
       if (typeof inputName.setCustomValidity === 'function') {
-        inputName.setCustomValidity('');
+        try {
+          inputName.setCustomValidity('');
+        } catch {}
       }
     }
   };

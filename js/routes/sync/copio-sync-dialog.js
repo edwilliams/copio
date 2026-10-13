@@ -1,12 +1,17 @@
 import { LitElement, html } from '../../lib/lit-core.min.js';
 
-class CopioSyncDialog extends LitElement {
+export class CopioSyncDialog extends LitElement {
   static properties = {
     syncState: { type: Object }
   };
 
   createRenderRoot() {
     return this;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.closeSyncDialog();
   }
 
   closeSyncDialog = () => {

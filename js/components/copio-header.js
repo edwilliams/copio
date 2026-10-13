@@ -1,6 +1,6 @@
 import { LitElement, html, css } from '../lib/lit-core.min.js';
 
-class CopioHeader extends LitElement {
+export class CopioHeader extends LitElement {
   static styles = css`
     header {
       background-color: #151f2a;
@@ -35,6 +35,10 @@ class CopioHeader extends LitElement {
     await this.#updateStorageInfo();
   }
 
+  disconnectedCallback() {
+    super.disconnectedCallback();
+  }
+
   async #updateStorageInfo() {
     if (navigator.storage) {
       if (navigator.storage.persisted) {
@@ -55,20 +59,14 @@ class CopioHeader extends LitElement {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
-  async #handleSelect(e) {
+  #handleSelect(e) {
     if (e.detail.item.value === 'link-device') {
       this.dispatchEvent(new CustomEvent('copio-header:link-device', { bubbles: true, composed: true }));
       return;
     }
-    if (e.detail.item.value !== 'clear-cache') return;
-
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map((r) => r.unregister()));
-
-    const cacheNames = await caches.keys();
-    await Promise.all(cacheNames.map((name) => caches.delete(name)));
-
-    window.location.reload();
+    if (e.detail.item.value === 'clear-cache') {
+      this.dispatchEvent(new CustomEvent('copio-header:clear-cache', { bubbles: true, composed: true }));
+    }
   }
 
   render() {

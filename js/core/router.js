@@ -15,12 +15,20 @@ export class SimpleRouter {
   #routes = [];
   #listeners = new Set();
   #currentRoute = null;
+  #handleHashChange = () => this.handleRoute();
+  #handlePopState = () => this.handleRoute();
 
   constructor(routes = ROUTES) {
     this.#routes = routes;
 
-    window.addEventListener('hashchange', () => this.handleRoute());
-    window.addEventListener('popstate', () => this.handleRoute());
+    window.addEventListener('hashchange', this.#handleHashChange);
+    window.addEventListener('popstate', this.#handlePopState);
+  }
+
+  destroy() {
+    window.removeEventListener('hashchange', this.#handleHashChange);
+    window.removeEventListener('popstate', this.#handlePopState);
+    this.#listeners.clear();
   }
 
   onRouteChange(listener) {
