@@ -55,13 +55,27 @@ export class SyncManager {
           mode: 'host',
           step: 'waiting',
           qrSvg: qr.createSvgTag(4, 8),
+          url,
+          peerId: id,
         });
       });
       this.#peer.on('connection', (conn) => {
-        conn.on('open', () => {
+        conn.on('error', (err) => {
+          this.#setState({
+            ...this.#syncState,
+            step: 'error',
+            message: err.message,
+          });
+        });
+        const setupConn = () => {
           this.#setState({ ...this.#syncState, step: 'syncing' });
           this.#doSync(conn);
-        });
+        };
+        if (conn.open) {
+          setupConn();
+        } else {
+          conn.on('open', setupConn);
+        }
       });
     } catch (err) {
       this.#setState({ mode: 'host', step: 'error', message: err.message });
@@ -90,10 +104,15 @@ export class SyncManager {
             message: err.message,
           });
         });
-        conn.on('open', () => {
+        const setupConn = () => {
           this.#setState({ ...this.#syncState, step: 'syncing' });
           this.#doSync(conn);
-        });
+        };
+        if (conn.open) {
+          setupConn();
+        } else {
+          conn.on('open', setupConn);
+        }
       });
     } catch (err) {
       this.#setState({ mode: 'joiner', step: 'error', message: err.message });
@@ -101,12 +120,17 @@ export class SyncManager {
   }
 
   #doSync(conn) {
-    conn.send(JSON.stringify(this.#store.getTable('docs')));
     conn.on('data', (raw) => {
-      const rows = JSON.parse(raw);
+      let rows;
+      try {
+        rows = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      } catch (err) {
+        console.error('Failed to parse sync data:', err);
+        return;
+      }
       let added = 0;
       this.#store.transaction(() => {
-        for (const [id, row] of Object.entries(rows)) {
+        for (const [id, row] of Object.entries(rows || {})) {
           if (!this.#store.hasRow('docs', id)) added++;
           this.#store.setRow('docs', id, row);
         }
@@ -114,6 +138,13 @@ export class SyncManager {
       this.#setState({ ...this.#syncState, step: 'done', added });
       notify.success(`Sync complete — ${added} doc${added !== 1 ? 's' : ''} added`);
     });
+
+    try {
+      conn.send(JSON.stringify(this.#store.getTable('docs')));
+    } catch (err) {
+      console.error('Failed to send sync data:', err);
+      this.#setState({ ...this.#syncState, step: 'error', message: err.message });
+    }
   }
 
   close() {

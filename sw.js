@@ -1,4 +1,4 @@
-const CACHE_NAME = 'copio-cache-v15'; // bump this on every deploy
+const CACHE_NAME = 'copio-cache-v16'; // bump this on every deploy
 
 // --------------------------------------------------------
 // install: fetch files-to-cache.json & cache all listed files
@@ -45,7 +45,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.url.startsWith(self.location.origin)) {
     event.respondWith(
-      caches.match(event.request).then((response) => {
+      caches.match(event.request, { ignoreSearch: true }).then((response) => {
         return response || fetch(event.request);
       }),
     );
