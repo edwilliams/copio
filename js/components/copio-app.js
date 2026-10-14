@@ -1,7 +1,7 @@
 import { LitElement, html } from '../lib/lit-core.min.js';
 import { router } from '../core/router.js';
 import { randomId } from '../utils/utils.js';
-import { store, persister } from '../core/store.js';
+import { docRepository } from '../services/doc-repository.js';
 import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../services/export-utils.js';
 import { SyncManager } from '../services/sync-service.js';
 import { notify } from '../services/notify.js';
@@ -10,7 +10,7 @@ import { terminateOcrWorker } from '../services/ocr-service.js';
 export class CopioApp extends LitElement {
   #syncManager = null;
   #unsubscribeRouter = null;
-  #tableListenerId = null;
+  #repoUnsubscribe = null;
 
   static properties = {
     docsData: { type: Object, state: true },
@@ -31,13 +31,12 @@ export class CopioApp extends LitElement {
     this.syncState = null;
     this.hideLoaderTimer = null;
 
-    // Setup TinyBase store
-    this.store = store;
-    this.persister = persister;
+    // Document repository
+    this.docRepo = docRepository;
 
-    // Bridge TinyBase reactivity to Lit
-    this.#tableListenerId = this.store.addTableListener('docs', () => {
-      this.docsData = this.store.getTable('docs');
+    // Bridge repository reactivity to Lit
+    this.#repoUnsubscribe = this.docRepo.subscribe(() => {
+      this.#refreshDocs();
       const currentPath = router.getHashPath();
       if (currentPath.startsWith('/doc/')) {
         router.handleRoute();
@@ -45,17 +44,37 @@ export class CopioApp extends LitElement {
     });
 
     // Initialize PeerJS sync service
-    this.#syncManager = new SyncManager(this.store, (state) => {
+    this.#syncManager = new SyncManager(this.docRepo, (state) => {
       this.syncState = state;
     });
+  }
+
+  get store() {
+    return this.docRepo.store;
+  }
+
+  get persister() {
+    return this.docRepo.adapter?.persister;
+  }
+
+  #refreshDocs() {
+    if (typeof this.docRepo.listDocsSync === 'function') {
+      const docs = this.docRepo.listDocsSync();
+      this.docsData = Object.fromEntries(docs.map((d) => [d.id, d]));
+    } else {
+      this.docRepo.listDocs().then((docs) => {
+        this.docsData = Object.fromEntries(docs.map((d) => [d.id, d]));
+      });
+    }
   }
 
   // Runs after first render - replaces connectedCallback
   async firstUpdated() {
     this.hideLoader();
 
-    // Load persisted data - triggers TinyBase listener → updates docsData → Lit re-renders
-    await this.persister.load();
+    // Load persisted data via repository
+    await this.docRepo.init();
+    await this.#refreshDocs();
 
     this.#unsubscribeRouter = router.onRouteChange((route) => {
       this.#handleRouteChange(route);
@@ -75,9 +94,9 @@ export class CopioApp extends LitElement {
     super.disconnectedCallback();
     clearTimeout(this.hideLoaderTimer);
     this.#unsubscribeRouter?.();
-    if (this.#tableListenerId) {
-      this.store.delListener(this.#tableListenerId);
-      this.#tableListenerId = null;
+    if (this.#repoUnsubscribe) {
+      this.#repoUnsubscribe();
+      this.#repoUnsubscribe = null;
     }
     this.#syncManager?.close();
     terminateOcrWorker();
@@ -142,10 +161,7 @@ export class CopioApp extends LitElement {
 
   handleAddEditSave(e) {
     const { id, name, pages } = e.detail;
-    this.store.setRow('docs', id, {
-      name,
-      pages: JSON.stringify(pages),
-    });
+    this.docRepo.saveDoc(id, { name, pages });
     notify.success(`Saved "${name || 'document'}"`);
     router.navigate('/');
   }
@@ -157,11 +173,10 @@ export class CopioApp extends LitElement {
   }
 
   async #loadEditDoc(id) {
-    const vals = this.store.getRow('docs', id);
-    if (!vals || Object.keys(vals).length === 0) return;
-    const pages = JSON.parse(vals.pages || '[]');
+    const doc = this.docRepo.getDocSync(id) || await this.docRepo.getDoc(id);
+    if (!doc) return;
     const dialog = this.querySelector('copio-add-edit-dialog');
-    if (dialog) await dialog.openEdit(id, vals.name, pages);
+    if (dialog) await dialog.openEdit(id, doc.name, doc.pages);
   }
 
   async #startSyncHost() {
@@ -180,13 +195,12 @@ export class CopioApp extends LitElement {
   }
 
   #loadCarouselDoc(id) {
-    const vals = this.store.getRow('docs', id);
-    if (!vals || Object.keys(vals).length === 0) return;
+    const doc = this.docRepo.getDocSync(id);
+    if (!doc) return;
 
     const carousel = this.querySelector('copio-carousel');
     if (carousel) {
-      const pages = JSON.parse(vals.pages || '[]');
-      carousel.images = pages;
+      carousel.images = doc.pages;
       this.showCarousel = true;
     }
   }
@@ -198,9 +212,11 @@ export class CopioApp extends LitElement {
 
   handleRowDelete(e) {
     const id = e.detail?.id;
-    const docName = this.store.getCell('docs', id, 'name');
-    this.store.delRow('docs', id);
-    notify.info(`Deleted "${docName || 'document'}"`);
+    if (!id) return;
+    const doc = this.docRepo.getDocSync(id);
+    const docName = doc?.name || 'document';
+    this.docRepo.deleteDoc(id);
+    notify.info(`Deleted "${docName}"`);
     if (router.getHashPath().startsWith(`/doc/${id}`)) {
       router.navigate('/');
     }
@@ -208,41 +224,38 @@ export class CopioApp extends LitElement {
 
   async handleRowDownload(e) {
     const id = e.detail?.id;
-    const vals = this.store.getRow('docs', id);
-    if (!vals) return;
-
-    const pages = JSON.parse(vals.pages || '[]');
-    await exportDocumentAsPdf(vals.name, pages);
+    if (!id) return;
+    const doc = await this.docRepo.getDoc(id);
+    if (!doc) return;
+    await exportDocumentAsPdf(doc.name, doc.pages);
   }
 
   async handleRowDownloadImages(e) {
     const id = e.detail?.id;
-    const vals = this.store.getRow('docs', id);
-    if (!vals) return;
-
-    const pages = JSON.parse(vals.pages || '[]');
-    await exportDocumentAsImages(vals.name, pages);
+    if (!id) return;
+    const doc = await this.docRepo.getDoc(id);
+    if (!doc) return;
+    await exportDocumentAsImages(doc.name, doc.pages);
   }
 
-  handleRowDownloadMarkdown(e) {
+  async handleRowDownloadMarkdown(e) {
     const id = e.detail?.id;
-    const vals = this.store.getRow('docs', id);
-    if (!vals) return;
-
-    const pages = JSON.parse(vals.pages || '[]');
-    exportDocumentAsMarkdown(vals.name, pages);
+    if (!id) return;
+    const doc = await this.docRepo.getDoc(id);
+    if (!doc) return;
+    exportDocumentAsMarkdown(doc.name, doc.pages);
   }
 
   // Document OCR Handlers
-  handleRowExtractOcr(e) {
+  async handleRowExtractOcr(e) {
     const id = e.detail?.id;
-    const vals = this.store.getRow('docs', id);
-    if (!vals) return;
+    if (!id) return;
+    const doc = await this.docRepo.getDoc(id);
+    if (!doc) return;
 
-    const pages = JSON.parse(vals.pages || '[]');
     const ocrDialog = this.querySelector('copio-doc-ocr-dialog');
     if (ocrDialog) {
-      ocrDialog.open(id, vals.name, pages);
+      ocrDialog.open(id, doc.name, doc.pages);
     }
   }
 
@@ -251,7 +264,7 @@ export class CopioApp extends LitElement {
    * Determines the current document from the active route and opens the shared
    * OCR dialog in single-page mode via openPage().
    */
-  handleOcrPage(e) {
+  async handleOcrPage(e) {
     const { page, pageIndex } = e.detail || {};
     if (!page) return;
 
@@ -269,23 +282,21 @@ export class CopioApp extends LitElement {
 
     if (!docId) return;
 
-    const vals = this.store.getRow('docs', docId);
-    if (!vals) return;
+    const doc = await this.docRepo.getDoc(docId);
+    if (!doc) return;
 
     const ocrDialog = this.querySelector('copio-doc-ocr-dialog');
     if (ocrDialog) {
-      ocrDialog.openPage(docId, vals.name, page, pageIndex);
+      ocrDialog.openPage(docId, doc.name, page, pageIndex);
     }
   }
 
-  handleOcrSaveNote(e) {
+  async handleOcrSaveNote(e) {
     const { docId, content, pageIndex } = e.detail || {};
     if (!docId || !content) return;
 
-    const vals = this.store.getRow('docs', docId);
-    if (!vals) return;
-
-    const pages = JSON.parse(vals.pages || '[]');
+    const doc = await this.docRepo.getDoc(docId);
+    if (!doc) return;
 
     const noteName =
       pageIndex !== null && pageIndex !== undefined
@@ -299,6 +310,7 @@ export class CopioApp extends LitElement {
       content,
     };
 
+    const pages = [...(doc.pages || [])];
     if (pageIndex !== null && pageIndex !== undefined) {
       // Insert right after the source image page
       pages.splice(pageIndex + 1, 0, newNote);
@@ -307,9 +319,9 @@ export class CopioApp extends LitElement {
       pages.push(newNote);
     }
 
-    this.store.setRow('docs', docId, {
-      ...vals,
-      pages: JSON.stringify(pages),
+    await this.docRepo.saveDoc(docId, {
+      ...doc,
+      pages,
     });
   }
 

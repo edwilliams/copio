@@ -16,13 +16,20 @@ The app is offline-first: the Service Worker caches every asset at install time.
 
 ```
 js/
-  core/               Singletons — instantiated once, imported anywhere
-    store.js          TinyBase store + IndexedDB persister (the single source of truth)
+  adapters/           Driven (Outbound) ports & implementations (Hexagonal)
+    storage/
+      storage-port.js         StoragePort contract interface
+      indexeddb-adapter.js    IndexedDbStorageAdapter (TinyBase + IndexedDB)
+      memory-adapter.js       MemoryStorageAdapter (in-memory for tests/ephemeral)
+      index.js                createDefaultAdapter() factory
+
+  core/               Singletons & infrastructure
+    store.js          TinyBase store + IndexedDB persister instance
     router.js         Hash-based SPA router singleton
     register-components.js  Entry point: imports all components, waits for CE definitions
 
   components/         Global shell components (not tied to a specific route)
-    copio-app.js      Root orchestrator — owns routing, store bridge, event handling
+    copio-app.js      Root orchestrator — owns routing, docRepo bridge, event handling
     copio-header.js   Top nav bar
     copio-loader.js   Full-screen loading spinner
 
@@ -40,6 +47,7 @@ js/
       copio-add-edit-dialog.js  Add / edit document dialog (/add, /doc/:id/edit)
 
   services/           Headless business logic (no rendering)
+    doc-repository.js Headless document repository (CPO-014)
     sync-service.js   PeerJS WebRTC session management
     ocr-service.js    Tesseract.js worker lifecycle + batch OCR
     export-utils.js   PDF (PDFKit), ZIP (JSZip), Markdown export
@@ -48,6 +56,7 @@ js/
     utils.js          randomId, fileToBase64, thresholdSrc (Sauvola binarization),
                       rotateSrc, getCroppedSrc, extractExif
     pdf-utils.js      Renders PDF pages to data URLs via PDF.js
+    module-loader.js  Dynamic lazy ES module and asset loaders (CPO-031)
 
   lib/                Third-party pre-built bundles — do not edit
 ```
@@ -64,17 +73,24 @@ createRenderRoot() { return this; }
 ```
 This opts into **Light DOM** so Shoelace's global CSS custom properties and `sl-*` components work without crossing shadow boundaries. This is intentional and should be preserved on any new component.
 
-### 2. Store is a singleton
+### 2. Headless DocRepository & Pluggable StoragePort (CPO-014, CPO-033)
 
-`js/core/store.js` exports a single `store` and `persister` instance. Any component needing data imports from there — never creates its own store. TinyBase auto-persists to IndexedDB (`copio-db`) on every change via `startAutoSave()`.
+Components and routes **never** import or touch the persistence layer (`store.js`) directly. All document persistence, lifecycle mutations, and reactive subscriptions flow through the headless `DocRepository` singleton (`js/services/doc-repository.js`).
+
+`DocRepository` delegates data persistence to a pluggable **`StoragePort`** driven adapter:
+- **`IndexedDbStorageAdapter`** (`js/adapters/storage/indexeddb-adapter.js`): Default browser adapter wrapping TinyBase IndexedDB persistence (`copio-db`).
+- **`MemoryStorageAdapter`** (`js/adapters/storage/memory-adapter.js`): Pure in-memory storage for headless Node test suites, temporary scan sessions, and server-side environments.
+- **`createDefaultAdapter()`** (`js/adapters/storage/index.js`): Factory selecting IndexedDB in browser runtimes and Memory in Node / test harnesses.
 
 ### 3. Data model
 
-The store has one table: **`docs`**. Each row:
+Documents are manipulated as domain objects with parsed pages:
 ```js
+// Document domain object
 {
+  id: "doc-abc123",
   name: "My Document",       // string
-  pages: "[ ... ]"           // JSON.stringify'd array of page objects
+  pages: [ ... ]             // Array of Page objects
 }
 ```
 
@@ -87,7 +103,7 @@ Each page object:
 { id, type: 'markdown', name, content }
 ```
 
-`pages` is stored as a JSON string (not a nested TinyBase table) to keep the schema flat. Always `JSON.parse(vals.pages || '[]')` before use.
+In the persistence layer (`IndexedDbStorageAdapter`), `pages` is stored as a JSON string within the TinyBase `docs` table to keep the schema flat. Serialization and deserialization are **100% encapsulated inside `DocRepository` and `IndexedDbStorageAdapter`**; no UI component ever calls `JSON.parse` or `JSON.stringify` on document pages.
 
 ### 4. Router
 
@@ -165,6 +181,71 @@ As decided in ADR 0001, the SDK target architecture separates concerns into:
 1. **Hexagon Core (`CopioEngine` / `@copio/core`)**: Headless, DOM-free business logic for page management, scan sessions, edit stacks, and export pipelines. Scheduled for implementation in **CPO-045** (depending on CPO-014 document repository and CPO-033 storage adapter).
 2. **Driving (Inbound) Adapters**: `<copio-scanner>` Web Component (CPO-034) and headless API.
 3. **Driven (Outbound) Ports**: `StoragePort` (CPO-033), `ImageProcessorPort`, `OcrPort`, `PdfPort`, `SyncPort`.
+
+#### `StoragePort` Contract (CPO-033)
+The storage port interface (`js/adapters/storage/storage-port.js`) defines the driven contract for data storage:
+
+```ts
+interface StoragePort {
+  init(): Promise<{ kind: string; persistent: boolean }>;
+  listDocs(): Promise<DocRow[]>;
+  getDoc(id: string): Promise<DocRow | null>;
+  saveDoc(id: string, doc: DocRow): Promise<void>;
+  deleteDoc(id: string): Promise<void>;
+  savePage(docId: string, pageId: string, blobOrData: any): Promise<void>;
+  getPage(docId: string, pageId: string): Promise<any>;
+  deletePage(docId: string, pageId: string): Promise<void>;
+  subscribe?(cb: () => void): () => void;
+}
+```
+
+##### Custom Storage Adapter Stub Example
+An SDK consumer or host application can implement a custom cloud backend adapter (e.g. S3, Supabase, or REST API) and inject it into `DocRepository`:
+
+```js
+import { StoragePort } from '@copio/sdk';
+
+export class CustomCloudStorageAdapter extends StoragePort {
+  async init() {
+    return { kind: 'custom-cloud', persistent: true };
+  }
+
+  async listDocs() {
+    const res = await fetch('/api/documents');
+    return res.json();
+  }
+
+  async getDoc(id) {
+    const res = await fetch(`/api/documents/${id}`);
+    if (res.status === 404) return null;
+    return res.json();
+  }
+
+  async saveDoc(id, doc) {
+    await fetch(`/api/documents/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(doc),
+    });
+  }
+
+  async deleteDoc(id) {
+    await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+  }
+
+  async savePage(docId, pageId, blobOrData) {
+    // Custom binary upload (e.g. presigned S3 URL)
+  }
+
+  async getPage(docId, pageId) {
+    // Custom binary fetch
+  }
+
+  async deletePage(docId, pageId) {
+    // Custom binary delete
+  }
+}
+```
 
 ---
 

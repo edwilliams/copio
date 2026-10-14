@@ -9,14 +9,14 @@ const CONNECT_TIMEOUT_MS = 30000;
  */
 export class SyncManager {
   #peer = null;
-  #store = null;
+  #target = null;
   #onStateChange = null;
   #syncState = null;
   #session = 0;
   #connectTimer = null;
 
-  constructor(store, onStateChange) {
-    this.#store = store;
+  constructor(storeOrRepo, onStateChange) {
+    this.#target = storeOrRepo;
     this.#onStateChange = onStateChange;
   }
 
@@ -156,7 +156,7 @@ export class SyncManager {
   }
 
   #doSync(conn) {
-    conn.on('data', (raw) => {
+    conn.on('data', async (raw) => {
       let rows;
       try {
         rows = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -165,22 +165,36 @@ export class SyncManager {
         return;
       }
       let added = 0;
-      this.#store.transaction(() => {
-        for (const [id, row] of Object.entries(rows || {})) {
-          if (!this.#store.hasRow('docs', id)) added++;
-          this.#store.setRow('docs', id, row);
-        }
-      });
+      if (typeof this.#target?.importDocs === 'function') {
+        added = await this.#target.importDocs(rows);
+      } else if (typeof this.#target?.transaction === 'function') {
+        this.#target.transaction(() => {
+          for (const [id, row] of Object.entries(rows || {})) {
+            if (!this.#target.hasRow('docs', id)) added++;
+            this.#target.setRow('docs', id, row);
+          }
+        });
+      }
       this.#setState({ ...this.#syncState, step: 'done', added });
       notify.success(`Sync complete — ${added} doc${added !== 1 ? 's' : ''} added`);
     });
 
-    try {
-      conn.send(JSON.stringify(this.#store.getTable('docs')));
-    } catch (err) {
-      console.error('Failed to send sync data:', err);
-      this.#fail(err.message);
-    }
+    (async () => {
+      try {
+        let payload;
+        if (typeof this.#target?.exportAll === 'function') {
+          payload = await this.#target.exportAll();
+        } else if (typeof this.#target?.getTable === 'function') {
+          payload = this.#target.getTable('docs');
+        } else {
+          payload = {};
+        }
+        conn.send(JSON.stringify(payload));
+      } catch (err) {
+        console.error('Failed to send sync data:', err);
+        this.#fail(err.message);
+      }
+    })();
   }
 
   close() {
