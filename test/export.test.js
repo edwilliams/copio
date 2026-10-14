@@ -1,4 +1,5 @@
 import { expect } from '@esm-bundle/chai';
+import '../js/lib/shoelace.js';
 import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../js/services/export-utils.js';
 import notify from '../js/services/notify.js';
 import { loadJsZip } from '../js/utils/module-loader.js';
@@ -145,4 +146,79 @@ describe('Export Smoke Tests', () => {
     exportDocumentAsMarkdown('Empty', []);
     expect(notifyMessages).to.include('No markdown text in this document');
   });
+
+  it('reports determinate progress via onProgress and copio:export-progress during multi-page export', async () => {
+    const pages = [
+      { id: 'p1', src: createTestImageDataUrl(10, 10, '#f43f5e') },
+      { id: 'p2', src: createTestImageDataUrl(10, 10, '#3b82f6') },
+      { id: 'p3', src: createTestImageDataUrl(10, 10, '#10b981') },
+    ];
+
+    const pdfProgress = [];
+    const windowEvents = [];
+    const eventHandler = (e) => windowEvents.push(e.detail);
+    window.addEventListener('copio:export-progress', eventHandler);
+
+    try {
+      await exportDocumentAsPdf('Multi-Page-Doc', pages, {
+        onProgress: (done, total) => {
+          pdfProgress.push({ done, total });
+        },
+      });
+
+      expect(pdfProgress).to.deep.equal([
+        { done: 1, total: 3 },
+        { done: 2, total: 3 },
+        { done: 3, total: 3 },
+      ]);
+
+      const pdfEvents = windowEvents.filter((e) => e.type === 'pdf');
+      expect(pdfEvents.length).to.equal(3);
+      expect(pdfEvents[2]).to.deep.include({ done: 3, total: 3, docName: 'Multi-Page-Doc' });
+
+      // Test ZIP export progress
+      const zipProgress = [];
+      await exportDocumentAsImages('Multi-Page-Doc', pages, {
+        onProgress: (done, total) => {
+          zipProgress.push({ done, total });
+        },
+      });
+
+      expect(zipProgress).to.deep.equal([
+        { done: 1, total: 3 },
+        { done: 2, total: 3 },
+        { done: 3, total: 3 },
+      ]);
+
+      const zipEvents = windowEvents.filter((e) => e.type === 'zip');
+      expect(zipEvents.length).to.equal(3);
+      expect(zipEvents[2]).to.deep.include({ done: 3, total: 3, docName: 'Multi-Page-Doc' });
+    } finally {
+      window.removeEventListener('copio:export-progress', eventHandler);
+    }
+  });
+
+  it('exporting a 30-page doc shows determinate progress and a completion toast (CPO-023)', async () => {
+    // Generate 30 lightweight pages
+    const sampleImg = createTestImageDataUrl(10, 10, '#64748b');
+    const pages = Array.from({ length: 30 }, (_, i) => ({
+      id: `p-${i + 1}`,
+      src: sampleImg,
+    }));
+
+    const progressReports = [];
+    await exportDocumentAsPdf('Thirty-Page-Doc', pages, {
+      onProgress: (done, total) => {
+        progressReports.push({ done, total });
+      },
+    });
+
+    expect(progressReports.length).to.equal(30);
+    expect(progressReports[0]).to.deep.equal({ done: 1, total: 30 });
+    expect(progressReports[29]).to.deep.equal({ done: 30, total: 30 });
+
+    // Verify completion toast was shown
+    expect(notifyMessages.some((msg) => msg.includes('Exported "Thirty-Page-Doc.pdf"'))).to.be.true;
+  });
 });
+

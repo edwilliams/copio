@@ -91,8 +91,15 @@ export async function show(messageOrOptions, options = {}) {
   }
 
   // Ensure Shoelace sl-alert is defined
-  if (!customElements.get('sl-alert')) {
-    await customElements.whenDefined('sl-alert');
+  if (typeof customElements !== 'undefined' && !customElements.get('sl-alert')) {
+    await Promise.race([
+      customElements.whenDefined('sl-alert'),
+      new Promise((r) => setTimeout(r, 200)),
+    ]);
+  }
+
+  if (typeof customElements === 'undefined' || !customElements.get('sl-alert')) {
+    return null;
   }
 
   const SlAlert = customElements.get('sl-alert');
@@ -247,6 +254,142 @@ export function undo(message, onUndo, options = {}) {
 }
 
 /**
+ * Display a progress toast notification with a determinate or indeterminate progress bar.
+ * @param {string|Object} messageOrOptions
+ * @param {Object} [options]
+ * @returns {Promise<{ alert: HTMLElement, progressBar: HTMLElement, update: (opts: { done?: number, total?: number, value?: number, message?: string }) => void, close: () => void }>}
+ */
+export async function progress(messageOrOptions, options = {}) {
+  let opts = {};
+  if (typeof messageOrOptions === 'string') {
+    opts = { message: messageOrOptions, ...options };
+  } else if (messageOrOptions && typeof messageOrOptions === 'object') {
+    opts = { ...messageOrOptions, ...options };
+  }
+
+  if (typeof customElements !== 'undefined') {
+    if (!customElements.get('sl-alert') || !customElements.get('sl-progress-bar')) {
+      await Promise.race([
+        Promise.all([
+          customElements.whenDefined('sl-alert'),
+          customElements.whenDefined('sl-progress-bar'),
+        ]),
+        new Promise((r) => setTimeout(r, 200)),
+      ]);
+    }
+  }
+
+  if (typeof customElements === 'undefined' || !customElements.get('sl-alert')) {
+    return {
+      alert: null,
+      progressBar: null,
+      update() {},
+      close() {},
+    };
+  }
+
+  const container = opts.container || getContainer();
+
+  const alert = document.createElement('sl-alert');
+  alert.variant = opts.variant || 'primary';
+  alert.closable = opts.closable === true;
+  alert.duration = Infinity;
+
+  const iconName = opts.icon !== undefined ? opts.icon : 'arrow-down-circle';
+  if (iconName) {
+    const icon = document.createElement('sl-icon');
+    icon.slot = 'icon';
+    icon.name = iconName;
+    alert.appendChild(icon);
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'notify-progress-wrapper';
+  wrapper.style.display = 'flex';
+  wrapper.style.flexDirection = 'column';
+  wrapper.style.gap = '0.35rem';
+  wrapper.style.minWidth = '220px';
+
+  const labelRow = document.createElement('div');
+  labelRow.style.display = 'flex';
+  labelRow.style.justifyContent = 'space-between';
+  labelRow.style.alignItems = 'center';
+  labelRow.style.gap = '0.5rem';
+
+  const messageNode = document.createElement('span');
+  messageNode.className = 'notify-progress-message';
+  messageNode.style.fontWeight = '500';
+  messageNode.style.fontSize = '0.9rem';
+  messageNode.textContent = opts.message || 'Processing...';
+  labelRow.appendChild(messageNode);
+
+  const statusNode = document.createElement('span');
+  statusNode.className = 'notify-progress-status';
+  statusNode.style.fontSize = '0.78rem';
+  statusNode.style.color = '#64748b';
+  statusNode.style.fontWeight = '600';
+  const initialDone = opts.done !== undefined ? opts.done : 0;
+  const initialTotal = opts.total !== undefined ? opts.total : 0;
+  if (initialTotal > 0) {
+    statusNode.textContent = `${initialDone} / ${initialTotal}`;
+  } else if (opts.value !== undefined) {
+    statusNode.textContent = `${opts.value}%`;
+  }
+  labelRow.appendChild(statusNode);
+  wrapper.appendChild(labelRow);
+
+  const progressBar = document.createElement('sl-progress-bar');
+  if (initialTotal > 0) {
+    progressBar.value = Math.round((initialDone / initialTotal) * 100);
+  } else if (opts.value !== undefined) {
+    progressBar.value = opts.value;
+  } else {
+    progressBar.indeterminate = true;
+  }
+  wrapper.appendChild(progressBar);
+
+  alert.appendChild(wrapper);
+
+  // Scope toastStack
+  const SlAlert = customElements.get('sl-alert');
+  if (SlAlert?.toastStack && container) {
+    const stack = SlAlert.toastStack;
+    if (stack.parentElement !== container) {
+      container.appendChild(stack);
+    }
+  }
+
+  alert.toast();
+
+  const handle = {
+    alert,
+    progressBar,
+    update({ done, total, value, message } = {}) {
+      if (message !== undefined) {
+        messageNode.textContent = message;
+      }
+      if (total !== undefined && done !== undefined) {
+        progressBar.indeterminate = false;
+        const pct = Math.min(100, Math.max(0, Math.round((done / Math.max(total, 1)) * 100)));
+        progressBar.value = pct;
+        statusNode.textContent = `${done} / ${total}`;
+      } else if (value !== undefined) {
+        progressBar.indeterminate = false;
+        progressBar.value = Math.min(100, Math.max(0, value));
+        statusNode.textContent = `${Math.round(progressBar.value)}%`;
+      }
+    },
+    close() {
+      if (typeof alert.hide === 'function') {
+        alert.hide();
+      }
+    },
+  };
+
+  return handle;
+}
+
+/**
  * Main notify interface.
  */
 export const notify = Object.assign(
@@ -260,6 +403,7 @@ export const notify = Object.assign(
     warning,
     info,
     undo,
+    progress,
     clear,
     setContainer,
     getContainer,

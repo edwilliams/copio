@@ -151,14 +151,32 @@ export async function renderMarkdownToPageDataUrls(page) {
 
 /**
  * Export document pages as a PDF file download.
+ * @param {string} docName
+ * @param {Array<any>} pages
+ * @param {Object} [options]
+ * @param {Function} [options.onProgress] - Callback invoked per page: (done, total) => void
+ * @param {boolean} [options.showProgress=true] - Whether to show progress toast in UI
+ * @returns {Promise<Blob|undefined>}
  */
-export async function exportDocumentAsPdf(docName, pages) {
+export async function exportDocumentAsPdf(docName, pages, options = {}) {
+  const { onProgress, showProgress = true } = options;
   if (!pages || pages.length === 0) {
     notify.warning('No images to export');
     return;
   }
 
+  let progress = null;
+  const total = pages.length;
+
   try {
+    if (showProgress && total > 1) {
+      progress = await notify.progress({
+        message: `Exporting "${docName || 'document'}.pdf"...`,
+        total,
+        done: 0,
+      });
+    }
+
     const hasMarkdown = pages.some((p) => p.type === 'markdown');
     const [PDFDocument] = await Promise.all([
       loadPdfKit(),
@@ -173,18 +191,30 @@ export async function exportDocumentAsPdf(docName, pages) {
 
     doc.on('data', (chunk) => chunks.push(chunk));
 
-    doc.on('end', () => {
-      const blob = new Blob(chunks, { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${docName || 'document'}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      notify.success(`Exported "${docName || 'document'}.pdf"`);
+    const exportPromise = new Promise((resolve, reject) => {
+      doc.on('end', () => {
+        try {
+          const blob = new Blob(chunks, { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${docName || 'document'}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+          progress?.close();
+          notify.success(`Exported "${docName || 'document'}.pdf"`);
+          resolve(blob);
+        } catch (err) {
+          reject(err);
+        }
+      });
+      doc.on('error', reject);
     });
 
-    for (const page of pages) {
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const done = i + 1;
+
       if (page.type === 'markdown') {
         renderMarkdownToPdf(doc, page.content);
       } else {
@@ -198,29 +228,54 @@ export async function exportDocumentAsPdf(docName, pages) {
           img.src = page.src;
         });
 
-        if (!img.width || !img.height) continue;
+        if (img.width && img.height) {
+          doc.addPage({ size: 'A4' });
 
-        doc.addPage({ size: 'A4' });
+          const scaleX = A4_WIDTH / img.width;
+          const scaleY = A4_HEIGHT / img.height;
+          const scale = Math.min(scaleX, scaleY);
 
-        const scaleX = A4_WIDTH / img.width;
-        const scaleY = A4_HEIGHT / img.height;
-        const scale = Math.min(scaleX, scaleY);
+          const scaledWidth = img.width * scale;
+          const scaledHeight = img.height * scale;
 
-        const scaledWidth = img.width * scale;
-        const scaledHeight = img.height * scale;
+          const x = (A4_WIDTH - scaledWidth) / 2;
+          const y = (A4_HEIGHT - scaledHeight) / 2;
 
-        const x = (A4_WIDTH - scaledWidth) / 2;
-        const y = (A4_HEIGHT - scaledHeight) / 2;
+          doc.image(page.src, x, y, {
+            width: scaledWidth,
+            height: scaledHeight,
+          });
+        }
+      }
 
-        doc.image(page.src, x, y, {
-          width: scaledWidth,
-          height: scaledHeight,
+      if (typeof onProgress === 'function') {
+        onProgress(done, total);
+      }
+
+      if (progress) {
+        progress.update({
+          done,
+          total,
+          message: `Exporting PDF: page ${done} of ${total}...`,
         });
       }
+
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(
+          new CustomEvent('copio:export-progress', {
+            detail: { type: 'pdf', done, total, docName: docName || 'document' },
+          }),
+        );
+      }
+
+      // Yield to browser to keep UI responsive and allow progress re-renders
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     doc.end();
+    return await exportPromise;
   } catch (error) {
+    progress?.close();
     console.error('Error generating PDF:', error);
     notify.error('Failed to generate PDF');
   }
@@ -228,12 +283,21 @@ export async function exportDocumentAsPdf(docName, pages) {
 
 /**
  * Export document pages as individual images or a ZIP file.
+ * @param {string} docName
+ * @param {Array<any>} pages
+ * @param {Object} [options]
+ * @param {Function} [options.onProgress] - Callback invoked per page: (done, total) => void
+ * @param {boolean} [options.showProgress=true] - Whether to show progress toast in UI
+ * @returns {Promise<Blob|undefined>}
  */
-export async function exportDocumentAsImages(docName, pages) {
+export async function exportDocumentAsImages(docName, pages, options = {}) {
+  const { onProgress, showProgress = true } = options;
   if (!pages || pages.length === 0) {
     notify.warning('No images to export');
     return;
   }
+
+  let progress = null;
 
   try {
     const rawName = (docName || 'document').trim();
@@ -258,74 +322,134 @@ export async function exportDocumentAsImages(docName, pages) {
         shouldRevoke = true;
       }
 
+      if (typeof onProgress === 'function') {
+        onProgress(1, 1);
+      }
+
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(
+          new CustomEvent('copio:export-progress', {
+            detail: { type: 'image', done: 1, total: 1, docName: safeName },
+          }),
+        );
+      }
+
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = `${safeName}.${ext}`;
       a.click();
       if (shouldRevoke) URL.revokeObjectURL(downloadUrl);
       notify.success(`Exported "${safeName}.${ext}"`);
-    } else {
-      const hasMarkdown = pages.some((p) => p.type === 'markdown');
-      const [JSZip] = await Promise.all([
-        loadJsZip(),
-        hasMarkdown ? Promise.all([loadPdfKit(), loadMarked()]) : Promise.resolve(),
-      ]);
-      const zip = new JSZip();
-      let exportIdx = 0;
+      return;
+    }
 
-      for (let index = 0; index < pages.length; index++) {
-        const page = pages[index];
-        let pageDataUrls = [];
+    const total = pages.length;
+    if (showProgress && total > 1) {
+      progress = await notify.progress({
+        message: `Exporting "${safeName}.zip"...`,
+        total,
+        done: 0,
+      });
+    }
 
-        if (page.type === 'markdown') {
-          pageDataUrls = await renderMarkdownToPageDataUrls(page);
-        } else {
-          pageDataUrls = [page.src];
-        }
+    const hasMarkdown = pages.some((p) => p.type === 'markdown');
+    const [JSZip] = await Promise.all([
+      loadJsZip(),
+      hasMarkdown ? Promise.all([loadPdfKit(), loadMarked()]) : Promise.resolve(),
+    ]);
+    const zip = new JSZip();
+    let exportIdx = 0;
 
-        const padLen = Math.max(2, String(pages.length * pageDataUrls.length).length);
+    for (let index = 0; index < pages.length; index++) {
+      const page = pages[index];
+      let pageDataUrls = [];
 
-        for (let subIdx = 0; subIdx < pageDataUrls.length; subIdx++) {
-          const dataUrl = pageDataUrls[subIdx];
-          let ext = 'jpg';
-          let base64Data = '';
-
-          if (dataUrl && dataUrl.startsWith('data:')) {
-            const match = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
-            if (match) {
-              if (match[1].includes('png')) ext = 'png';
-              base64Data = match[2];
-            } else {
-              base64Data = dataUrl.replace(/^data:[^;]+;base64,/, '');
-            }
-          } else {
-            const response = await fetch(dataUrl);
-            const blob = await response.blob();
-            const arrayBuf = await blob.arrayBuffer();
-            const pageNum = String(exportIdx + 1).padStart(padLen, '0');
-            const fileName = `${safeName}-${pageNum}.${ext}`;
-            zip.file(fileName, arrayBuf);
-            exportIdx++;
-            continue;
-          }
-
-          const pageNum = String(exportIdx + 1).padStart(padLen, '0');
-          const fileName = `${safeName}-${pageNum}.${ext}`;
-          zip.file(fileName, base64Data, { base64: true });
-          exportIdx++;
-        }
+      if (page.type === 'markdown') {
+        pageDataUrls = await renderMarkdownToPageDataUrls(page);
+      } else {
+        pageDataUrls = [page.src];
       }
 
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${safeName}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-      notify.success(`Exported "${safeName}.zip"`);
+      const padLen = Math.max(2, String(pages.length * pageDataUrls.length).length);
+
+      for (let subIdx = 0; subIdx < pageDataUrls.length; subIdx++) {
+        const dataUrl = pageDataUrls[subIdx];
+        let ext = 'jpg';
+        let base64Data = '';
+
+        if (dataUrl && dataUrl.startsWith('data:')) {
+          const match = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
+          if (match) {
+            if (match[1].includes('png')) ext = 'png';
+            base64Data = match[2];
+          } else {
+            base64Data = dataUrl.replace(/^data:[^;]+;base64,/, '');
+          }
+        } else {
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          const arrayBuf = await blob.arrayBuffer();
+          const pageNum = String(exportIdx + 1).padStart(padLen, '0');
+          const fileName = `${safeName}-${pageNum}.${ext}`;
+          zip.file(fileName, arrayBuf);
+          exportIdx++;
+          continue;
+        }
+
+        const pageNum = String(exportIdx + 1).padStart(padLen, '0');
+        const fileName = `${safeName}-${pageNum}.${ext}`;
+        zip.file(fileName, base64Data, { base64: true });
+        exportIdx++;
+      }
+
+      const done = index + 1;
+      if (typeof onProgress === 'function') {
+        onProgress(done, total);
+      }
+
+      if (progress) {
+        progress.update({
+          done,
+          total,
+          message: `Exporting ZIP: page ${done} of ${total}...`,
+        });
+      }
+
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(
+          new CustomEvent('copio:export-progress', {
+            detail: { type: 'zip', done, total, docName: safeName },
+          }),
+        );
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
+
+    if (progress) {
+      progress.update({ message: 'Compressing archive...' });
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+      if (progress && metadata.percent) {
+        progress.update({
+          value: Math.round(metadata.percent),
+          message: `Compressing ZIP: ${Math.round(metadata.percent)}%...`,
+        });
+      }
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    progress?.close();
+    notify.success(`Exported "${safeName}.zip"`);
+    return blob;
   } catch (error) {
+    progress?.close();
     console.error('Error downloading images:', error);
     notify.error('Failed to download images');
   }

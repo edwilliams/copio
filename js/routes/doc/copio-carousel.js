@@ -17,9 +17,23 @@ export class CopioCarousel extends LitElement {
   }
 
   static properties = {
+    docId: { type: String },
+    docName: { type: String },
     images: { type: Array },
     activeSlideIndex: { type: Number, state: true },
   };
+
+  get hasImages() {
+    return (this.images || []).some((img) => img.type !== 'markdown' && !!img.src);
+  }
+
+  get hasMarkdown() {
+    return (this.images || []).some((img) => img.type === 'markdown');
+  }
+
+  get pageCount() {
+    return (this.images || []).length;
+  }
 
   static styles = css`
     sl-carousel {
@@ -41,17 +55,82 @@ export class CopioCarousel extends LitElement {
       background-size: contain;
       background-position: center;
     }
-    .back {
+    .top-bar {
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 5;
-      padding: 8px 32px;
-      font-size: 48px;
+      right: 0;
+      height: 56px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      background: linear-gradient(to bottom, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.3) 80%, transparent 100%);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+    .top-bar > * {
+      pointer-events: auto;
+    }
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .top-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .back {
+      font-size: 26px;
       cursor: pointer;
       appearance: none;
-      background: none;
-      border: none;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .back:hover {
+      background: rgba(15, 23, 42, 0.9);
+    }
+    .doc-heading {
+      color: #f8fafc;
+      font-size: 1.05rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 240px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+    .ocr-btn, .export-btn {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 6px 12px;
+      height: 36px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      box-sizing: border-box;
+    }
+    .ocr-btn:hover, .export-btn:hover {
+      background: rgba(15, 23, 42, 0.95);
+      border-color: rgba(255, 255, 255, 0.4);
     }
     .markdown-container {
       width: 100%;
@@ -123,32 +202,12 @@ export class CopioCarousel extends LitElement {
       height: auto;
       border-radius: 6px;
     }
-    .ocr-btn {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      z-index: 5;
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(8px);
-      color: white;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .ocr-btn:hover {
-      background: rgba(15, 23, 42, 0.95);
-      border-color: rgba(255, 255, 255, 0.4);
-    }
   `;
 
   constructor() {
     super();
+    this.docId = '';
+    this.docName = '';
     this.images = [];
     this.activeSlideIndex = 0;
   }
@@ -176,6 +235,42 @@ export class CopioCarousel extends LitElement {
         },
       }),
     );
+  }
+
+  handleExportSelect(e) {
+    if (e.detail?.item?.disabled) return;
+    const value = e.detail?.item?.value;
+    const detail = {
+      docId: this.docId,
+      docName: this.docName,
+      pages: this.images,
+    };
+
+    if (value === 'pdf') {
+      this.dispatchEvent(
+        new CustomEvent('copio-carousel:download-pdf', {
+          bubbles: true,
+          composed: true,
+          detail,
+        }),
+      );
+    } else if (value === 'images') {
+      this.dispatchEvent(
+        new CustomEvent('copio-carousel:download-images', {
+          bubbles: true,
+          composed: true,
+          detail,
+        }),
+      );
+    } else if (value === 'markdown') {
+      this.dispatchEvent(
+        new CustomEvent('copio-carousel:download-markdown', {
+          bubbles: true,
+          composed: true,
+          detail,
+        }),
+      );
+    }
   }
 
   handleSlideChange(e) {
@@ -206,16 +301,45 @@ export class CopioCarousel extends LitElement {
     const canOcr = activePage && activePage.type !== 'markdown' && !!activePage.src;
 
     return html`
-      <button class="back" @click=${this.handleBackClick} aria-label="Back">←</button>
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <button class="back" @click=${this.handleBackClick} aria-label="Back">←</button>
+          <span class="doc-heading">${this.docName || 'Document'}</span>
+        </div>
 
-      ${canOcr
-        ? html`
-            <button class="ocr-btn" @click=${this.handleOcrClick} aria-label="Extract text">
-              <sl-icon name="card-text"></sl-icon>
-              <span>Extract Text</span>
+        <div class="top-bar-right">
+          ${canOcr
+            ? html`
+                <button class="ocr-btn" @click=${this.handleOcrClick} aria-label="Extract text">
+                  <sl-icon name="card-text"></sl-icon>
+                  <span>Extract Text</span>
+                </button>
+              `
+            : ''}
+
+          <sl-dropdown>
+            <button slot="trigger" class="export-btn" aria-label="Export document">
+              <sl-icon name="box-arrow-up"></sl-icon>
+              <span>Export</span>
+              <sl-icon name="chevron-down" style="font-size: 0.75rem;"></sl-icon>
             </button>
-          `
-        : ''}
+            <sl-menu @sl-select=${this.handleExportSelect}>
+              <sl-menu-item value="pdf" ?disabled=${this.pageCount === 0}>
+                <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
+                Download as PDF
+              </sl-menu-item>
+              <sl-menu-item value="images" ?disabled=${this.pageCount === 0}>
+                <sl-icon slot="prefix" name="images"></sl-icon>
+                Download as Images (ZIP)
+              </sl-menu-item>
+              <sl-menu-item value="markdown" ?disabled=${!this.hasMarkdown}>
+                <sl-icon slot="prefix" name="markdown"></sl-icon>
+                Download as Markdown
+              </sl-menu-item>
+            </sl-menu>
+          </sl-dropdown>
+        </div>
+      </div>
 
       <sl-carousel
         class="sl-carousel"

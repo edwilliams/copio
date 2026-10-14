@@ -240,6 +240,34 @@ describe('Unified Toast / Feedback Service (CPO-022)', () => {
         manager.close();
       }
     });
+
+    it('renders a progress toast with progress bar and updates dynamically', async () => {
+      const handle = await notify.progress({
+        message: 'Exporting files...',
+        done: 2,
+        total: 10,
+      });
+
+      expect(handle).to.exist;
+      expect(handle.alert).to.exist;
+      expect(handle.alert.tagName.toLowerCase()).to.equal('sl-alert');
+      expect(handle.progressBar).to.exist;
+      expect(handle.progressBar.value).to.equal(20);
+
+      const statusEl = handle.alert.querySelector('.notify-progress-status');
+      expect(statusEl.textContent).to.equal('2 / 10');
+
+      // Update progress
+      handle.update({ done: 5, total: 10, message: 'Halfway done...' });
+      expect(handle.progressBar.value).to.equal(50);
+      expect(statusEl.textContent).to.equal('5 / 10');
+      const msgEl = handle.alert.querySelector('.notify-progress-message');
+      expect(msgEl.textContent).to.equal('Halfway done...');
+
+      // Close progress
+      handle.close();
+    });
   });
 });
+
 

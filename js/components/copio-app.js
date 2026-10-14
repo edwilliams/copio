@@ -200,7 +200,9 @@ export class CopioApp extends LitElement {
 
     const carousel = this.querySelector('copio-carousel');
     if (carousel) {
-      carousel.images = doc.pages;
+      carousel.docId = id;
+      carousel.docName = doc.name || 'document';
+      carousel.images = doc.pages || [];
       this.showCarousel = true;
     }
   }
@@ -208,6 +210,18 @@ export class CopioApp extends LitElement {
   handleRowView(e) {
     const id = e.detail?.id;
     if (id) router.navigate(`/doc/${id}`);
+  }
+
+  async handleRowRename(e) {
+    const { id, name } = e.detail || {};
+    if (!id || !name) return;
+    try {
+      await this.docRepo.renameDoc(id, name);
+      notify.success(`Renamed document to "${name}"`);
+    } catch (err) {
+      console.error('Failed to rename document:', err);
+      notify.error('Failed to rename document');
+    }
   }
 
   handleRowDelete(e) {
@@ -244,6 +258,21 @@ export class CopioApp extends LitElement {
     const doc = await this.docRepo.getDoc(id);
     if (!doc) return;
     exportDocumentAsMarkdown(doc.name, doc.pages);
+  }
+
+  async handleCarouselDownloadPdf(e) {
+    const { docName, pages } = e.detail || {};
+    await exportDocumentAsPdf(docName, pages);
+  }
+
+  async handleCarouselDownloadImages(e) {
+    const { docName, pages } = e.detail || {};
+    await exportDocumentAsImages(docName, pages);
+  }
+
+  async handleCarouselDownloadMarkdown(e) {
+    const { docName, pages } = e.detail || {};
+    exportDocumentAsMarkdown(docName, pages);
   }
 
   // Document OCR Handlers
@@ -439,11 +468,13 @@ export class CopioApp extends LitElement {
 
     return html`
       ${Object.entries(this.docsData).map(
-        ([id, { name }]) => html`
+        ([id, doc]) => html`
           <copio-row
             id=${id}
-            name=${name}
+            name=${doc.name}
+            .pages=${doc.pages || []}
             @copio-row:edit=${this.handleRowEdit}
+            @copio-row:rename=${this.handleRowRename}
             @copio-row:view=${this.handleRowView}
             @copio-row:extract-ocr=${this.handleRowExtractOcr}
             @copio-row:delete=${this.handleRowDelete}
@@ -494,6 +525,9 @@ export class CopioApp extends LitElement {
         style="display: ${this.showCarousel ? 'block' : 'none'}"
         @copio-carousel:close=${this.handleCarouselClose}
         @copio:ocr-page=${this.handleOcrPage}
+        @copio-carousel:download-pdf=${this.handleCarouselDownloadPdf}
+        @copio-carousel:download-images=${this.handleCarouselDownloadImages}
+        @copio-carousel:download-markdown=${this.handleCarouselDownloadMarkdown}
       ></copio-carousel>
 
       ${this.syncState ? html`<copio-sync-dialog
