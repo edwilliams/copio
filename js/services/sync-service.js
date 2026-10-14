@@ -1,5 +1,6 @@
 import { notify } from './notify.js';
 import { getIceServers } from './ice-servers.js';
+import { loadPeerJs, loadQrCode } from '../utils/module-loader.js';
 
 const CONNECT_TIMEOUT_MS = 30000;
 
@@ -43,7 +44,10 @@ export class SyncManager {
    */
   async #createPeer() {
     const session = ++this.#session;
-    const iceServers = await getIceServers();
+    const [iceServers, Peer] = await Promise.all([
+      getIceServers(),
+      loadPeerJs(),
+    ]);
     if (session !== this.#session) return null;
     return new Peer({ config: { iceServers } });
   }
@@ -107,8 +111,9 @@ export class SyncManager {
     this.#peer = peer;
 
     peer.on('error', (err) => this.#fail(err.message));
-    peer.on('open', (id) => {
+    peer.on('open', async (id) => {
       const url = `${location.origin}${location.pathname}?peer=${id}`;
+      const qrcode = await loadQrCode();
       const qr = qrcode(0, 'M');
       qr.addData(url);
       qr.make();

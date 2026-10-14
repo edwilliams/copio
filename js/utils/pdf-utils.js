@@ -1,5 +1,7 @@
 import * as pdfjsLib from '../lib/pdf.min.mjs';
-pdfjsLib.GlobalWorkerOptions.workerSrc = './js/lib/pdf.worker.min.mjs';
+import { resolveAssetUrl } from './module-loader.js';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = resolveAssetUrl('js/lib/pdf.worker.min.mjs');
 
 /**
  * Renders all pages of a PDF (given as ArrayBuffer) into base64 JPEG image data URLs.

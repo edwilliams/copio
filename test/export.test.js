@@ -1,6 +1,7 @@
 import { expect } from '@esm-bundle/chai';
 import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../js/services/export-utils.js';
 import notify from '../js/services/notify.js';
+import { loadJsZip } from '../js/utils/module-loader.js';
 
 function createTestImageDataUrl(width = 30, height = 30, color = '#38bdf8') {
   const canvas = document.createElement('canvas');
@@ -104,6 +105,7 @@ describe('Export Smoke Tests', () => {
     expect(downloadedFilenames).to.include('Project-Scans.zip');
 
     // Verify valid ZIP structure by reading with JSZip
+    const JSZip = await loadJsZip();
     const zip = await JSZip.loadAsync(blob);
     const filesInZip = Object.keys(zip.files);
     expect(filesInZip.length).to.be.at.least(2);

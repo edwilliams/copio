@@ -23,12 +23,6 @@ export default {
     <!doctype html>
     <html>
       <head>
-        <script src="/js/lib/cropper.js"></script>
-        <script src="/js/lib/pdfkit.js"></script>
-        <script src="/js/lib/jszip.min.js"></script>
-        <script src="/js/lib/marked.min.js"></script>
-        <script src="/js/lib/peerjs.min.js"></script>
-        <script src="/js/lib/qrcode.js"></script>
       </head>
       <body>
         <script type="module" src="${testFramework}"></script>
