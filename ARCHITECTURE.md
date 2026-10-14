@@ -160,6 +160,12 @@ index.html
 Key architectural decisions for the SDK, packaging, and module loading are recorded in:
 - [ADR 0001: SDK Architecture, Hexagonal Core, and Packaging Boundaries](docs/adr/0001-sdk-architecture.md) (CPO-030)
 
+### Hexagonal Architecture & `CopioEngine` Roadmap
+As decided in ADR 0001, the SDK target architecture separates concerns into:
+1. **Hexagon Core (`CopioEngine` / `@copio/core`)**: Headless, DOM-free business logic for page management, scan sessions, edit stacks, and export pipelines. Scheduled for implementation in **CPO-045** (depending on CPO-014 document repository and CPO-033 storage adapter).
+2. **Driving (Inbound) Adapters**: `<copio-scanner>` Web Component (CPO-034) and headless API.
+3. **Driven (Outbound) Ports**: `StoragePort` (CPO-033), `ImageProcessorPort`, `OcrPort`, `PdfPort`, `SyncPort`.
+
 ---
 
 ## Key Third-Party Libraries
