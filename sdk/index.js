@@ -65,3 +65,13 @@ export {
   loadQrCode,
   loadTesseract,
 } from '../js/utils/module-loader.js';
+
+// Data Layer & StoragePort (CPO-014, CPO-033)
+export { DocRepository, docRepository } from '../js/services/doc-repository.js';
+export {
+  StoragePort,
+  MemoryStorageAdapter,
+  IndexedDbStorageAdapter,
+  createDefaultAdapter,
+} from '../js/adapters/storage/index.js';
+
