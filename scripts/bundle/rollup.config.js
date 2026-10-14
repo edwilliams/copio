@@ -1,5 +1,4 @@
 import path from 'path';
-import { readFileSync, writeFileSync } from 'fs';
 import { readdir, writeFile, readFile } from 'fs/promises';
 import { relative } from 'path';
 import resolve from 'rollup-plugin-node-resolve';
@@ -19,8 +18,8 @@ const COPIO_COMPONENTS = [
 const rootDir = path.resolve(__dirname, '../..');
 
 const staticFiles = [
+  '/',
   'index.html',
-  './',
   'manifest.webmanifest',
   'favicon.ico',
   'apple-touch-icon.png',
@@ -29,7 +28,7 @@ const staticFiles = [
   'copio.svg',
 ];
 
-const directoriesToScan = ['css', 'js', 'fonts', 'assets/tessdata'];
+const directoriesToScan = ['css', 'js', 'sdk', 'fonts', 'assets/tessdata'];
 
 async function getFilesRecursively(dir) {
   const files = [];
@@ -50,6 +49,7 @@ async function findUsedIcons() {
   const jsFiles = await getFilesRecursively(path.join(rootDir, 'js'));
   const allFiles = [...jsFiles, path.join(rootDir, 'index.html')];
   const iconPattern = /<sl-icon(?:-button)?\s+[^>]*name=["']([^"']+)["']/g;
+  const notifyIconPattern = /icon:\s*['"]([a-z0-9-]+)['"]/g;
   for (const file of allFiles) {
     try {
       const content = await readFile(file, 'utf-8');
@@ -57,6 +57,9 @@ async function findUsedIcons() {
         if (!match[0].includes('library="system"') && !match[0].includes("library='system'")) {
           iconNames.add(match[1]);
         }
+      }
+      for (const match of content.matchAll(notifyIconPattern)) {
+        iconNames.add(match[1]);
       }
     } catch {}
   }
@@ -84,43 +87,10 @@ async function generateFilesToCache() {
   console.log(`\n✓ Generated files-to-cache.json with ${filesToCache.length} files`);
 }
 
-function generateRegisterComponents() {
+function generateCacheManifest() {
   return {
-    name: 'generate-register-components',
+    name: 'generate-cache-manifest',
     async closeBundle() {
-      const src = readFileSync(path.resolve(__dirname, 'src/index.js'), 'utf-8');
-      const slComponents = [...src.matchAll(/\/components\/([^/]+)\/[^'"]+\.js/g)]
-        .map((m) => `sl-${m[1]}`);
-
-      const slLines = slComponents.map((c) => `  customElements.whenDefined('${c}'),`).join('\n');
-      const copioLines = COPIO_COMPONENTS.map((c) => `  customElements.whenDefined('${c}'),`).join('\n');
-
-      const content = `import './copio-app.js';
-import './copio-loader.js';
-import './copio-header.js';
-import './copio-row.js';
-import './copio-images.js';
-import './copio-carousel.js';
-
-// =============================================
-// Show UI when custom components are ready
-// note: might not be great loading this before app.js
-// =============================================
-
-// trick borrow from shoelace; prevents flash of unstyled content
-await Promise.allSettled([
-  // shoelace
-${slLines}
-  // copio
-${copioLines}
-]);
-
-document.body.classList.add('ready');
-`;
-
-      writeFileSync(path.resolve(__dirname, '../../js/register-components.js'), content);
-      console.log('✓ Generated register-components.js');
-
       await generateFilesToCache();
     },
   };
@@ -136,7 +106,7 @@ export default {
     resolve(),
     css({ output: 'shoelace.css' }),
     terser(),
-    generateRegisterComponents(),
+    generateCacheManifest(),
     copy({
       copyOnce: true,
       targets: [

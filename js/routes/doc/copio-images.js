@@ -9,6 +9,7 @@ import Sortable from '../../lib/sortable.esm.js';
 import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from '../../utils/utils.js';
 import { renderPdfPagesToDataUrls } from '../../utils/pdf-utils.js';
 import { notify } from '../../services/notify.js';
+import { loadCropper } from '../../utils/module-loader.js';
 export class CopioImages extends HTMLElement {
   #images = [];
   #cropper = null;
@@ -621,7 +622,7 @@ export class CopioImages extends HTMLElement {
     });
   }
 
-  openCropDialog(index) {
+  async openCropDialog(index) {
     this.#cropIndex = index;
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
     const cropImage = this.shadowRoot.querySelector('#crop-image');
@@ -629,7 +630,8 @@ export class CopioImages extends HTMLElement {
     cropImage.src = this.#images[index].src;
     cropDialog.show();
 
-    cropImage.onload = () => {
+    const Cropper = await loadCropper();
+    const initCropper = () => {
       if (this.#cropper) {
         this.#cropper.destroy();
       }
@@ -638,6 +640,11 @@ export class CopioImages extends HTMLElement {
         autoCropArea: 1,
       });
     };
+
+    cropImage.onload = initCropper;
+    if (cropImage.complete && cropImage.naturalWidth > 0 && !this.#cropper) {
+      initCropper();
+    }
   }
 
   closeCropDialog() {

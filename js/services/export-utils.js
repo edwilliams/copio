@@ -1,5 +1,6 @@
 import { renderPdfPagesToDataUrls } from '../utils/pdf-utils.js';
 import { notify } from './notify.js';
+import { loadPdfKit, loadJsZip, loadMarked } from '../utils/module-loader.js';
 
 /**
  * Clean text from markdown formatting and emojis for PDF kit rendering.
@@ -120,6 +121,10 @@ export function renderMarkdownToPdf(doc, rawContent) {
  * Render a markdown page object to image data URLs by rendering PDF and extracting pages as images.
  */
 export async function renderMarkdownToPageDataUrls(page) {
+  const [PDFDocument] = await Promise.all([
+    loadPdfKit(),
+    loadMarked(),
+  ]);
   const doc = new PDFDocument({ autoFirstPage: false });
   const chunks = [];
   doc.on('data', (chunk) => chunks.push(chunk));
@@ -154,6 +159,12 @@ export async function exportDocumentAsPdf(docName, pages) {
   }
 
   try {
+    const hasMarkdown = pages.some((p) => p.type === 'markdown');
+    const [PDFDocument] = await Promise.all([
+      loadPdfKit(),
+      hasMarkdown ? loadMarked() : Promise.resolve(),
+    ]);
+
     const A4_WIDTH = 595.28;
     const A4_HEIGHT = 841.89;
 
@@ -254,6 +265,11 @@ export async function exportDocumentAsImages(docName, pages) {
       if (shouldRevoke) URL.revokeObjectURL(downloadUrl);
       notify.success(`Exported "${safeName}.${ext}"`);
     } else {
+      const hasMarkdown = pages.some((p) => p.type === 'markdown');
+      const [JSZip] = await Promise.all([
+        loadJsZip(),
+        hasMarkdown ? Promise.all([loadPdfKit(), loadMarked()]) : Promise.resolve(),
+      ]);
       const zip = new JSZip();
       let exportIdx = 0;
 

@@ -4,6 +4,8 @@
  * 100% Private, Local, Offline-First Document Text Extraction
  */
 
+import { loadTesseract, resolveAssetUrl } from '../utils/module-loader.js';
+
 export const SUPPORTED_LANGUAGES = [
   { code: 'eng', label: 'English', flag: '🇬🇧' },
   { code: 'spa', label: 'Spanish (Español)', flag: '🇪🇸' },
@@ -35,7 +37,7 @@ let currentProgressCallback = null;
  */
 function getLangPath(lang) {
   if (lang === 'eng') {
-    return 'assets/tessdata';
+    return resolveAssetUrl('assets/tessdata');
   }
   return 'https://tessdata.projectnaptha.com/4.0.0_fast';
 }
@@ -86,15 +88,12 @@ export async function getOcrWorker(lang = 'eng', onProgress = null) {
     currentWorkerLang = null;
   }
 
-  if (typeof window.Tesseract === 'undefined') {
-    throw new Error('Tesseract library is not loaded. Ensure tesseract.min.js is included.');
-  }
-
+  const Tesseract = await loadTesseract();
   const langPath = getLangPath(lang);
 
-  const worker = await window.Tesseract.createWorker(lang, 1, {
-    workerPath: 'js/lib/tesseract-worker.min.js',
-    corePath: 'js/lib/tesseract-core',
+  const worker = await Tesseract.createWorker(lang, 1, {
+    workerPath: resolveAssetUrl('js/lib/tesseract-worker.min.js'),
+    corePath: resolveAssetUrl('js/lib/tesseract-core'),
     langPath,
     logger: (message) => {
       if (currentProgressCallback && typeof currentProgressCallback === 'function') {

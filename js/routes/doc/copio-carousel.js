@@ -1,9 +1,19 @@
 import { LitElement, html, css } from '../../lib/lit-core.min.js';
+import { loadMarked } from '../../utils/module-loader.js';
 
 export class CopioCarousel extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.activeSlideIndex = 0;
+  }
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    if (changedProperties.has('images') && Array.isArray(this.images)) {
+      if (this.images.some((img) => img.type === 'markdown') && (!window.marked || !window.marked.parse)) {
+        loadMarked().then(() => this.requestUpdate());
+      }
+    }
   }
 
   static properties = {

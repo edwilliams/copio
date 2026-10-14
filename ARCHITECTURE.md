@@ -155,6 +155,19 @@ index.html
 
 ---
 
+## Architecture Decision Records (ADRs)
+
+Key architectural decisions for the SDK, packaging, and module loading are recorded in:
+- [ADR 0001: SDK Architecture, Hexagonal Core, and Packaging Boundaries](docs/adr/0001-sdk-architecture.md) (CPO-030)
+
+### Hexagonal Architecture & `CopioEngine` Roadmap
+As decided in ADR 0001, the SDK target architecture separates concerns into:
+1. **Hexagon Core (`CopioEngine` / `@copio/core`)**: Headless, DOM-free business logic for page management, scan sessions, edit stacks, and export pipelines. Scheduled for implementation in **CPO-045** (depending on CPO-014 document repository and CPO-033 storage adapter).
+2. **Driving (Inbound) Adapters**: `<copio-scanner>` Web Component (CPO-034) and headless API.
+3. **Driven (Outbound) Ports**: `StoragePort` (CPO-033), `ImageProcessorPort`, `OcrPort`, `PdfPort`, `SyncPort`.
+
+---
+
 ## Key Third-Party Libraries
 
 | Library | How it's used | Loaded as |
@@ -162,16 +175,16 @@ index.html
 | **Lit** (`lit-core.min.js`) | Base class for all components | ES module |
 | **TinyBase** | Reactive store + IndexedDB persistence | ES module |
 | **Shoelace** | UI components (`sl-dialog`, `sl-button`, etc.) | ES module (auto-registers) |
-| **Tesseract.js** | OCR via WASM Web Worker | Global (`window.Tesseract`) |
-| **PDFKit** | Client-side PDF generation | Global (`window.PDFDocument`) |
+| **Tesseract.js** | OCR via WASM Web Worker | Lazy dynamic loader (`loadTesseract()`) |
+| **PDFKit** | Client-side PDF generation | Lazy dynamic loader (`loadPdfKit()`) |
 | **PDF.js** | Renders uploaded PDFs to images | ES module |
-| **PeerJS** | WebRTC for P2P sync | Global (`window.Peer`) |
-| **Cropper.js** | Interactive image crop UI | Global (`window.Cropper`) |
-| **JSZip** | ZIP bundle export | Global (`window.JSZip`) |
+| **PeerJS** | WebRTC for P2P sync | Lazy dynamic loader (`loadPeerJs()`) |
+| **Cropper.js** | Interactive image crop UI | Lazy dynamic loader (`loadCropper()`) |
+| **JSZip** | ZIP bundle export | Lazy dynamic loader (`loadJsZip()`) |
 | **Sortable.js** | Drag-to-reorder pages | ES module |
-| **qrcode** | QR code generation for sync URL | Global (`window.qrcode`) |
+| **qrcode** | QR code generation for sync URL | Lazy dynamic loader (`loadQrCode()`) |
 
-Globals are loaded as classic `<script>` tags in `index.html` before the module graph. Modules are imported inside the ES module graph.
+Per **CPO-031** and **ADR 0001**, `index.html` contains zero third-party classic `<script>` tags. Heavy dependencies (Tesseract, PDFKit, JSZip, PeerJS, Cropper, marked, qrcode) are loaded on demand via `js/utils/module-loader.js`. All worker, WASM, and asset paths resolve via a configurable `assetBase` (`setAssetBase()`, `resolveAssetUrl()`).
 
 ---
 
@@ -198,7 +211,7 @@ Globals are loaded as classic `<script>` tags in `index.html` before the module 
 - **Shoelace dialogs are async** — `await dialog.show()` before trying to focus inputs
 - **OCR workers are long-lived** — `ocr-service.js` caches the active Tesseract worker; switching language terminates and recreates it
 - **P2P sync requires internet** — PeerJS needs its signalling server; `sync-service.js` checks `navigator.onLine` before attempting
-- **Tesseract and PDF.js worker paths** in `ocr-service.js` and `pdf-utils.js` are hardcoded as absolute paths from the site root — they don't need updating if those service files move
+- **Worker & WASM asset paths** resolve via `resolveAssetUrl()` in `js/utils/module-loader.js` relative to the configurable `assetBase` (defaulting to `.`)
 
 ---
 

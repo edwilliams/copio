@@ -2,6 +2,7 @@ import { expect } from '@esm-bundle/chai';
 import '../js/lib/shoelace.js';
 import '../js/core/register-components.js';
 import Sortable from '../js/lib/sortable.esm.js';
+import { loadPdfKit } from '../js/utils/module-loader.js';
 
 function createTestImageDataUrl(width = 40, height = 20, color = '#ff0000') {
   const canvas = document.createElement('canvas');
@@ -24,7 +25,8 @@ async function createTestImageFile(name = 'sample.png', width = 30, height = 30,
   return new File([blob], name, { type: 'image/png' });
 }
 
-function createMultiPagePdfFile(pageCount = 2) {
+async function createMultiPagePdfFile(pageCount = 2) {
+  const PDFDocument = await loadPdfKit();
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ autoFirstPage: false });
     const chunks = [];

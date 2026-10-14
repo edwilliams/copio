@@ -50,3 +50,18 @@ export {
 } from '../js/utils/utils.js';
 
 export { renderPdfPagesToDataUrls } from '../js/utils/pdf-utils.js';
+
+// Module & Asset Loaders (CPO-031)
+export {
+  getAssetBase,
+  setAssetBase,
+  resolveAssetUrl,
+  loadScript,
+  loadCropper,
+  loadPdfKit,
+  loadJsZip,
+  loadMarked,
+  loadPeerJs,
+  loadQrCode,
+  loadTesseract,
+} from '../js/utils/module-loader.js';
