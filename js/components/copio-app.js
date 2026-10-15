@@ -481,14 +481,6 @@ export class CopioApp extends LitElement {
             @doc:download=${this.handleRowDownload}
             @doc:download-images=${this.handleRowDownloadImages}
             @doc:download-markdown=${this.handleRowDownloadMarkdown}
-            @copio-row:edit=${this.handleRowEdit}
-            @copio-row:rename=${this.handleRowRename}
-            @copio-row:view=${this.handleRowView}
-            @copio-row:extract-ocr=${this.handleRowExtractOcr}
-            @copio-row:delete=${this.handleRowDelete}
-            @copio-row:download=${this.handleRowDownload}
-            @copio-row:download-images=${this.handleRowDownloadImages}
-            @copio-row:download-markdown=${this.handleRowDownloadMarkdown}
           ></copio-row>
         `,
       )}
@@ -508,8 +500,6 @@ export class CopioApp extends LitElement {
         <copio-header
           @header:link-device=${this.startSyncAsHost}
           @header:clear-cache=${this.handleClearCache}
-          @copio-header:link-device=${this.startSyncAsHost}
-          @copio-header:clear-cache=${this.handleClearCache}
         ></copio-header>
 
         <div id="copio-rows">${this.renderRows()}</div>
@@ -517,8 +507,6 @@ export class CopioApp extends LitElement {
         <copio-add-edit-dialog
           @dialog:save=${this.handleAddEditSave}
           @dialog:close=${this.handleAddEditHide}
-          @copio-add-edit-dialog:save=${this.handleAddEditSave}
-          @copio-add-edit-dialog:hide=${this.handleAddEditHide}
           @copio:ocr-page=${this.handleOcrPage}
         ></copio-add-edit-dialog>
 
@@ -536,24 +524,18 @@ export class CopioApp extends LitElement {
       <copio-carousel
         style="display: ${this.showCarousel ? 'block' : 'none'}"
         @dialog:close=${this.handleCarouselClose}
+        @copio:ocr-page=${this.handleOcrPage}
         @doc:download-pdf=${this.handleCarouselDownloadPdf}
         @doc:download-images=${this.handleCarouselDownloadImages}
         @doc:download-markdown=${this.handleCarouselDownloadMarkdown}
-        @copio-carousel:close=${this.handleCarouselClose}
-        @copio:ocr-page=${this.handleOcrPage}
-        @copio-carousel:download-pdf=${this.handleCarouselDownloadPdf}
-        @copio-carousel:download-images=${this.handleCarouselDownloadImages}
-        @copio-carousel:download-markdown=${this.handleCarouselDownloadMarkdown}
       ></copio-carousel>
 
       ${this.syncState ? html`<copio-sync-dialog
         .syncState=${this.syncState}
         @dialog:close=${this.closeSyncDialog}
-        @copio-sync-dialog:close=${this.closeSyncDialog}
       ></copio-sync-dialog>` : ''}
       <copio-doc-ocr-dialog
         @note:save=${this.handleOcrSaveNote}
-        @copio-ocr:save-note=${this.handleOcrSaveNote}
       ></copio-doc-ocr-dialog>
     `;
   }

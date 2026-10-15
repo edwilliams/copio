@@ -213,7 +213,7 @@ describe('Unified Toast / Feedback Service (CPO-022)', () => {
 
         // Test save note
         let noteSaved = false;
-        ocrDialog.addEventListener('copio-ocr:save-note', () => {
+        ocrDialog.addEventListener('note:save', () => {
           noteSaved = true;
         });
         ocrDialog.saveAsNote();

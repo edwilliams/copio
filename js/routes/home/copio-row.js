@@ -148,7 +148,6 @@ export class CopioRow extends LitElement {
     if (trimmed !== this.name) {
       const detail = { id: this.getAttribute('id'), name: trimmed };
       this.dispatchEvent(new CustomEvent('doc:rename', { bubbles: true, composed: false, detail }));
-      this.dispatchEvent(new CustomEvent('copio-row:rename', { bubbles: true, composed: false, detail }));
       this.name = trimmed;
     }
     this.isRenaming = false;
@@ -167,43 +166,36 @@ export class CopioRow extends LitElement {
   handleExtractOcr() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:extract-ocr', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-row:extract-ocr', { bubbles: true, composed: false, detail }));
   }
 
   handleView() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:view', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-row:view', { bubbles: true, composed: false, detail }));
   }
 
   handleDelete() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:delete', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-row:delete', { bubbles: true, composed: false, detail }));
   }
 
   handleEdit() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:edit', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-row:edit', { bubbles: true, composed: false, detail }));
   }
 
   handleDownload() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:download', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-row:download', { bubbles: true, composed: false, detail }));
   }
 
   handleDownloadImages() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:download-images', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-row:download-images', { bubbles: true, composed: false, detail }));
   }
 
   handleDownloadMarkdown() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:download-markdown', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-row:download-markdown', { bubbles: true, composed: false, detail }));
   }
 
   render() {

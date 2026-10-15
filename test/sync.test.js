@@ -118,7 +118,7 @@ describe('CopioSyncDialog UI & App Integration', () => {
     await dialog.updateComplete;
 
     let closed = false;
-    dialog.addEventListener('copio-sync-dialog:close', () => {
+    dialog.addEventListener('dialog:close', () => {
       closed = true;
     });
 

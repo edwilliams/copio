@@ -127,12 +127,13 @@ Subscribe to changes: `router.onRouteChange(({ name, params }) => ...)` — retu
 
 Components communicate **upward via custom events**, **downward via properties/methods**:
 
-- `copio-row` fires `copio-row:edit`, `copio-row:view`, `copio-row:delete`, etc. → `copio-app` handles them
-- `copio-add-edit-dialog` fires `copio-add-edit-dialog:save` with `{ id, name, pages }` → `copio-app` writes to store
-- `copio-sync-dialog` fires `copio-sync-dialog:close` → `copio-app` calls `syncManager.close()`
-- `copio-doc-ocr-dialog` fires `copio-ocr:save-note` → `copio-app` appends a markdown page to the doc
+- `copio-row` fires `doc:edit`, `doc:view`, `doc:delete`, `doc:rename`, etc. → `copio-app` handles them
+- `copio-add-edit-dialog` fires `dialog:save` with `{ id, name, pages }` and `dialog:close` → `copio-app` handles them
+- `copio-sync-dialog` fires `dialog:close` → `copio-app` calls `syncManager.close()`
+- `copio-doc-ocr-dialog` fires `note:save` → `copio-app` appends a markdown page to the doc
+- `copio-header` fires `header:link-device`, `header:clear-cache` → `copio-app` handles them
 
-All custom events use `{ bubbles: true }` and follow the `component-name:action` naming convention.
+All custom events use `{ bubbles: true, composed: false }` and follow the clean domain event convention (`doc:*`, `dialog:*`, `note:*`, `header:*`) as specified in CPO-036.
 
 ### 6. TinyBase → Lit reactivity bridge
 

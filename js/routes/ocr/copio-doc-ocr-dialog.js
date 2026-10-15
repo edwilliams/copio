@@ -233,7 +233,6 @@ export class CopioDocOcrDialog extends LitElement {
     };
 
     this.dispatchEvent(new CustomEvent('note:save', { bubbles: true, composed: false, detail }));
-    this.dispatchEvent(new CustomEvent('copio-ocr:save-note', { bubbles: true, composed: false, detail }));
 
     notify.success('Saved OCR text as note');
     this.close();
