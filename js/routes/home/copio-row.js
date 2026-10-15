@@ -1,13 +1,32 @@
 import { LitElement, html, css } from '../../lib/lit-core.min.js';
 
 export class CopioRow extends LitElement {
-  disconnectedCallback() {
-    super.disconnectedCallback();
-  }
-
   static properties = {
     name: { type: String },
+    pages: { type: Array },
+    isRenaming: { type: Boolean, state: true },
+    renameValue: { type: String, state: true },
   };
+
+  constructor() {
+    super();
+    this.name = '';
+    this.pages = [];
+    this.isRenaming = false;
+    this.renameValue = '';
+  }
+
+  get hasImages() {
+    return (this.pages || []).some((p) => p.type !== 'markdown' && !!p.src);
+  }
+
+  get hasMarkdown() {
+    return (this.pages || []).some((p) => p.type === 'markdown');
+  }
+
+  get pageCount() {
+    return (this.pages || []).length;
+  }
 
   static styles = css`
     .wrapper {
@@ -17,19 +36,48 @@ export class CopioRow extends LitElement {
       justify-content: space-between;
       align-items: center;
       max-width: 768px;
-      padding: 8px;
-      border-bottom: 1px solid #333;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
       cursor: pointer;
+      user-select: none;
     }
     .inner {
       display: flex;
       align-items: center;
+      flex: 1;
+      min-width: 0;
     }
     .titles {
       display: flex;
       flex-direction: column;
-      margin-left: 8px;
-      padding: 8px;
+      margin-left: 12px;
+      padding: 2px 0;
+      flex: 1;
+      min-width: 0;
+    }
+    .doc-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #151f2a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+    .doc-page-count {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .rename-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .rename-container sl-input {
+      flex: 1;
     }
     button {
       appearance: none;
@@ -42,18 +90,82 @@ export class CopioRow extends LitElement {
   `;
 
   #handleWrapperClick(e) {
-    if (e.target.closest('sl-dropdown')) return;
+    if (this.isRenaming) return;
+    if (e.target.closest('sl-dropdown') || e.target.closest('.rename-container')) return;
     this.handleView();
   }
 
   #handleMenuSelect(e) {
-    const selected = e.detail.item.value;
+    if (e.detail?.item?.disabled) return;
+    const selected = e.detail?.item?.value;
     if (selected === 'delete') this.handleDelete();
+    if (selected === 'rename') this.startRename();
     if (selected === 'edit') this.handleEdit();
     if (selected === 'extract-ocr') this.handleExtractOcr();
     if (selected === 'download') this.handleDownload();
     if (selected === 'download-images') this.handleDownloadImages();
     if (selected === 'download-markdown') this.handleDownloadMarkdown();
+  }
+
+  startRename(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    this.renameValue = this.name || '';
+    this.isRenaming = true;
+    this.updateComplete.then(() => {
+      const input = this.shadowRoot.querySelector('.rename-input');
+      if (input) {
+        input.focus();
+        if (typeof input.select === 'function') {
+          input.select();
+        }
+      }
+    });
+  }
+
+  cancelRename(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    this.isRenaming = false;
+    this.renameValue = this.name || '';
+  }
+
+  commitRename(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const trimmed = (this.renameValue || '').trim();
+    if (!trimmed) {
+      this.cancelRename();
+      return;
+    }
+
+    if (trimmed !== this.name) {
+      this.dispatchEvent(
+        new CustomEvent('copio-row:rename', {
+          bubbles: true,
+          composed: true,
+          detail: { id: this.getAttribute('id'), name: trimmed },
+        }),
+      );
+      this.name = trimmed;
+    }
+    this.isRenaming = false;
+  }
+
+  handleRenameKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.commitRename();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this.cancelRename();
+    }
   }
 
   handleExtractOcr() {
@@ -135,7 +247,34 @@ export class CopioRow extends LitElement {
           </sl-avatar>
 
           <div class="titles">
-            <div>${this.name}</div>
+            ${this.isRenaming
+              ? html`
+                  <div class="rename-container" @click=${(e) => e.stopPropagation()}>
+                    <sl-input
+                      class="rename-input"
+                      size="small"
+                      .value=${this.renameValue}
+                      @sl-input=${(e) => (this.renameValue = e.target.value)}
+                      @keydown=${this.handleRenameKeyDown}
+                    ></sl-input>
+                    <sl-icon-button
+                      name="check-lg"
+                      label="Save rename"
+                      @click=${this.commitRename}
+                    ></sl-icon-button>
+                    <sl-icon-button
+                      name="x-lg"
+                      label="Cancel rename"
+                      @click=${this.cancelRename}
+                    ></sl-icon-button>
+                  </div>
+                `
+              : html`
+                  <div class="doc-title">${this.name || 'Untitled Document'}</div>
+                  <div class="doc-page-count">
+                    ${this.pageCount} ${this.pageCount === 1 ? 'page' : 'pages'}
+                  </div>
+                `}
           </div>
         </div>
 
@@ -144,16 +283,52 @@ export class CopioRow extends LitElement {
             <sl-icon name="three-dots-vertical"></sl-icon>
           </sl-button>
           <sl-menu @sl-select=${this.#handleMenuSelect}>
-            <sl-menu-item value="edit">Edit</sl-menu-item>
-            <sl-menu-item value="extract-ocr">
+            <sl-menu-item value="edit">
+              <sl-icon slot="prefix" name="sliders"></sl-icon>
+              Edit
+            </sl-menu-item>
+            <sl-menu-item value="rename">
+              <sl-icon slot="prefix" name="pencil"></sl-icon>
+              Rename
+            </sl-menu-item>
+            <sl-menu-item
+              value="extract-ocr"
+              ?disabled=${!this.hasImages}
+              title=${!this.hasImages ? 'No image pages in document' : 'Extract text with OCR'}
+            >
               <sl-icon slot="prefix" name="card-text"></sl-icon>
               Extract All Text (OCR)
             </sl-menu-item>
-            <sl-menu-item value="download">Download as PDF</sl-menu-item>
-            <sl-menu-item value="download-images">Download as Images</sl-menu-item>
-            <sl-menu-item value="download-markdown">Download as Markdown</sl-menu-item>
             <sl-divider></sl-divider>
-            <sl-menu-item value="delete">Delete</sl-menu-item>
+            <sl-menu-item
+              value="download"
+              ?disabled=${this.pageCount === 0}
+              title=${this.pageCount === 0 ? 'Document is empty' : 'Download as PDF'}
+            >
+              <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
+              Download as PDF
+            </sl-menu-item>
+            <sl-menu-item
+              value="download-images"
+              ?disabled=${this.pageCount === 0}
+              title=${this.pageCount === 0 ? 'Document is empty' : 'Download as Images'}
+            >
+              <sl-icon slot="prefix" name="images"></sl-icon>
+              Download as Images
+            </sl-menu-item>
+            <sl-menu-item
+              value="download-markdown"
+              ?disabled=${!this.hasMarkdown}
+              title=${!this.hasMarkdown ? 'No markdown notes in document' : 'Download as Markdown'}
+            >
+              <sl-icon slot="prefix" name="markdown"></sl-icon>
+              Download as Markdown
+            </sl-menu-item>
+            <sl-divider></sl-divider>
+            <sl-menu-item value="delete">
+              <sl-icon slot="prefix" name="trash"></sl-icon>
+              Delete
+            </sl-menu-item>
           </sl-menu>
         </sl-dropdown>
       </div>
