@@ -36,8 +36,8 @@ export class CopioRow extends LitElement {
       justify-content: space-between;
       align-items: center;
       max-width: 768px;
-      padding: 8px 12px;
-      border-bottom: 1px solid #333;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
       cursor: pointer;
       user-select: none;
     }
@@ -51,37 +51,23 @@ export class CopioRow extends LitElement {
       display: flex;
       flex-direction: column;
       margin-left: 12px;
-      padding: 4px 0;
+      padding: 2px 0;
       flex: 1;
       min-width: 0;
     }
-    .doc-title-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
     .doc-title {
-      font-weight: 500;
-      color: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #151f2a;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.3;
     }
     .doc-page-count {
-      font-size: 0.75rem;
-      color: #94a3b8;
+      font-size: 0.8rem;
+      color: #64748b;
       margin-top: 2px;
-    }
-    .rename-btn {
-      opacity: 0.6;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: opacity 0.15s;
-      color: #94a3b8;
-    }
-    .rename-btn:hover {
-      opacity: 1;
-      color: #38bdf8;
     }
     .rename-container {
       display: flex;
@@ -105,7 +91,7 @@ export class CopioRow extends LitElement {
 
   #handleWrapperClick(e) {
     if (this.isRenaming) return;
-    if (e.target.closest('sl-dropdown') || e.target.closest('.rename-container') || e.target.closest('.rename-btn')) return;
+    if (e.target.closest('sl-dropdown') || e.target.closest('.rename-container')) return;
     this.handleView();
   }
 
@@ -284,15 +270,7 @@ export class CopioRow extends LitElement {
                   </div>
                 `
               : html`
-                  <div class="doc-title-row">
-                    <div class="doc-title">${this.name || 'Untitled Document'}</div>
-                    <sl-icon-button
-                      class="rename-btn"
-                      name="pencil"
-                      label="Rename"
-                      @click=${this.startRename}
-                    ></sl-icon-button>
-                  </div>
+                  <div class="doc-title">${this.name || 'Untitled Document'}</div>
                   <div class="doc-page-count">
                     ${this.pageCount} ${this.pageCount === 1 ? 'page' : 'pages'}
                   </div>
