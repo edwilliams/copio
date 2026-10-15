@@ -45,7 +45,8 @@ export class CopioAddEditDialog extends LitElement {
     if (inputName) inputName.value = '';
     if (copioImages) copioImages.images = [];
     
-    this.dispatchEvent(new CustomEvent('copio-add-edit-dialog:hide', { bubbles: true }));
+    this.dispatchEvent(new CustomEvent('dialog:close', { bubbles: true, composed: false }));
+    this.dispatchEvent(new CustomEvent('copio-add-edit-dialog:hide', { bubbles: true, composed: false }));
   };
 
   #handleKeydown = (e) => {
@@ -131,8 +132,14 @@ export class CopioAddEditDialog extends LitElement {
 
     const id = inputId?.value || randomId();
 
+    this.dispatchEvent(new CustomEvent('dialog:save', {
+      bubbles: true,
+      composed: false,
+      detail: { id, name, pages }
+    }));
     this.dispatchEvent(new CustomEvent('copio-add-edit-dialog:save', {
       bubbles: true,
+      composed: false,
       detail: { id, name, pages }
     }));
 

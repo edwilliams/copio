@@ -473,6 +473,14 @@ export class CopioApp extends LitElement {
             id=${id}
             name=${doc.name}
             .pages=${doc.pages || []}
+            @doc:edit=${this.handleRowEdit}
+            @doc:rename=${this.handleRowRename}
+            @doc:view=${this.handleRowView}
+            @doc:extract-ocr=${this.handleRowExtractOcr}
+            @doc:delete=${this.handleRowDelete}
+            @doc:download=${this.handleRowDownload}
+            @doc:download-images=${this.handleRowDownloadImages}
+            @doc:download-markdown=${this.handleRowDownloadMarkdown}
             @copio-row:edit=${this.handleRowEdit}
             @copio-row:rename=${this.handleRowRename}
             @copio-row:view=${this.handleRowView}
@@ -498,6 +506,8 @@ export class CopioApp extends LitElement {
         style="display: ${this.showCarousel ? 'none' : 'block'}"
       >
         <copio-header
+          @header:link-device=${this.startSyncAsHost}
+          @header:clear-cache=${this.handleClearCache}
           @copio-header:link-device=${this.startSyncAsHost}
           @copio-header:clear-cache=${this.handleClearCache}
         ></copio-header>
@@ -505,6 +515,8 @@ export class CopioApp extends LitElement {
         <div id="copio-rows">${this.renderRows()}</div>
 
         <copio-add-edit-dialog
+          @dialog:save=${this.handleAddEditSave}
+          @dialog:close=${this.handleAddEditHide}
           @copio-add-edit-dialog:save=${this.handleAddEditSave}
           @copio-add-edit-dialog:hide=${this.handleAddEditHide}
           @copio:ocr-page=${this.handleOcrPage}
@@ -523,6 +535,10 @@ export class CopioApp extends LitElement {
 
       <copio-carousel
         style="display: ${this.showCarousel ? 'block' : 'none'}"
+        @dialog:close=${this.handleCarouselClose}
+        @doc:download-pdf=${this.handleCarouselDownloadPdf}
+        @doc:download-images=${this.handleCarouselDownloadImages}
+        @doc:download-markdown=${this.handleCarouselDownloadMarkdown}
         @copio-carousel:close=${this.handleCarouselClose}
         @copio:ocr-page=${this.handleOcrPage}
         @copio-carousel:download-pdf=${this.handleCarouselDownloadPdf}
@@ -532,9 +548,11 @@ export class CopioApp extends LitElement {
 
       ${this.syncState ? html`<copio-sync-dialog
         .syncState=${this.syncState}
+        @dialog:close=${this.closeSyncDialog}
         @copio-sync-dialog:close=${this.closeSyncDialog}
       ></copio-sync-dialog>` : ''}
       <copio-doc-ocr-dialog
+        @note:save=${this.handleOcrSaveNote}
         @copio-ocr:save-note=${this.handleOcrSaveNote}
       ></copio-doc-ocr-dialog>
     `;

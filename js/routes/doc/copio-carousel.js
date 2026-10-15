@@ -213,12 +213,8 @@ export class CopioCarousel extends LitElement {
   }
 
   handleBackClick() {
-    this.dispatchEvent(
-      new CustomEvent('copio-carousel:close', {
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.dispatchEvent(new CustomEvent('dialog:close', { bubbles: true, composed: false }));
+    this.dispatchEvent(new CustomEvent('copio-carousel:close', { bubbles: true, composed: false }));
   }
 
   handleOcrClick() {
@@ -247,29 +243,14 @@ export class CopioCarousel extends LitElement {
     };
 
     if (value === 'pdf') {
-      this.dispatchEvent(
-        new CustomEvent('copio-carousel:download-pdf', {
-          bubbles: true,
-          composed: true,
-          detail,
-        }),
-      );
+      this.dispatchEvent(new CustomEvent('doc:download-pdf', { bubbles: true, composed: false, detail }));
+      this.dispatchEvent(new CustomEvent('copio-carousel:download-pdf', { bubbles: true, composed: false, detail }));
     } else if (value === 'images') {
-      this.dispatchEvent(
-        new CustomEvent('copio-carousel:download-images', {
-          bubbles: true,
-          composed: true,
-          detail,
-        }),
-      );
+      this.dispatchEvent(new CustomEvent('doc:download-images', { bubbles: true, composed: false, detail }));
+      this.dispatchEvent(new CustomEvent('copio-carousel:download-images', { bubbles: true, composed: false, detail }));
     } else if (value === 'markdown') {
-      this.dispatchEvent(
-        new CustomEvent('copio-carousel:download-markdown', {
-          bubbles: true,
-          composed: true,
-          detail,
-        }),
-      );
+      this.dispatchEvent(new CustomEvent('doc:download-markdown', { bubbles: true, composed: false, detail }));
+      this.dispatchEvent(new CustomEvent('copio-carousel:download-markdown', { bubbles: true, composed: false, detail }));
     }
   }
 

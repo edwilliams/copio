@@ -159,7 +159,7 @@ export async function renderMarkdownToPageDataUrls(page) {
  * @returns {Promise<Blob|undefined>}
  */
 export async function exportDocumentAsPdf(docName, pages, options = {}) {
-  const { onProgress, showProgress = true } = options;
+  const { onProgress, showProgress = true, download = true } = options;
   if (!pages || pages.length === 0) {
     notify.warning('No images to export');
     return;
@@ -195,14 +195,30 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
       doc.on('end', () => {
         try {
           const blob = new Blob(chunks, { type: 'application/pdf' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${docName || 'document'}.pdf`;
-          a.click();
-          URL.revokeObjectURL(url);
+          if (download !== false) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${docName || 'document'}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            notify.success(`Exported "${docName || 'document'}.pdf"`);
+          }
           progress?.close();
-          notify.success(`Exported "${docName || 'document'}.pdf"`);
+          if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(
+              new CustomEvent('copio:export-complete', {
+                bubbles: true,
+                composed: true,
+                detail: {
+                  type: 'pdf',
+                  format: 'pdf',
+                  blob,
+                  docName: docName || 'document',
+                },
+              }),
+            );
+          }
           resolve(blob);
         } catch (err) {
           reject(err);
@@ -291,7 +307,7 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
  * @returns {Promise<Blob|undefined>}
  */
 export async function exportDocumentAsImages(docName, pages, options = {}) {
-  const { onProgress, showProgress = true } = options;
+  const { onProgress, showProgress = true, download = true } = options;
   if (!pages || pages.length === 0) {
     notify.warning('No images to export');
     return;
@@ -314,12 +330,21 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
 
       let downloadUrl = page.src;
       let shouldRevoke = false;
+      let exportBlob = null;
 
       if (!page.src.startsWith('data:') && !page.src.startsWith('blob:')) {
         const response = await fetch(page.src);
-        const blob = await response.blob();
-        downloadUrl = URL.createObjectURL(blob);
+        exportBlob = await response.blob();
+        downloadUrl = URL.createObjectURL(exportBlob);
         shouldRevoke = true;
+      } else if (page.src.startsWith('data:')) {
+        try {
+          const response = await fetch(page.src);
+          exportBlob = await response.blob();
+        } catch (_) {
+          // Fallback if fetch of data URI is restricted
+          exportBlob = new Blob([page.src], { type: `image/${ext}` });
+        }
       }
 
       if (typeof onProgress === 'function') {
@@ -334,13 +359,25 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
         );
       }
 
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `${safeName}.${ext}`;
-      a.click();
+      if (download !== false) {
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `${safeName}.${ext}`;
+        a.click();
+        notify.success(`Exported "${safeName}.${ext}"`);
+      }
       if (shouldRevoke) URL.revokeObjectURL(downloadUrl);
-      notify.success(`Exported "${safeName}.${ext}"`);
-      return;
+
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(
+          new CustomEvent('copio:export-complete', {
+            bubbles: true,
+            composed: true,
+            detail: { type: 'image', format: ext, blob: exportBlob, docName: safeName },
+          }),
+        );
+      }
+      return exportBlob;
     }
 
     const total = pages.length;
@@ -439,14 +476,25 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
       }
     });
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${safeName}.zip`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (download !== false) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      notify.success(`Exported "${safeName}.zip"`);
+    }
     progress?.close();
-    notify.success(`Exported "${safeName}.zip"`);
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(
+        new CustomEvent('copio:export-complete', {
+          bubbles: true,
+          composed: true,
+          detail: { type: 'zip', format: 'zip', blob, docName: safeName },
+        }),
+      );
+    }
     return blob;
   } catch (error) {
     progress?.close();

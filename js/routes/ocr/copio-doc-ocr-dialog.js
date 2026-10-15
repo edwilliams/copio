@@ -225,18 +225,15 @@ export class CopioDocOcrDialog extends LitElement {
   saveAsNote = () => {
     if (!this.resultText || !this.docId) return;
 
-    this.dispatchEvent(
-      new CustomEvent('copio-ocr:save-note', {
-        bubbles: true,
-        composed: true,
-        detail: {
-          docId: this.docId,
-          content: this.resultText,
-          // pageIndex is set in single-page mode so the note is inserted adjacent to the source image
-          pageIndex: this._pageIndex,
-        },
-      }),
-    );
+    const detail = {
+      docId: this.docId,
+      content: this.resultText,
+      // pageIndex is set in single-page mode so the note is inserted adjacent to the source image
+      pageIndex: this._pageIndex,
+    };
+
+    this.dispatchEvent(new CustomEvent('note:save', { bubbles: true, composed: false, detail }));
+    this.dispatchEvent(new CustomEvent('copio-ocr:save-note', { bubbles: true, composed: false, detail }));
 
     notify.success('Saved OCR text as note');
     this.close();
