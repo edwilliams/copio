@@ -149,10 +149,10 @@ describe('CPO-040: Remove Router Dependency from SDK Components', () => {
     let viewEventDetail = null;
     let editEventDetail = null;
 
-    row.addEventListener('copio-row:view', (e) => {
+    row.addEventListener('doc:view', (e) => {
       viewEventDetail = e.detail;
     });
-    row.addEventListener('copio-row:edit', (e) => {
+    row.addEventListener('doc:edit', (e) => {
       editEventDetail = e.detail;
     });
 
@@ -170,7 +170,7 @@ describe('CPO-040: Remove Router Dependency from SDK Components', () => {
     document.body.appendChild(carousel);
 
     let closeFired = false;
-    carousel.addEventListener('copio-carousel:close', () => {
+    carousel.addEventListener('dialog:close', () => {
       closeFired = true;
     });
 
@@ -185,7 +185,7 @@ describe('CPO-040: Remove Router Dependency from SDK Components', () => {
     document.body.appendChild(dialog);
 
     let closeFired = false;
-    dialog.addEventListener('copio-sync-dialog:close', () => {
+    dialog.addEventListener('dialog:close', () => {
       closeFired = true;
     });
 
@@ -197,13 +197,13 @@ describe('CPO-040: Remove Router Dependency from SDK Components', () => {
 });
 
 describe('CPO-044: Decouple Service Worker Caching from SDK', () => {
-  it('<copio-header> dispatches copio-header:clear-cache event without touching Service Worker directly', async () => {
+  it('<copio-header> dispatches header:clear-cache event without touching Service Worker directly', async () => {
     const header = document.createElement('copio-header');
     document.body.appendChild(header);
     await header.updateComplete;
 
     let eventDispatched = false;
-    header.addEventListener('copio-header:clear-cache', () => {
+    header.addEventListener('header:clear-cache', () => {
       eventDispatched = true;
     });
 

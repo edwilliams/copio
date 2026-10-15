@@ -186,7 +186,7 @@ describe('Streamline Add/Import UX & Direct File/Camera Picker (CPO-027)', funct
     it('blank title shows inline validation error instead of prompt()', async () => {
       // Acceptance criteria: Blank title shows inline validation error instead of prompt()
       let saveEventDispatched = false;
-      dialogEl.addEventListener('copio-add-edit-dialog:save', () => {
+      dialogEl.addEventListener('dialog:save', () => {
         saveEventDispatched = true;
       });
 
@@ -213,7 +213,7 @@ describe('Streamline Add/Import UX & Direct File/Camera Picker (CPO-027)', funct
 
     it('typing into name input clears validation error, and saving valid name succeeds', async () => {
       let savedDetail = null;
-      dialogEl.addEventListener('copio-add-edit-dialog:save', (e) => {
+      dialogEl.addEventListener('dialog:save', (e) => {
         savedDetail = e.detail;
       });
 

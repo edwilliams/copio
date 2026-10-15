@@ -61,11 +61,11 @@ export class CopioHeader extends LitElement {
 
   #handleSelect(e) {
     if (e.detail.item.value === 'link-device') {
-      this.dispatchEvent(new CustomEvent('copio-header:link-device', { bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent('header:link-device', { bubbles: true, composed: false }));
       return;
     }
     if (e.detail.item.value === 'clear-cache') {
-      this.dispatchEvent(new CustomEvent('copio-header:clear-cache', { bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent('header:clear-cache', { bubbles: true, composed: false }));
     }
   }
 

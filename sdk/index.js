@@ -19,6 +19,7 @@ export { CopioLoader } from '../js/components/copio-loader.js';
 
 // Hexagonal Core & Licensing (CPO-045, CPO-053, CPO-061)
 export { CopioEngine } from './core.js';
+export { COPIO_EVENTS, dispatchCopioEvent } from './events.js';
 export { LicenseManager } from './license.js';
 export { BUILD_DATE, VERSION } from './version.js';
 
@@ -80,3 +81,17 @@ export {
   IndexedDbStorageAdapter,
   createDefaultAdapter,
 } from '../js/adapters/storage/index.js';
+
+// Register Default Driven Ports (Hexagonal Architecture)
+import { registerService } from './core.js';
+import * as exportService from '../js/services/export-utils.js';
+import * as ocrService from '../js/services/ocr-service.js';
+import { SyncManager } from '../js/services/sync-service.js';
+import { renderPdfPagesToDataUrls } from '../js/utils/pdf-utils.js';
+
+registerService('export', exportService);
+registerService('ocr', ocrService);
+registerService('sync', SyncManager);
+registerService('pdf', { renderPdfPagesToDataUrls });
+
+export { registerService, getRegisteredService } from './core.js';

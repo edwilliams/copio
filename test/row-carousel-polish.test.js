@@ -108,7 +108,7 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
       expect(input.value).to.equal('Original Name');
 
       let renameEvent = null;
-      row.addEventListener('copio-row:rename', (e) => {
+      row.addEventListener('doc:rename', (e) => {
         renameEvent = e.detail;
       });
 
@@ -133,7 +133,7 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
       await row.updateComplete;
 
       let renameEvent = null;
-      row.addEventListener('copio-row:rename', (e) => {
+      row.addEventListener('doc:rename', (e) => {
         renameEvent = e.detail;
       });
 
@@ -198,9 +198,9 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
       let imagesDetail = null;
       let mdDetail = null;
 
-      carousel.addEventListener('copio-carousel:download-pdf', (e) => (pdfDetail = e.detail));
-      carousel.addEventListener('copio-carousel:download-images', (e) => (imagesDetail = e.detail));
-      carousel.addEventListener('copio-carousel:download-markdown', (e) => (mdDetail = e.detail));
+      carousel.addEventListener('doc:download-pdf', (e) => (pdfDetail = e.detail));
+      carousel.addEventListener('doc:download-images', (e) => (imagesDetail = e.detail));
+      carousel.addEventListener('doc:download-markdown', (e) => (mdDetail = e.detail));
 
       carousel.handleExportSelect({ detail: { item: { value: 'pdf' } } });
       carousel.handleExportSelect({ detail: { item: { value: 'images' } } });
@@ -249,7 +249,7 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
 
       // Simulate rename event from row
       row.dispatchEvent(
-        new CustomEvent('copio-row:rename', {
+        new CustomEvent('doc:rename', {
           bubbles: true,
           composed: true,
           detail: { id: created.id, name: 'Updated via Row' },

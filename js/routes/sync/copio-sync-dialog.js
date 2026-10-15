@@ -24,7 +24,7 @@ export class CopioSyncDialog extends LitElement {
   };
 
   closeSyncDialog = () => {
-    this.dispatchEvent(new CustomEvent('copio-sync-dialog:close', { bubbles: true }));
+    this.dispatchEvent(new CustomEvent('dialog:close', { bubbles: true, composed: false }));
   };
 
   render() {

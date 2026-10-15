@@ -473,14 +473,14 @@ export class CopioApp extends LitElement {
             id=${id}
             name=${doc.name}
             .pages=${doc.pages || []}
-            @copio-row:edit=${this.handleRowEdit}
-            @copio-row:rename=${this.handleRowRename}
-            @copio-row:view=${this.handleRowView}
-            @copio-row:extract-ocr=${this.handleRowExtractOcr}
-            @copio-row:delete=${this.handleRowDelete}
-            @copio-row:download=${this.handleRowDownload}
-            @copio-row:download-images=${this.handleRowDownloadImages}
-            @copio-row:download-markdown=${this.handleRowDownloadMarkdown}
+            @doc:edit=${this.handleRowEdit}
+            @doc:rename=${this.handleRowRename}
+            @doc:view=${this.handleRowView}
+            @doc:extract-ocr=${this.handleRowExtractOcr}
+            @doc:delete=${this.handleRowDelete}
+            @doc:download=${this.handleRowDownload}
+            @doc:download-images=${this.handleRowDownloadImages}
+            @doc:download-markdown=${this.handleRowDownloadMarkdown}
           ></copio-row>
         `,
       )}
@@ -498,15 +498,15 @@ export class CopioApp extends LitElement {
         style="display: ${this.showCarousel ? 'none' : 'block'}"
       >
         <copio-header
-          @copio-header:link-device=${this.startSyncAsHost}
-          @copio-header:clear-cache=${this.handleClearCache}
+          @header:link-device=${this.startSyncAsHost}
+          @header:clear-cache=${this.handleClearCache}
         ></copio-header>
 
         <div id="copio-rows">${this.renderRows()}</div>
 
         <copio-add-edit-dialog
-          @copio-add-edit-dialog:save=${this.handleAddEditSave}
-          @copio-add-edit-dialog:hide=${this.handleAddEditHide}
+          @dialog:save=${this.handleAddEditSave}
+          @dialog:close=${this.handleAddEditHide}
           @copio:ocr-page=${this.handleOcrPage}
         ></copio-add-edit-dialog>
 
@@ -523,19 +523,19 @@ export class CopioApp extends LitElement {
 
       <copio-carousel
         style="display: ${this.showCarousel ? 'block' : 'none'}"
-        @copio-carousel:close=${this.handleCarouselClose}
+        @dialog:close=${this.handleCarouselClose}
         @copio:ocr-page=${this.handleOcrPage}
-        @copio-carousel:download-pdf=${this.handleCarouselDownloadPdf}
-        @copio-carousel:download-images=${this.handleCarouselDownloadImages}
-        @copio-carousel:download-markdown=${this.handleCarouselDownloadMarkdown}
+        @doc:download-pdf=${this.handleCarouselDownloadPdf}
+        @doc:download-images=${this.handleCarouselDownloadImages}
+        @doc:download-markdown=${this.handleCarouselDownloadMarkdown}
       ></copio-carousel>
 
       ${this.syncState ? html`<copio-sync-dialog
         .syncState=${this.syncState}
-        @copio-sync-dialog:close=${this.closeSyncDialog}
+        @dialog:close=${this.closeSyncDialog}
       ></copio-sync-dialog>` : ''}
       <copio-doc-ocr-dialog
-        @copio-ocr:save-note=${this.handleOcrSaveNote}
+        @note:save=${this.handleOcrSaveNote}
       ></copio-doc-ocr-dialog>
     `;
   }
