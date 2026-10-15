@@ -1,11 +1,56 @@
 {
+  "name": "@copio/sdk",
+  "version": "0.1.0",
+  "description": "Embeddable Web Components and Headless Services for Document Scanning, OCR, Editing, and P2P Sync.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./scanner": {
+      "import": "./dist/scanner.js",
+      "default": "./dist/scanner.js"
+    },
+    "./sync": {
+      "import": "./dist/sync.js",
+      "default": "./dist/sync.js"
+    },
+    "./adapters/*": {
+      "import": "./dist/adapters/*.js",
+      "default": "./dist/adapters/*.js"
+    },
+    "./styles": "./css/shoelace.css",
+    "./styles/*": "./css/*"
+  },
+  "files": [
+    "dist",
+    "sdk",
+    "css",
+    "assets"
+  ],
+  "sideEffects": [
+    "dist/cdn.js",
+    "dist/scanner.js",
+    "sdk/scanner.js",
+    "*.css"
+  ],
   "scripts": {
     "build": "npm run build --prefix scripts/bundle",
+    "build:sdk": "node scripts/build-sdk.mjs",
+    "check:size": "node scripts/check-bundle-size.mjs",
     "test": "web-test-runner test/**/*.test.js --node-resolve"
   },
   "devDependencies": {
     "@esm-bundle/chai": "^4.3.4-fix.0",
     "@web/test-runner": "^1.0.0",
-    "@web/test-runner-playwright": "^1.0.0"
+    "@web/test-runner-playwright": "^1.0.0",
+    "esbuild": "^0.28.2"
   }
 }
