@@ -156,6 +156,7 @@ export async function renderMarkdownToPageDataUrls(page) {
  * @param {Object} [options]
  * @param {Function} [options.onProgress] - Callback invoked per page: (done, total) => void
  * @param {boolean} [options.showProgress=true] - Whether to show progress toast in UI
+ * @param {boolean} [options.download=true] - Whether to trigger browser download
  * @returns {Promise<Blob|undefined>}
  */
 export async function exportDocumentAsPdf(docName, pages, options = {}) {
@@ -239,7 +240,7 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
           img.onload = resolve;
           img.onerror = (err) => {
             console.warn('Page image failed to load for PDF:', err);
-            resolve();
+            resolve(undefined);
           };
           img.src = page.src;
         });
@@ -304,6 +305,7 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
  * @param {Object} [options]
  * @param {Function} [options.onProgress] - Callback invoked per page: (done, total) => void
  * @param {boolean} [options.showProgress=true] - Whether to show progress toast in UI
+ * @param {boolean} [options.download=true] - Whether to trigger browser download
  * @returns {Promise<Blob|undefined>}
  */
 export async function exportDocumentAsImages(docName, pages, options = {}) {
@@ -341,7 +343,7 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
         try {
           const response = await fetch(page.src);
           exportBlob = await response.blob();
-        } catch (_) {
+        } catch {
           // Fallback if fetch of data URI is restricted
           exportBlob = new Blob([page.src], { type: `image/${ext}` });
         }

@@ -3,8 +3,6 @@ import '../js/lib/shoelace.js';
 import '../js/core/register-components.js';
 import { docRepository } from '../js/services/doc-repository.js';
 import { router } from '../js/core/router.js';
-import notify from '../js/services/notify.js';
-import * as exportUtils from '../js/services/export-utils.js';
 
 describe('CPO-028: Action guards, in-place rename, and quick export in document view', () => {
   describe('CopioRow Action Guards & Contextual Menu State', () => {

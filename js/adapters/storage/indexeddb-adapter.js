@@ -115,7 +115,7 @@ export class IndexedDbStorageAdapter extends StoragePort {
   /**
    * Saves or updates a document.
    * @param {string} id
-   * @param {{ name?: string, pages?: any[] }} doc
+   * @param {import('./storage-port.js').DocRow} doc
    * @returns {Promise<void>}
    */
   async saveDoc(id, doc) {

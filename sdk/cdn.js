@@ -6,7 +6,7 @@ import * as Copio from './index.js';
 
 // Auto-register elements in global environment
 if (typeof window !== 'undefined') {
-  window.Copio = Copio;
+  /** @type {any} */ (window).Copio = Copio;
 }
 
 export * from './index.js';

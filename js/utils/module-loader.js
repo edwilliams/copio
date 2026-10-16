@@ -89,7 +89,7 @@ export function loadScript(relativeSrc, checkGlobal) {
         return;
       }
       existingTag.addEventListener('load', () => resolve(checkGlobal()), { once: true });
-      existingTag.addEventListener('error', (err) => reject(new Error(`Failed to load "${relativeSrc}": ${err?.message || 'Network error'}`)), { once: true });
+      existingTag.addEventListener('error', () => reject(new Error(`Failed to load "${relativeSrc}": Network error`)), { once: true });
       return;
     }
 
@@ -102,10 +102,10 @@ export function loadScript(relativeSrc, checkGlobal) {
       resolve(result);
     };
 
-    script.onerror = (err) => {
+    script.onerror = () => {
       loadPromises.delete(relativeSrc);
       script.remove();
-      reject(new Error(`Failed to load script "${relativeSrc}": ${err?.message || 'Network error'}`));
+      reject(new Error(`Failed to load script "${relativeSrc}": Network error`));
     };
 
     document.head.appendChild(script);

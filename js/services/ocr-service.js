@@ -120,7 +120,7 @@ export async function getOcrWorker(lang = 'eng', onProgress = null) {
  * @param {string} [options.lang='eng'] - Language code (e.g. 'eng', 'spa', 'fra')
  * @param {Function} [options.onProgress] - Progress callback ({ status, progress, message })
  * @param {AbortSignal} [options.abortSignal] - Signal to cancel recognition
- * @returns {Promise<{ text: string, confidence: number, words: Array, lines: Array, paragraphs: Array }>}
+ * @returns {Promise<{ text: string, confidence: number, words: Array<any>, lines: Array<any>, paragraphs: Array<any>, hocr?: string }>}
  */
 export async function recognizeImageText(image, options = {}) {
   const { lang = 'eng', onProgress = null, abortSignal = null } = options;

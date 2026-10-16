@@ -124,7 +124,7 @@ export class CopioEngine {
    * @param {string} [options.licenseKey] - SDK commercial license key
    */
   constructor(options = {}) {
-    this.#storage = options.storage || createDefaultAdapter(options);
+    this.#storage = options.storage || createDefaultAdapter(/** @type {any} */ (options));
     this.#repository = options.repository || new DocRepository(this.#storage);
 
     if (options.services) {
@@ -140,7 +140,7 @@ export class CopioEngine {
       this.#ocrLanguages = normalizeList(options.ocrLanguages, DEFAULT_OCR_LANGUAGES);
     }
     if (options.maxPages !== undefined) {
-      this.#maxPages = Math.max(0, parseInt(options.maxPages, 10) || 0);
+      this.#maxPages = Math.max(0, Number(options.maxPages) || 0);
     }
     if (options.assetBase !== undefined) {
       setAssetBase(options.assetBase);
@@ -269,7 +269,7 @@ export class CopioEngine {
    * @param {number} limit
    */
   set maxPages(limit) {
-    this.#maxPages = Math.max(0, parseInt(limit, 10) || 0);
+    this.#maxPages = Math.max(0, Number(limit) || 0);
   }
 
   /**
@@ -398,7 +398,7 @@ export class CopioEngine {
               id: randomId(),
               src: dataUrl,
               type: 'image',
-              name: file.name || 'PDF Page',
+              name: /** @type {any} */ (file).name || 'PDF Page',
             });
           }
         } else {
@@ -409,13 +409,13 @@ export class CopioEngine {
         let orientation = null;
         try {
           orientation = await extractExif(file);
-        } catch (_) {}
+        } catch {}
 
         newPages.push({
           id: randomId(),
           src: base64,
           type: 'image',
-          name: file.name || 'Captured Image',
+          name: /** @type {any} */ (file).name || 'Captured Image',
           orientation,
         });
       }
@@ -478,14 +478,13 @@ export class CopioEngine {
     }
     const doc = await this.getDocument(targetDocId);
     if (!doc || !doc.pages) return;
-    for (const p of [...doc.pages]) {
+    for (const p of doc.pages) {
       await this.deletePage(targetDocId, p.id);
     }
   }
 
   /**
    * Resolve pages and document name from either doc ID, array of pages, or latest doc.
-   * @private
    */
   async #resolveDocAndPages(docIdOrPages) {
     if (Array.isArray(docIdOrPages)) {
@@ -524,7 +523,7 @@ export class CopioEngine {
   async exportPdf(docIdOrPages, options = {}) {
     if (!this.hasFeature('export')) {
       const err = new Error('Feature "export" is disabled');
-      err.code = 'FEATURE_DISABLED';
+      Object.assign(err, { code: 'FEATURE_DISABLED' });
       throw err;
     }
 
@@ -554,7 +553,7 @@ export class CopioEngine {
   async exportZip(docIdOrPages, options = {}) {
     if (!this.hasFeature('export')) {
       const err = new Error('Feature "export" is disabled');
-      err.code = 'FEATURE_DISABLED';
+      Object.assign(err, { code: 'FEATURE_DISABLED' });
       throw err;
     }
 
@@ -584,7 +583,7 @@ export class CopioEngine {
   async runOcr(docIdOrPages, pageId = null, options = {}) {
     if (!this.hasFeature('ocr')) {
       const err = new Error('Feature "ocr" is disabled');
-      err.code = 'FEATURE_DISABLED';
+      Object.assign(err, { code: 'FEATURE_DISABLED' });
       throw err;
     }
 
@@ -621,7 +620,7 @@ export class CopioEngine {
   async sync(options = {}) {
     if (!this.hasFeature('sync')) {
       const err = new Error('Feature "sync" is disabled');
-      err.code = 'FEATURE_DISABLED';
+      Object.assign(err, { code: 'FEATURE_DISABLED' });
       throw err;
     }
 

@@ -186,7 +186,6 @@ describe('Page Operations & Editing', function () {
     const originalSrc = createTestImageDataUrl(100, 100, '#a855f7');
     imagesEl.images = [{ id: 'crop-test-page', src: originalSrc }];
 
-    const cropImage = imagesEl.shadowRoot.querySelector('#crop-image');
     imagesEl.openCropDialog(0);
 
     // Wait for cropper initialization

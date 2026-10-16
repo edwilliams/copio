@@ -3,8 +3,6 @@ import '../js/lib/shoelace.js';
 import '../js/core/register-components.js';
 import { store, persister } from '../js/core/store.js';
 import { router } from '../js/core/router.js';
-import { createStore } from '../js/lib/tinybase.6.5.2.js';
-import { createIndexedDbPersister } from '../js/lib/tinybase-persister-indexed-db.js';
 
 describe('Document Flow: create and view a document', () => {
   let app;

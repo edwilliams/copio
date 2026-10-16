@@ -364,6 +364,13 @@ export async function progress(messageOrOptions, options = {}) {
   const handle = {
     alert,
     progressBar,
+    /**
+     * @param {Object} [updates]
+     * @param {number} [updates.done]
+     * @param {number} [updates.total]
+     * @param {number} [updates.value]
+     * @param {string} [updates.message]
+     */
     update({ done, total, value, message } = {}) {
       if (message !== undefined) {
         messageNode.textContent = message;

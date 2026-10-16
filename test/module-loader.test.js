@@ -3,7 +3,6 @@ import {
   getAssetBase,
   setAssetBase,
   resolveAssetUrl,
-  loadScript,
   loadCropper,
   loadPdfKit,
   loadJsZip,

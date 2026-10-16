@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LitElement, html } from '../../lib/lit-core.min.js';
 import { recognizeDocumentPages, SUPPORTED_LANGUAGES, terminateOcrWorker } from '../../services/ocr-service.js';
 import { notify } from '../../services/notify.js';

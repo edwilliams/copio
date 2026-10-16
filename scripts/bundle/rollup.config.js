@@ -6,7 +6,7 @@ import copy from 'rollup-plugin-copy';
 import css from 'rollup-plugin-css-only';
 import { terser } from 'rollup-plugin-terser';
 
-const COPIO_COMPONENTS = [
+const _COPIO_COMPONENTS = [
   'copio-app',
   'copio-loader',
   'copio-header',

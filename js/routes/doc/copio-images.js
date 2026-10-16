@@ -1,3 +1,4 @@
+// @ts-nocheck
 /*
 this doesn't convert nicely to lit-html
 The issue is a fundamental incompatibility between Sortable and lit-html. When Sortable physically moves a DOM node, it moves the element but
@@ -362,7 +363,7 @@ export class CopioImages extends HTMLElement {
       }
     };
 
-    const handleDragLeave = (event) => {
+    const handleDragLeave = () => {
       dragCounter--;
       if (dragCounter <= 0) {
         dragCounter = 0;

@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    "js/lib/**",
+    "coverage/**",
+    "test/fixtures/**"
+  ],
+  "overrides": [
+    {
+      "files": ["test/**/*.js"],
+      "rules": {
+        "no-unused-expressions": "off"
+      }
+    }
+  ]
+}
