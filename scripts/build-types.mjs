@@ -4,9 +4,13 @@ import { execSync } from 'child_process';
 import { copyFile, appendFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { syncVendorTypes } from './sync-vendor-types.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
+
+// Ensure vendor type declarations are synchronized to js/lib
+syncVendorTypes();
 
 console.log('📦 Generating TypeScript declaration files via tsc...');
 execSync('npx tsc -p tsconfig.build-types.json', { cwd: rootDir, stdio: 'inherit' });

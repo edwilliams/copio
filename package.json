@@ -52,7 +52,8 @@
     "build:sdk": "node scripts/build-sdk.mjs",
     "build:types": "node scripts/build-types.mjs",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/sync-vendor-types.mjs && tsc --noEmit",
+    "postinstall": "node scripts/sync-vendor-types.mjs",
     "check:size": "node scripts/check-bundle-size.mjs",
     "test": "web-test-runner test/**/*.test.js --node-resolve"
   },
