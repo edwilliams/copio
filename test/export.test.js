@@ -65,7 +65,6 @@ describe('Export Smoke Tests', () => {
     ];
 
     const blobPromise = new Promise((resolve) => {
-      const orig = URL.createObjectURL;
       URL.createObjectURL = (blob) => {
         createdBlobs.push(blob);
         resolve(blob);
@@ -90,7 +89,6 @@ describe('Export Smoke Tests', () => {
     ];
 
     const blobPromise = new Promise((resolve) => {
-      const orig = URL.createObjectURL;
       URL.createObjectURL = (blob) => {
         createdBlobs.push(blob);
         resolve(blob);

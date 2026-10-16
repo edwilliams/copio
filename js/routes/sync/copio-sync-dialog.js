@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LitElement, html } from '../../lib/lit-core.min.js';
 
 export class CopioSyncDialog extends LitElement {

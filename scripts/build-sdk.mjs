@@ -11,6 +11,7 @@
  */
 
 import { rm, mkdir, cp, stat } from 'fs/promises';
+import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as esbuild from 'esbuild';
@@ -140,7 +141,11 @@ async function buildSdk() {
   }
   await cp(path.join(rootDir, 'js/lib/tesseract-core'), path.join(distJsLib, 'tesseract-core'), { recursive: true });
 
-  // 5. Report output chunks
+  // 5. Build TypeScript declarations & Custom Elements Manifest
+  console.log('\n📝 Building TypeScript types and Custom Elements Manifest...');
+  execSync('node scripts/build-types.mjs', { cwd: rootDir, stdio: 'inherit' });
+
+  // 6. Report output chunks
   console.log('\n✅ Build complete! Distributable outputs:');
   const outputs = Object.keys(esmResult.metafile.outputs);
   for (const out of outputs) {

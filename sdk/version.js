@@ -1,4 +1,6 @@
+// @ts-ignore
 export const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined'
+  // @ts-ignore
   ? __BUILD_DATE__
   : new Date().toISOString();
 

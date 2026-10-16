@@ -31,6 +31,10 @@ export class SimpleRouter {
     this.#listeners.clear();
   }
 
+  get currentRoute() {
+    return this.#currentRoute;
+  }
+
   onRouteChange(listener) {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LitElement, html, css } from '../../lib/lit-core.min.js';
 import { loadMarked } from '../../utils/module-loader.js';
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LitElement, html, css } from '../../lib/lit-core.min.js';
 
 export class CopioRow extends LitElement {

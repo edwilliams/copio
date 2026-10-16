@@ -109,7 +109,13 @@ export class DocRepository {
       };
     }
     const docs = this.listDocsSync();
-    return docs.find((d) => d.id === id) || null;
+    const doc = docs.find((d) => d.id === id);
+    if (!doc) return null;
+    return {
+      id: doc.id,
+      name: doc.name,
+      pages: doc.pages || [],
+    };
   }
 
   /**

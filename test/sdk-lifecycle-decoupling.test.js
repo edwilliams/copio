@@ -3,7 +3,6 @@ import '../js/lib/shoelace.js';
 import '../js/core/register-components.js';
 import * as SDK from '../sdk/index.js';
 import { store, persister } from '../js/core/store.js';
-import { router } from '../js/core/router.js';
 
 describe('CPO-039: Lifecycle Hygiene - Cleanup on Disconnect', () => {
   it('mounts and unmounts <copio-images> 50 times without error or resource leakage', async () => {

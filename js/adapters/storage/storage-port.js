@@ -13,9 +13,9 @@
 
 /**
  * @typedef {Object} DocRow
- * @property {string} id - Unique document identifier
- * @property {string} name - Document title
- * @property {Array<any>|string} pages - Document pages array (or serialized JSON string in persistence layer)
+ * @property {string} [id] - Unique document identifier
+ * @property {string} [name] - Document title
+ * @property {Array<any>|string} [pages] - Document pages array (or serialized JSON string in persistence layer)
  * @property {string} [createdAt] - Creation ISO timestamp
  * @property {string} [updatedAt] - Last modified ISO timestamp
  */
@@ -42,69 +42,69 @@ export class StoragePort {
 
   /**
    * Retrieves a document by its ID.
-   * @param {string} id
+   * @param {string} _id
    * @returns {Promise<DocRow|null>}
    */
-  async getDoc(id) {
+  async getDoc(_id) {
     throw new Error('StoragePort.getDoc() must be implemented by adapter');
   }
 
   /**
    * Saves or updates a document.
-   * @param {string} id
-   * @param {DocRow} doc
+   * @param {string} _id
+   * @param {DocRow} _doc
    * @returns {Promise<void>}
    */
-  async saveDoc(id, doc) {
+  async saveDoc(_id, _doc) {
     throw new Error('StoragePort.saveDoc() must be implemented by adapter');
   }
 
   /**
    * Deletes a document and its associated pages.
-   * @param {string} id
+   * @param {string} _id
    * @returns {Promise<void>}
    */
-  async deleteDoc(id) {
+  async deleteDoc(_id) {
     throw new Error('StoragePort.deleteDoc() must be implemented by adapter');
   }
 
   /**
    * Saves page binary/data for a specific document.
-   * @param {string} docId
-   * @param {string} pageId
-   * @param {any} blobOrData
+   * @param {string} _docId
+   * @param {string} _pageId
+   * @param {any} _blobOrData
    * @returns {Promise<void>}
    */
-  async savePage(docId, pageId, blobOrData) {
+  async savePage(_docId, _pageId, _blobOrData) {
     throw new Error('StoragePort.savePage() must be implemented by adapter');
   }
 
   /**
    * Retrieves page binary/data.
-   * @param {string} docId
-   * @param {string} pageId
+   * @param {string} _docId
+   * @param {string} _pageId
    * @returns {Promise<any>}
    */
-  async getPage(docId, pageId) {
+  async getPage(_docId, _pageId) {
     throw new Error('StoragePort.getPage() must be implemented by adapter');
   }
 
   /**
    * Deletes page binary/data.
-   * @param {string} docId
-   * @param {string} pageId
+   * @param {string} _docId
+   * @param {string} _pageId
    * @returns {Promise<void>}
    */
-  async deletePage(docId, pageId) {
+  async deletePage(_docId, _pageId) {
     throw new Error('StoragePort.deletePage() must be implemented by adapter');
   }
 
   /**
    * Subscribes to storage changes (document modifications, additions, deletions).
-   * @param {() => void} cb
+   * @param {() => void} _cb
    * @returns {() => void} Unsubscribe function
    */
-  subscribe(cb) {
+  subscribe(_cb) {
     return () => {};
   }
 }

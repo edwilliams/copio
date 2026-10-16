@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LitElement, html } from '../lib/lit-core.min.js';
 import { router } from '../core/router.js';
 import { randomId } from '../utils/utils.js';

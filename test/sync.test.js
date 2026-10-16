@@ -2,7 +2,7 @@ import { expect } from '@esm-bundle/chai';
 import { createStore } from '../js/lib/tinybase.6.5.2.js';
 import { SyncManager } from '../js/services/sync-service.js';
 import '../js/routes/sync/copio-sync-dialog.js';
-import { CopioApp } from '../js/components/copio-app.js';
+import '../js/components/copio-app.js';
 import { router } from '../js/core/router.js';
 
 describe('SyncManager P2P', function () {

@@ -1,18 +1,17 @@
 import { expect } from '@esm-bundle/chai';
 import '../js/lib/shoelace.js';
 import {
-  CopioScanner,
   CopioEngine,
   COPIO_EVENTS,
   dispatchCopioEvent,
   MemoryStorageAdapter,
 } from '../sdk/index.js';
-import { CopioRow } from '../js/routes/home/copio-row.js';
-import { CopioAddEditDialog } from '../js/routes/add-edit/copio-add-edit-dialog.js';
-import { CopioCarousel } from '../js/routes/doc/copio-carousel.js';
-import { CopioSyncDialog } from '../js/routes/sync/copio-sync-dialog.js';
-import { CopioHeader } from '../js/components/copio-header.js';
-import { CopioDocOcrDialog } from '../js/routes/ocr/copio-doc-ocr-dialog.js';
+import '../js/routes/home/copio-row.js';
+import '../js/routes/add-edit/copio-add-edit-dialog.js';
+import '../js/routes/doc/copio-carousel.js';
+import '../js/routes/sync/copio-sync-dialog.js';
+import '../js/components/copio-header.js';
+import '../js/routes/ocr/copio-doc-ocr-dialog.js';
 import { getAssetBase, setAssetBase } from '../js/utils/module-loader.js';
 
 async function createDummyImageFile(width = 20, height = 20, color = '#38bdf8') {

@@ -74,6 +74,10 @@ describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
     el.remove();
   });
 
+  it('exports CopioScanner from @copio/sdk/scanner', () => {
+    expect(Scanner.CopioScanner).to.be.a('function');
+  });
+
   it('exports sync manager and dialog from @copio/sdk/sync', () => {
     expect(Sync.SyncManager).to.be.a('function');
     expect(Sync.CopioSyncDialog).to.be.a('function');
@@ -84,5 +88,15 @@ describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
     expect(BUILD_DATE).to.be.a('string');
     expect(new Date(BUILD_DATE).getTime()).to.be.greaterThan(0);
     expect(VERSION).to.equal('0.1.0');
+  });
+
+  it('defines package.json types and customElements manifest entries (CPO-063)', async () => {
+    const pkg = await fetch('/package.json').then((r) => r.json());
+    expect(pkg.types).to.equal('./dist/types/sdk/index.d.ts');
+    expect(pkg.customElements).to.equal('dist/custom-elements.json');
+    expect(pkg.exports['.'].types).to.equal('./dist/types/sdk/index.d.ts');
+    expect(pkg.exports['./core'].types).to.equal('./dist/types/sdk/core.d.ts');
+    expect(pkg.exports['./scanner'].types).to.equal('./dist/types/sdk/scanner.d.ts');
+    expect(pkg.exports['./sync'].types).to.equal('./dist/types/sdk/sync.d.ts');
   });
 });

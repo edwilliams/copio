@@ -11,7 +11,8 @@ import { CopioHeader } from '../js/components/copio-header.js';
 import { CopioLoader } from '../js/components/copio-loader.js';
 import { setAssetBase } from '../js/utils/module-loader.js';
 
-const BaseElement = typeof HTMLElement !== 'undefined' ? HTMLElement : class {};
+/** @type {typeof HTMLElement} */
+const BaseElement = typeof HTMLElement !== 'undefined' ? HTMLElement : /** @type {any} */ (class {});
 
 /**
  * <copio-scanner> Web Component Driving UI Adapter
@@ -149,7 +150,7 @@ export class CopioScanner extends BaseElement {
    */
   get mode() {
     return typeof this.getAttribute === 'function'
-      ? this.getAttribute('mode') || 'document'
+      ? /** @type {'single'|'document'} */ (this.getAttribute('mode') || 'document')
       : 'document';
   }
 
@@ -346,6 +347,14 @@ export class CopioScanner extends BaseElement {
    */
   async close() {
     this.#isOpen = false;
+  }
+
+  /**
+   * Whether the scanner is currently open.
+   * @type {boolean}
+   */
+  get isOpen() {
+    return this.#isOpen;
   }
 
   /**
