@@ -21,6 +21,11 @@ import {
   rotateSrc,
   getCroppedSrc,
   extractExif,
+  applyEdits,
+  normalizeEdits,
+  hasActiveEdits,
+  renderEditsToCanvas,
+  applySauvolaToImageData,
 } from '../js/utils/utils.js';
 import { setAssetBase, getAssetBase } from '../js/utils/module-loader.js';
 import { BUILD_DATE, VERSION } from './version.js';
@@ -344,8 +349,12 @@ export class CopioEngine {
     return this.#repository.createDoc(name, pages);
   }
 
-  async deleteDocument(id) {
-    return this.#repository.deleteDoc(id);
+  async deleteDocument(id, options) {
+    return this.#repository.deleteDoc(id, options);
+  }
+
+  async undoDeleteDocument(id) {
+    return this.#repository.undoDeleteDoc(id);
   }
 
   async renameDocument(id, name) {
@@ -356,8 +365,12 @@ export class CopioEngine {
     return this.#repository.addPages(id, pages);
   }
 
-  async deletePage(id, pageId) {
-    return this.#repository.deletePage(id, pageId);
+  async deletePage(id, pageId, options) {
+    return this.#repository.deletePage(id, pageId, options);
+  }
+
+  async undoDeletePage(id, pageId) {
+    return this.#repository.undoDeletePage(id, pageId);
   }
 
   async updatePage(id, pageId, updates) {
@@ -397,6 +410,8 @@ export class CopioEngine {
             newPages.push({
               id: randomId(),
               src: dataUrl,
+              originalSrc: dataUrl,
+              edits: { crop: null, rotation: 0, filter: 'none' },
               type: 'image',
               name: /** @type {any} */ (file).name || 'PDF Page',
             });
@@ -414,6 +429,8 @@ export class CopioEngine {
         newPages.push({
           id: randomId(),
           src: base64,
+          originalSrc: base64,
+          edits: { crop: null, rotation: 0, filter: 'none' },
           type: 'image',
           name: /** @type {any} */ (file).name || 'Captured Image',
           orientation,
@@ -646,6 +663,11 @@ export {
   rotateSrc,
   getCroppedSrc,
   extractExif,
+  applyEdits,
+  normalizeEdits,
+  hasActiveEdits,
+  renderEditsToCanvas,
+  applySauvolaToImageData,
   BUILD_DATE,
   VERSION,
 };

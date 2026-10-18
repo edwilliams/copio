@@ -7,7 +7,15 @@ the element was and creates a duplicate — the moved node becomes orphaned.
 */
 
 import Sortable from '../../lib/sortable.esm.js';
-import { randomId, fileToBase64, rotateSrc, thresholdSrc, extractExif, getCroppedSrc } from '../../utils/utils.js';
+import {
+  randomId,
+  fileToBase64,
+  extractExif,
+  applyEdits,
+  normalizeEdits,
+  hasActiveEdits,
+  renderEditsToCanvas,
+} from '../../utils/utils.js';
 import { renderPdfPagesToDataUrls } from '../../utils/pdf-utils.js';
 import { notify } from '../../services/notify.js';
 import { loadCropper } from '../../utils/module-loader.js';
@@ -468,6 +476,8 @@ export class CopioImages extends HTMLElement {
             </div>
           `;
         }
+        const hasEdits = hasActiveEdits(item.edits);
+        const isBw = item.edits?.filter === 'bw';
         return `
           <div class="image-wrapper" data-index="${index}">
             <img src="${item.src}" draggable="false">
@@ -482,7 +492,14 @@ export class CopioImages extends HTMLElement {
                 <sl-divider></sl-divider>
                 <sl-menu-item value="crop">Crop</sl-menu-item>
                 <sl-menu-item value="rotate">Rotate</sl-menu-item>
-                <sl-menu-item value="threshold">Black &amp; White</sl-menu-item>
+                <sl-menu-item value="threshold">
+                  <sl-icon slot="prefix" name="${isBw ? 'check-lg' : 'circle'}"></sl-icon>
+                  ${isBw ? 'Remove Black &amp; White' : 'Black &amp; White'}
+                </sl-menu-item>
+                <sl-menu-item value="reset" ?disabled=${!hasEdits}>
+                  <sl-icon slot="prefix" name="arrow-counterclockwise"></sl-icon>
+                  Reset to Original
+                </sl-menu-item>
                 <sl-menu-item value="showdata">Show Data</sl-menu-item>
                 <sl-menu-item value="download">Download Image</sl-menu-item>
                 <sl-divider></sl-divider>
@@ -555,6 +572,9 @@ export class CopioImages extends HTMLElement {
           this.rotateImage(index);
         } else if (action === 'threshold') {
           this.thresholdImage(index);
+        } else if (action === 'reset') {
+          dropdown.hide();
+          this.resetImage(index);
         } else if (action === 'showdata') {
           dropdown.hide();
           this.showImageData(index);
@@ -564,8 +584,18 @@ export class CopioImages extends HTMLElement {
         } else if (action === 'download') {
           this.downloadImage(index);
         } else if (action === 'delete') {
-          this.#images.splice(index, 1);
+          const [deletedPage] = this.#images.splice(index, 1);
           this.#renderGrid();
+          const pageName = deletedPage.name || (deletedPage.type === 'markdown' ? 'Markdown Note' : `Page ${index + 1}`);
+          notify.undo(
+            `Deleted ${pageName}`,
+            () => {
+              this.#images.splice(index, 0, deletedPage);
+              this.#renderGrid();
+              notify.success(`Restored ${pageName}`);
+            },
+            { duration: 5000 },
+          );
         }
       });
     });
@@ -608,13 +638,22 @@ export class CopioImages extends HTMLElement {
 
   async openCropDialog(index) {
     this.#cropIndex = index;
+    const page = this.#images[index];
+    if (!page || page.type === 'markdown') return;
+
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
     const cropImage = this.shadowRoot.querySelector('#crop-image');
 
-    cropImage.src = this.#images[index].src;
+    page.originalSrc = page.originalSrc || page.src;
+    page.edits = normalizeEdits(page.edits);
+
+    // Re-cropping starts from the original image with the prior box pre-selected
+    cropImage.src = page.originalSrc;
     cropDialog.show();
 
     const Cropper = await loadCropper();
+    const priorCrop = page.edits?.crop;
+
     const initCropper = () => {
       if (this.#cropper) {
         this.#cropper.destroy();
@@ -622,6 +661,13 @@ export class CopioImages extends HTMLElement {
       this.#cropper = new Cropper(cropImage, {
         viewMode: 1,
         autoCropArea: 1,
+        ready: () => {
+          if (priorCrop && priorCrop.width > 0 && priorCrop.height > 0) {
+            try {
+              this.#cropper.setData(priorCrop);
+            } catch {}
+          }
+        },
       });
     };
 
@@ -651,26 +697,75 @@ export class CopioImages extends HTMLElement {
 
   applyCrop() {
     if (this.#cropper && this.#cropIndex !== null) {
-      const originalSrc = this.#images[this.#cropIndex]?.src || '';
-      const croppedSrc = getCroppedSrc(this.#cropper, originalSrc);
+      const page = this.#images[this.#cropIndex];
+      if (!page) return;
 
-      this.#images[this.#cropIndex].src = croppedSrc;
+      page.originalSrc = page.originalSrc || page.src || '';
+      const cropData = this.#cropper.getData(true);
+      page.edits = {
+        ...normalizeEdits(page.edits),
+        crop: {
+          x: Math.round(cropData.x),
+          y: Math.round(cropData.y),
+          width: Math.round(cropData.width),
+          height: Math.round(cropData.height),
+        },
+      };
+
+      const croppedCanvas = this.#cropper.getCroppedCanvas();
+      if (croppedCanvas) {
+        const finalCanvas = renderEditsToCanvas(croppedCanvas, {
+          crop: null,
+          rotation: page.edits.rotation,
+          filter: page.edits.filter,
+        });
+        const isPng = page.originalSrc.startsWith('data:image/png');
+        const format = isPng ? 'image/png' : 'image/jpeg';
+        page.src = finalCanvas.toDataURL(format, isPng ? undefined : 0.82);
+      }
+
       this.#renderGrid();
-
       this.closeCropDialog();
     }
   }
 
   async rotateImage(index) {
-    const rotatedSrc = await rotateSrc(this.#images[index].src);
-    this.#images[index].src = rotatedSrc;
+    const page = this.#images[index];
+    if (!page || page.type === 'markdown') return;
+    page.originalSrc = page.originalSrc || page.src;
+    page.edits = {
+      ...normalizeEdits(page.edits),
+      rotation: ((page.edits?.rotation || 0) + 90) % 360,
+    };
+    page.src = await applyEdits(page.originalSrc, page.edits);
     this.#renderGrid();
   }
 
   async thresholdImage(index) {
-    const thresholdedSrc = await thresholdSrc(this.#images[index].src);
-    this.#images[index].src = thresholdedSrc;
+    const page = this.#images[index];
+    if (!page || page.type === 'markdown') return;
+    page.originalSrc = page.originalSrc || page.src;
+    const isCurrentlyBw = page.edits?.filter === 'bw';
+    page.edits = {
+      ...normalizeEdits(page.edits),
+      filter: isCurrentlyBw ? 'none' : 'bw',
+    };
+    page.src = await applyEdits(page.originalSrc, page.edits);
     this.#renderGrid();
+    if (isCurrentlyBw) {
+      notify.info('Restored color (removed B&W filter)');
+    } else {
+      notify.success('Applied B&W threshold filter');
+    }
+  }
+
+  resetImage(index) {
+    const page = this.#images[index];
+    if (!page || page.type === 'markdown') return;
+    page.edits = { crop: null, rotation: 0, filter: 'none' };
+    page.src = page.originalSrc || page.src;
+    this.#renderGrid();
+    notify.success('Reset page to original');
   }
 
   addBlankNote() {
@@ -765,6 +860,8 @@ export class CopioImages extends HTMLElement {
     return dataUrls.map((src) => ({
       id: randomId(),
       src,
+      originalSrc: src,
+      edits: { crop: null, rotation: 0, filter: 'none' },
     }));
   }
 
@@ -795,6 +892,8 @@ export class CopioImages extends HTMLElement {
           allImages.push({
             id: randomId(),
             src,
+            originalSrc: src,
+            edits: { crop: null, rotation: 0, filter: 'none' },
             exif,
           });
         }
@@ -815,7 +914,15 @@ export class CopioImages extends HTMLElement {
   }
 
   set images(val) {
-    this.#images = Array.isArray(val) ? val : [];
+    const arr = Array.isArray(val) ? val : [];
+    this.#images = arr.map((item) => {
+      if (!item || item.type === 'markdown') return item;
+      return {
+        ...item,
+        originalSrc: item.originalSrc || item.src || '',
+        edits: normalizeEdits(item.edits),
+      };
+    });
     if (this.#isInitialized) {
       this.#renderGrid();
     }

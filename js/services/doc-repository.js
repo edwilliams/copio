@@ -25,6 +25,8 @@ import { randomId } from '../utils/utils.js';
  */
 export class DocRepository {
   #adapter = null;
+  #softDeletedDocs = new Map();
+  #softDeletedPages = new Map();
 
   /**
    * @param {import('../adapters/storage/storage-port.js').StoragePort} [adapter]
@@ -179,13 +181,70 @@ export class DocRepository {
   }
 
   /**
-   * Deletes a document and its pages.
+   * Deletes a document with soft-delete undo support (CPO-016).
    * @param {string} id
-   * @returns {Promise<void>}
+   * @param {Object} [options]
+   * @param {boolean} [options.soft=true] - Whether to allow undo for timeoutMs
+   * @param {number} [options.timeoutMs=5000] - Duration in ms before purging permanently
+   * @returns {Promise<{ id: string, name: string, undo: () => Promise<any> }|void>}
    */
-  async deleteDoc(id) {
+  async deleteDoc(id, { soft = true, timeoutMs = 5000 } = {}) {
     if (!id) return;
+    const doc = this.getDocSync(id);
+    if (!doc) return;
+
+    this.#clearDocSoftDelete(id);
     await this.#adapter.deleteDoc(id);
+
+    if (soft && timeoutMs > 0) {
+      const timerId = setTimeout(async () => {
+        this.#softDeletedDocs.delete(id);
+      }, timeoutMs);
+
+      this.#softDeletedDocs.set(id, {
+        doc,
+        timerId,
+      });
+    }
+
+    return {
+      id,
+      name: doc.name,
+      undo: () => this.undoDeleteDoc(id),
+    };
+  }
+
+  #clearDocSoftDelete(id) {
+    if (this.#softDeletedDocs.has(id)) {
+      const entry = this.#softDeletedDocs.get(id);
+      clearTimeout(entry.timerId);
+      this.#softDeletedDocs.delete(id);
+    }
+  }
+
+  /**
+   * Restores a soft-deleted document back into the active store.
+   * @param {string} id
+   * @returns {Promise<DocWithPages|null>}
+   */
+  async undoDeleteDoc(id) {
+    const entry = this.#softDeletedDocs.get(id);
+    if (!entry) return null;
+
+    clearTimeout(entry.timerId);
+    this.#softDeletedDocs.delete(id);
+
+    await this.#adapter.saveDoc(id, entry.doc);
+    return entry.doc;
+  }
+
+  /**
+   * Checks whether a document is currently in soft-delete state.
+   * @param {string} id
+   * @returns {boolean}
+   */
+  isSoftDeletedDoc(id) {
+    return this.#softDeletedDocs.has(id);
   }
 
   /**
@@ -258,25 +317,103 @@ export class DocRepository {
   }
 
   /**
-   * Deletes a page from a document.
+   * Deletes a page from a document with soft-delete undo support (CPO-016).
    * @param {string} id
    * @param {string} pageId
-   * @returns {Promise<void>}
+   * @param {Object} [options]
+   * @param {boolean} [options.soft=true] - Whether to allow undo for timeoutMs
+   * @param {number} [options.timeoutMs=5000] - Duration in ms before purging permanently
+   * @returns {Promise<{ docId: string, pageId: string, undo: () => Promise<any> }|void>}
    */
-  async deletePage(id, pageId) {
+  async deletePage(id, pageId, { soft = true, timeoutMs = 5000 } = {}) {
     const doc = await this.getDoc(id);
     if (!doc) throw new Error(`Document "${id}" not found`);
 
-    doc.pages = doc.pages.filter((p) => p.id !== pageId);
+    const pageIndex = doc.pages.findIndex((p) => p.id === pageId);
+    if (pageIndex === -1) return;
+
+    const [deletedPage] = doc.pages.splice(pageIndex, 1);
     await this.saveDoc(id, doc);
 
-    if (typeof this.#adapter.deletePage === 'function') {
-      try {
-        await this.#adapter.deletePage(id, pageId);
-      } catch (err) {
-        console.warn(`[DocRepository] Adapter deletePage error:`, err);
+    const key = `${id}:${pageId}`;
+    this.#clearPageSoftDelete(key);
+
+    if (!soft || timeoutMs <= 0) {
+      if (typeof this.#adapter.deletePage === 'function') {
+        try {
+          await this.#adapter.deletePage(id, pageId);
+        } catch (err) {
+          console.warn(`[DocRepository] Adapter deletePage error:`, err);
+        }
       }
+      return;
     }
+
+    const timerId = setTimeout(async () => {
+      this.#softDeletedPages.delete(key);
+      if (typeof this.#adapter.deletePage === 'function') {
+        try {
+          await this.#adapter.deletePage(id, pageId);
+        } catch (err) {
+          console.warn(`[DocRepository] Adapter deletePage error:`, err);
+        }
+      }
+    }, timeoutMs);
+
+    this.#softDeletedPages.set(key, {
+      docId: id,
+      pageId,
+      page: deletedPage,
+      index: pageIndex,
+      timerId,
+    });
+
+    return {
+      docId: id,
+      pageId,
+      undo: () => this.undoDeletePage(id, pageId),
+    };
+  }
+
+  #clearPageSoftDelete(key) {
+    if (this.#softDeletedPages.has(key)) {
+      const entry = this.#softDeletedPages.get(key);
+      clearTimeout(entry.timerId);
+      this.#softDeletedPages.delete(key);
+    }
+  }
+
+  /**
+   * Restores a soft-deleted page back into its parent document at its original index.
+   * @param {string} id
+   * @param {string} pageId
+   * @returns {Promise<any|null>}
+   */
+  async undoDeletePage(id, pageId) {
+    const key = `${id}:${pageId}`;
+    const entry = this.#softDeletedPages.get(key);
+    if (!entry) return null;
+
+    clearTimeout(entry.timerId);
+    this.#softDeletedPages.delete(key);
+
+    const doc = await this.getDoc(id);
+    if (!doc) return null;
+
+    const insertIdx = Math.min(entry.index, doc.pages.length);
+    doc.pages.splice(insertIdx, 0, entry.page);
+    await this.saveDoc(id, doc);
+    return entry.page;
+  }
+
+  /**
+   * Checks whether a page is currently in soft-delete state.
+   * @param {string} id
+   * @param {string} pageId
+   * @returns {boolean}
+   */
+  isSoftDeletedPage(id, pageId) {
+    return this.#softDeletedPages.has(`${id}:${pageId}`);
   }
 
   /**

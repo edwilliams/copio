@@ -89,7 +89,16 @@ export class CopioAddEditDialog extends LitElement {
     inputName.value = name;
 
     await customElements.whenDefined('copio-images');
-    copioImages.images = pages.map(({ id, src, exif, type, name, content }) => ({ id, src, exif, type, name, content }));
+    copioImages.images = pages.map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
+      id,
+      src,
+      originalSrc: originalSrc || src,
+      edits: edits || { crop: null, rotation: 0, filter: 'none' },
+      exif,
+      type,
+      name,
+      content,
+    }));
 
     if (!dialog.open) {
       await dialog.show();
@@ -121,9 +130,11 @@ export class CopioAddEditDialog extends LitElement {
       return;
     }
 
-    const pages = (copioImages?.images || []).map(({ id, src, exif, type, name, content }) => ({
+    const pages = (copioImages?.images || []).map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
       id,
       src,
+      originalSrc: originalSrc || src,
+      edits: edits || { crop: null, rotation: 0, filter: 'none' },
       exif,
       type,
       name,
