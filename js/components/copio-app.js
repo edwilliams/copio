@@ -225,13 +225,20 @@ export class CopioApp extends LitElement {
     }
   }
 
-  handleRowDelete(e) {
+  async handleRowDelete(e) {
     const id = e.detail?.id;
     if (!id) return;
     const doc = this.docRepo.getDocSync(id);
     const docName = doc?.name || 'document';
-    this.docRepo.deleteDoc(id);
-    notify.info(`Deleted "${docName}"`);
+    await this.docRepo.deleteDoc(id);
+    notify.undo(
+      `Deleted "${docName}"`,
+      async () => {
+        await this.docRepo.undoDeleteDoc(id);
+        notify.success(`Restored "${docName}"`);
+      },
+      { duration: 5000 },
+    );
     if (router.getHashPath().startsWith(`/doc/${id}`)) {
       router.navigate('/');
     }
