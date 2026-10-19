@@ -349,7 +349,7 @@ export class CopioEngine {
     return this.#repository.createDoc(name, pages);
   }
 
-  async deleteDocument(id, options) {
+  async deleteDocument(id, options = {}) {
     return this.#repository.deleteDoc(id, options);
   }
 
@@ -365,7 +365,7 @@ export class CopioEngine {
     return this.#repository.addPages(id, pages);
   }
 
-  async deletePage(id, pageId, options) {
+  async deletePage(id, pageId, options = {}) {
     return this.#repository.deletePage(id, pageId, options);
   }
 
