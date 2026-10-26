@@ -416,12 +416,14 @@ export class CopioApp extends LitElement {
       return html`
         <style>
           .empty-state {
+            flex: 1 1 auto;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: calc(100% - 64px);
-            min-height: 240px;
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
             padding: 1.5rem;
             text-align: center;
             color: white;
@@ -509,7 +511,7 @@ export class CopioApp extends LitElement {
 
       <article
         class="copio-items"
-        style="display: ${this.showCarousel ? 'none' : 'block'}"
+        style="display: ${this.showCarousel ? 'none' : 'flex'}"
       >
         <copio-header
           @header:link-device=${this.startSyncAsHost}

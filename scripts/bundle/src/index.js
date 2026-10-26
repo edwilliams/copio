@@ -23,8 +23,15 @@ import '@shoelace-style/shoelace/dist/components/tooltip/tooltip.js';
 import '@shoelace-style/shoelace/dist/components/tab-group/tab-group.js';
 import '@shoelace-style/shoelace/dist/components/tab/tab.js';
 import '@shoelace-style/shoelace/dist/components/tab-panel/tab-panel.js';
-import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
+import { setBasePath, getBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
 
-// Set the base path to the folder you copied Shoelace's assets to
-setBasePath('..');
+// Set the base path relative to the Shoelace bundle location (js/lib/ -> root)
+try {
+  setBasePath(new URL('../../', import.meta.url).href);
+} catch {
+  setBasePath('/');
+}
+
+export { setBasePath, getBasePath };
+
 
