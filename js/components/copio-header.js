@@ -24,6 +24,13 @@ export class CopioHeader extends LitElement {
       font-size: 24px;
       margin: 0;
     }
+    sl-icon-button::part(base) {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
   `;
 
   static properties = {

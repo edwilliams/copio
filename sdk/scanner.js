@@ -10,6 +10,7 @@ import { CopioRow } from '../js/routes/home/copio-row.js';
 import { CopioHeader } from '../js/components/copio-header.js';
 import { CopioLoader } from '../js/components/copio-loader.js';
 import { setAssetBase } from '../js/utils/module-loader.js';
+import { setContainer, getContainer } from '../js/services/notify.js';
 
 /** @type {typeof HTMLElement} */
 const BaseElement = typeof HTMLElement !== 'undefined' ? HTMLElement : /** @type {any} */ (class {});
@@ -80,18 +81,36 @@ export class CopioScanner extends BaseElement {
             display: block;
             position: relative;
             width: 100%;
+            height: 100%;
             min-height: 200px;
+            container-type: size;
+            container-name: copio-scanner;
+            overflow: hidden;
+            contain: layout;
+            box-sizing: border-box;
             font-family: inherit;
           }
           .copio-scanner-container {
             width: 100%;
             height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+          }
+          ::slotted(*) {
+            box-sizing: border-box;
           }
         </style>
         <div class="copio-scanner-container">
           <slot></slot>
         </div>
       `;
+    }
+
+    if (typeof setContainer === 'function' && typeof document !== 'undefined' && getContainer() === document.body) {
+      setContainer(this.shadowRoot?.querySelector('.copio-scanner-container') || this);
     }
 
     // Subscribe to engine repository changes
@@ -114,6 +133,12 @@ export class CopioScanner extends BaseElement {
     if (typeof this.#unsubscribeRepo === 'function') {
       this.#unsubscribeRepo();
       this.#unsubscribeRepo = null;
+    }
+    if (typeof setContainer === 'function' && typeof document !== 'undefined') {
+      const containerEl = this.shadowRoot?.querySelector('.copio-scanner-container') || this;
+      if (getContainer() === containerEl) {
+        setContainer(null);
+      }
     }
   }
 
