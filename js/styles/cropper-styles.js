@@ -170,99 +170,89 @@ export const cropperCss = `
 }
 
 .cropper-point {
-  background-color: #39f;
-  height: 5px;
-  opacity: 0.75;
-  width: 5px;
+  width: var(--copio-crop-handle-hit, 48px);
+  height: var(--copio-crop-handle-hit, 48px);
+  min-width: 44px;
+  min-height: 44px;
+  background-color: transparent;
+  opacity: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  touch-action: none;
+  z-index: 10;
+}
+
+.cropper-point::after {
+  content: '';
+  display: block;
+  width: var(--copio-crop-handle-visual, 16px);
+  height: var(--copio-crop-handle-visual, 16px);
+  border-radius: 50%;
+  background-color: var(--copio-color-primary, #38bdf8);
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: transform 120ms ease;
+  box-sizing: border-box;
+}
+
+.cropper-point:hover::after,
+.cropper-point:active::after {
+  transform: scale(1.25);
+  background-color: var(--copio-color-success, #22c55e);
 }
 
 .cropper-point.point-e {
   cursor: ew-resize;
-  margin-top: -3px;
-  right: -3px;
+  margin-top: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
+  right: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
   top: 50%;
 }
 
 .cropper-point.point-n {
   cursor: ns-resize;
   left: 50%;
-  margin-left: -3px;
-  top: -3px;
+  margin-left: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
+  top: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
 }
 
 .cropper-point.point-w {
   cursor: ew-resize;
-  left: -3px;
-  margin-top: -3px;
+  left: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
+  margin-top: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
   top: 50%;
 }
 
 .cropper-point.point-s {
-  bottom: -3px;
+  bottom: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
   cursor: s-resize;
   left: 50%;
-  margin-left: -3px;
+  margin-left: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
 }
 
 .cropper-point.point-ne {
   cursor: nesw-resize;
-  right: -3px;
-  top: -3px;
+  right: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
+  top: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
 }
 
 .cropper-point.point-nw {
   cursor: nwse-resize;
-  left: -3px;
-  top: -3px;
+  left: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
+  top: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
 }
 
 .cropper-point.point-sw {
-  bottom: -3px;
+  bottom: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
   cursor: nesw-resize;
-  left: -3px;
+  left: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
 }
 
 .cropper-point.point-se {
-  bottom: -3px;
+  bottom: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
   cursor: nwse-resize;
-  height: 20px;
-  opacity: 1;
-  right: -3px;
-  width: 20px;
-}
-
-@media (min-width: 768px) {
-  .cropper-point.point-se {
-    height: 15px;
-    width: 15px;
-  }
-}
-
-@media (min-width: 992px) {
-  .cropper-point.point-se {
-    height: 10px;
-    width: 10px;
-  }
-}
-
-@media (min-width: 1200px) {
-  .cropper-point.point-se {
-    height: 5px;
-    opacity: 0.75;
-    width: 5px;
-  }
-}
-
-.cropper-point.point-se:before {
-  background-color: #39f;
-  bottom: -50%;
-  content: ' ';
-  display: block;
-  height: 200%;
-  opacity: 0;
-  position: absolute;
-  right: -50%;
-  width: 200%;
+  right: calc(-1 * var(--copio-crop-handle-hit, 48px) / 2);
 }
 
 .cropper-invisible {
