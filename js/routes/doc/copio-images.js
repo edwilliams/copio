@@ -221,17 +221,19 @@ export class CopioImages extends HTMLElement {
         }
         #crop-image {
           max-width: 100%;
-          max-height: calc(min(52cqh, 450px) - 56px);
+          max-height: 100%;
           display: block;
         }
         .crop-wrapper {
           width: 100%;
-          max-height: min(52cqh, 450px);
+          height: 360px;
+          max-height: min(50vh, 380px);
+          min-height: 200px;
+          position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: visible;
-          padding: 28px;
           box-sizing: border-box;
           margin-bottom: 0.5rem;
         }
@@ -252,8 +254,8 @@ export class CopioImages extends HTMLElement {
           flex-direction: column;
         }
         .crop-dialog::part(body) {
-          padding: 0;
-          overflow: visible;
+          padding: 24px;
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -262,15 +264,16 @@ export class CopioImages extends HTMLElement {
         }
         @container copio-scanner (max-width: 400px) {
           .crop-wrapper {
-            max-height: 48cqh;
-            padding: 24px;
-          }
-          #crop-image {
-            max-height: calc(48cqh - 48px);
+            height: 240px;
+            max-height: 42cqh;
+            min-height: 160px;
           }
           .crop-dialog::part(panel) {
             max-width: calc(100% - 12px);
             max-height: calc(100% - 12px);
+          }
+          .crop-dialog::part(body) {
+            padding: 16px;
           }
           .crop-dialog::part(header) {
             padding: 0.5rem 0.75rem;
@@ -741,7 +744,8 @@ export class CopioImages extends HTMLElement {
       }
       this.#cropper = new Cropper(cropImage, {
         viewMode: 1,
-        autoCropArea: 0.92,
+        autoCropArea: 0.88,
+        responsive: true,
         ready: () => {
           if (priorCrop) {
             try {

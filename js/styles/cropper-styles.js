@@ -15,7 +15,6 @@ export const cropperCss = `
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  overflow: visible !important;
 }
 
 .cropper-container img {
@@ -39,10 +38,6 @@ export const cropperCss = `
   position: absolute;
   right: 0;
   top: 0;
-}
-
-.cropper-crop-box {
-  overflow: visible !important;
 }
 
 .cropper-wrap-box,

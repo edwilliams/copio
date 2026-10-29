@@ -209,6 +209,62 @@ describe('CPO-025: Non-Destructive Touch Crop UX & Re-editable Crop', function (
 
       imagesEl.closeCropDialog();
     });
+
+    it('ensures cropper dialog stays properly contained without overflowing when opened inside copio-app', async () => {
+      const app = document.createElement('copio-app');
+      fixtureContainer.appendChild(app);
+      await app.updateComplete;
+
+      const addEditDialog = app.querySelector('copio-add-edit-dialog');
+      expect(addEditDialog).to.exist;
+
+      await addEditDialog.open();
+      const slDialog = addEditDialog.querySelector('.dialog-add-edit');
+      await waitFor(() => slDialog.open && !slDialog.classList.contains('dialog--is-animating'));
+
+      const imagesEl = addEditDialog.querySelector('copio-images');
+      expect(imagesEl).to.exist;
+
+      const testSrc = createTestImageDataUrl(800, 600, '#10b981');
+      imagesEl.images = [{
+        id: 'test-doc-page',
+        src: testSrc,
+        originalSrc: testSrc,
+        edits: { crop: null, rotation: 0, filter: 'none' },
+      }];
+
+      await imagesEl.openCropDialog(0);
+      const cropDialog = imagesEl.shadowRoot.querySelector('.crop-dialog');
+      await waitFor(() => imagesEl.shadowRoot.querySelector('.cropper-container') && !cropDialog.classList.contains('dialog--is-animating'));
+
+      const cropPanel = cropDialog.shadowRoot.querySelector('[part~="panel"]');
+      const cropBody = cropDialog.shadowRoot.querySelector('[part~="body"]');
+      const cropperContainer = imagesEl.shadowRoot.querySelector('.cropper-container');
+
+      expect(cropPanel).to.exist;
+      expect(cropBody).to.exist;
+      expect(cropperContainer).to.exist;
+
+      const panelRect = cropPanel.getBoundingClientRect();
+      const cropperRect = cropperContainer.getBoundingClientRect();
+
+      // Cropper container must be fully contained within the crop dialog panel
+      expect(cropperRect.top).to.be.at.least(panelRect.top - 1);
+      expect(cropperRect.bottom).to.be.at.most(panelRect.bottom + 1);
+      expect(cropperRect.left).to.be.at.least(panelRect.left - 1);
+      expect(cropperRect.right).to.be.at.most(panelRect.right + 1);
+
+      // Verify all 8 touch points are active and sized >= 44px
+      const points = imagesEl.shadowRoot.querySelectorAll('.cropper-point');
+      expect(points.length).to.equal(8);
+      for (const pt of points) {
+        expect(pt.offsetWidth).to.be.at.least(44);
+        expect(pt.offsetHeight).to.be.at.least(44);
+      }
+
+      imagesEl.closeCropDialog();
+      slDialog.hide();
+    });
   });
 
   describe('Acceptance Criterion 3: Re-editable Crop over Immutable originalSrc with Normalized Coords', () => {
