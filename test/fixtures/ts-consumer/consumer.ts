@@ -17,9 +17,11 @@ scanner.features = ['crop', 'rotate', 'ocr'];
 scanner.maxPages = 20;
 scanner.exportFormats = ['pdf', 'zip'];
 scanner.ocrLanguages = ['eng'];
+scanner.theme = 'light';
 
 const currentMode: 'single' | 'document' = scanner.mode;
 const currentDocId: string | null = scanner.docId;
+const currentTheme: 'dark' | 'light' | 'brand' | 'auto' = scanner.theme;
 const maxPages: number = scanner.maxPages;
 const isOpen: boolean = scanner.isOpen;
 const hasCrop: boolean = scanner.hasFeature('crop');
