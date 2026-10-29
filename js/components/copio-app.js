@@ -526,7 +526,7 @@ export class CopioApp extends LitElement {
           @copio:ocr-page=${this.handleOcrPage}
         ></copio-add-edit-dialog>
 
-        <div class="copio-fab-wrap mr2 mb2 bottom-0 right-0 z4">
+        <div class="copio-fab-wrap">
           <sl-icon-button
             class="dialog-add-edit-btn"
             name="plus-circle"

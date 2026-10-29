@@ -57,6 +57,13 @@ copio-app {
   overflow-y: auto;
 }
 
+.copio-fab-wrap {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 4;
+}
+
 /* EXTEND SHOELACE */
 
 sl-card {
