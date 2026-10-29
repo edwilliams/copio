@@ -221,7 +221,7 @@ export class CopioImages extends HTMLElement {
         }
         #crop-image {
           max-width: 100%;
-          max-height: 100%;
+          max-height: calc(min(52cqh, 450px) - 56px);
           display: block;
         }
         .crop-wrapper {
@@ -230,7 +230,9 @@ export class CopioImages extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: center;
-          overflow: hidden;
+          overflow: visible;
+          padding: 28px;
+          box-sizing: border-box;
           margin-bottom: 0.5rem;
         }
         sl-dialog::part(base) {
@@ -250,8 +252,8 @@ export class CopioImages extends HTMLElement {
           flex-direction: column;
         }
         .crop-dialog::part(body) {
-          padding: 0.5rem;
-          overflow: hidden;
+          padding: 0;
+          overflow: visible;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -261,6 +263,10 @@ export class CopioImages extends HTMLElement {
         @container copio-scanner (max-width: 400px) {
           .crop-wrapper {
             max-height: 48cqh;
+            padding: 24px;
+          }
+          #crop-image {
+            max-height: calc(48cqh - 48px);
           }
           .crop-dialog::part(panel) {
             max-width: calc(100% - 12px);
@@ -735,7 +741,7 @@ export class CopioImages extends HTMLElement {
       }
       this.#cropper = new Cropper(cropImage, {
         viewMode: 1,
-        autoCropArea: 1,
+        autoCropArea: 0.92,
         ready: () => {
           if (priorCrop) {
             try {

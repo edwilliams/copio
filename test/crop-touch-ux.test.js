@@ -157,6 +157,58 @@ describe('CPO-025: Non-Destructive Touch Crop UX & Re-editable Crop', function (
 
       imagesEl.closeCropDialog();
     });
+
+    it('ensures top and bottom grabbers remain fully visible when cropping a landscape picture', async () => {
+      const hostBox = document.createElement('div');
+      hostBox.style.width = '360px';
+      hostBox.style.height = '640px';
+      hostBox.style.position = 'relative';
+      hostBox.style.overflow = 'hidden';
+      fixtureContainer.appendChild(hostBox);
+
+      const imagesEl = document.createElement('copio-images');
+      hostBox.appendChild(imagesEl);
+      await customElements.whenDefined('copio-images');
+
+      // Create wide 16:9 landscape image (400x225)
+      const landscapeSrc = createTestImageDataUrl(400, 225, '#6366f1');
+      imagesEl.images = [{
+        id: 'landscape-crop-page',
+        src: landscapeSrc,
+        originalSrc: landscapeSrc,
+        edits: { crop: null, rotation: 0, filter: 'none' },
+      }];
+
+      await imagesEl.openCropDialog(0);
+      const cropDialog = imagesEl.shadowRoot.querySelector('.crop-dialog');
+      await waitFor(() => imagesEl.shadowRoot.querySelector('.cropper-point') && !cropDialog.classList.contains('dialog--is-animating'));
+
+      const topGrabber = imagesEl.shadowRoot.querySelector('.cropper-point.point-n');
+      const bottomGrabber = imagesEl.shadowRoot.querySelector('.cropper-point.point-s');
+      const nwGrabber = imagesEl.shadowRoot.querySelector('.cropper-point.point-nw');
+      const seGrabber = imagesEl.shadowRoot.querySelector('.cropper-point.point-se');
+      const dialogHeader = cropDialog.shadowRoot.querySelector('.dialog__header');
+      const dialogFooter = cropDialog.shadowRoot.querySelector('.dialog__footer');
+
+      expect(topGrabber, 'Top grabber (point-n) must exist').to.exist;
+      expect(bottomGrabber, 'Bottom grabber (point-s) must exist').to.exist;
+      expect(nwGrabber, 'NW corner grabber must exist').to.exist;
+      expect(seGrabber, 'SE corner grabber must exist').to.exist;
+
+      await waitFor(() => topGrabber.offsetHeight >= 44 && bottomGrabber.offsetHeight >= 44);
+
+      const topRect = topGrabber.getBoundingClientRect();
+      const bottomRect = bottomGrabber.getBoundingClientRect();
+      const headerRect = dialogHeader ? dialogHeader.getBoundingClientRect() : { bottom: 0 };
+      const footerRect = dialogFooter ? dialogFooter.getBoundingClientRect() : { top: window.innerHeight };
+
+      // Top grabber must be below the dialog header (not occluded or cut off above)
+      expect(topRect.top).to.be.at.least(headerRect.bottom - 4);
+      // Bottom grabber must be above the dialog footer (not occluded or cut off below)
+      expect(bottomRect.bottom).to.be.at.most(footerRect.top + 4);
+
+      imagesEl.closeCropDialog();
+    });
   });
 
   describe('Acceptance Criterion 3: Re-editable Crop over Immutable originalSrc with Normalized Coords', () => {
