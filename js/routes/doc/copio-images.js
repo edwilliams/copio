@@ -153,14 +153,36 @@ export class CopioImages extends HTMLElement {
           background-color: rgba(59, 130, 246, 0.08);
           box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
         }
-        @media (min-width: 640px) {
+        @container copio-scanner (max-width: 400px) {
           .container {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            padding: 0.25rem;
           }
         }
-        @media (min-width: 1024px) {
+        @container copio-scanner (min-width: 401px) and (max-width: 767px) {
+          .container {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+          }
+        }
+        @container copio-scanner (min-width: 768px) {
           .container {
             grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+          }
+        }
+        /* Fallbacks if container queries are unsupported or outside named container */
+        @supports not (container-type: size) {
+          @media (min-width: 640px) {
+            .container {
+              grid-template-columns: repeat(3, 1fr);
+            }
+          }
+          @media (min-width: 1024px) {
+            .container {
+              grid-template-columns: repeat(4, 1fr);
+            }
           }
         }
         .image-wrapper {
@@ -196,7 +218,18 @@ export class CopioImages extends HTMLElement {
         }
         #crop-image {
           max-width: 100%;
-          max-height: 60vh;
+          max-height: min(60cqh, 450px);
+          max-height: 60%;
+        }
+        sl-dialog::part(base) {
+          position: absolute;
+        }
+        sl-dialog::part(overlay) {
+          position: absolute;
+        }
+        sl-dialog::part(panel) {
+          max-width: calc(100% - 20px);
+          max-height: calc(100% - 20px);
         }
         .markdown-card {
           width: 100%;
@@ -269,7 +302,7 @@ export class CopioImages extends HTMLElement {
       <input type="file" class="file-input" accept="image/*,application/pdf,.md,.markdown,text/plain" multiple style="display: none">
       <input type="file" class="camera-input" accept="image/*" capture="environment" style="display: none">
 
-      <sl-dialog label="Edit Markdown Text" class="text-dialog" style="--width: 80vw">
+      <sl-dialog label="Edit Markdown Text" class="text-dialog" style="--width: min(92%, 560px)">
         <div style="margin-bottom: 1rem;">
           <sl-textarea class="text-editor" rows="12" placeholder="Enter markdown content..."></sl-textarea>
         </div>
@@ -282,7 +315,7 @@ export class CopioImages extends HTMLElement {
         <sl-button slot="footer" variant="primary" class="close-data">Close</sl-button>
       </sl-dialog>
 
-      <sl-dialog label="Crop Image" class="crop-dialog" style="--width: 80vw">
+      <sl-dialog label="Crop Image" class="crop-dialog" style="--width: min(92%, 560px)">
         <div style="margin-bottom: 1rem;">
           <img id="crop-image" />
         </div>

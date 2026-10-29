@@ -117,14 +117,29 @@ export async function show(messageOrOptions, options = {}) {
 
     if (targetContainer !== document.body) {
       stack.style.position = 'absolute';
-      stack.style.top = '0';
-      stack.style.insetInlineEnd = '0';
+      stack.style.width = 'auto';
+      stack.style.maxWidth = 'calc(100% - 24px)';
+      stack.style.left = '12px';
+      stack.style.right = '12px';
+      stack.style.insetInlineStart = '12px';
+      stack.style.insetInlineEnd = '12px';
+      if (opts.position === 'top') {
+        stack.style.top = '12px';
+        stack.style.bottom = 'auto';
+      } else {
+        stack.style.top = 'auto';
+        stack.style.bottom = '16px';
+      }
       stack.style.maxHeight = '100%';
-      stack.style.maxWidth = '100%';
       stack.style.overflow = 'auto';
     } else {
       stack.style.position = '';
+      stack.style.width = '';
+      stack.style.left = '';
+      stack.style.right = '';
       stack.style.top = '';
+      stack.style.bottom = '';
+      stack.style.insetInlineStart = '';
       stack.style.insetInlineEnd = '';
       stack.style.maxHeight = '';
       stack.style.maxWidth = '';

@@ -55,7 +55,9 @@ async function findUsedIcons() {
       const content = await readFile(file, 'utf-8');
       for (const match of content.matchAll(iconPattern)) {
         if (!match[0].includes('library="system"') && !match[0].includes("library='system'")) {
-          iconNames.add(match[1]);
+          if (/^[a-z0-9-]+$/.test(match[1])) {
+            iconNames.add(match[1]);
+          }
         }
       }
       for (const match of content.matchAll(notifyIconPattern)) {
@@ -75,7 +77,7 @@ async function generateFilesToCache() {
     filesToCache.push(
       ...files
         .map((f) => relative(rootDir, f))
-        .filter((p) => !p.split('/').pop().startsWith('.'))
+        .filter((p) => !p.split('/').pop().startsWith('.') && !p.endsWith('.d.ts') && !p.endsWith('.d.mts'))
         .sort(),
     );
   }
@@ -108,7 +110,6 @@ export default {
     terser(),
     generateCacheManifest(),
     copy({
-      copyOnce: true,
       targets: [
         {
           src: path.resolve(__dirname, 'dist/shoelace.css'),

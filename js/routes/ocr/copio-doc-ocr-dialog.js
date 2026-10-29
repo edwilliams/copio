@@ -257,7 +257,7 @@ export class CopioDocOcrDialog extends LitElement {
       <sl-dialog
         label="${this._dialogLabel}"
         open
-        style="--width: 85vw"
+        style="--width: min(92%, 560px)"
         @sl-after-hide=${this.close}
       >
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px;">

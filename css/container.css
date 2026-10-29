@@ -1,0 +1,177 @@
+/* ==========================================================================
+   Constrained-Container Layout Pass (CPO-024)
+   Layout architecture per docs/redesign-workflow.md & prototype-v1.html
+   Container name: copio-scanner
+   Container type: size
+   ========================================================================== */
+
+/* 1. Host Container and Component Roots */
+.copio-scanner-host,
+copio-scanner,
+copio-app {
+  container-type: size;
+  container-name: copio-scanner;
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  contain: layout;
+  box-sizing: border-box;
+}
+
+/* 2. Container Sizing Test Frames */
+.host-container-frame {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #0b0f17;
+}
+
+.host-container-frame[data-size="360x640"] {
+  width: 360px;
+  height: 640px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.host-container-frame[data-size="480x800"] {
+  width: 480px;
+  height: 800px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.host-container-frame[data-size="400x800"] {
+  width: 400px;
+  height: 800px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.host-container-frame[data-size="800x500"] {
+  width: 800px;
+  height: 500px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.host-container-frame[data-size="full"] {
+  width: 100%;
+  height: 100%;
+}
+
+/* 3. Container-Scoped Toast Stack */
+.copio-scanner-host .sl-toast-stack,
+copio-scanner .sl-toast-stack,
+copio-app .sl-toast-stack,
+.copio-toast-stack-scoped {
+  position: absolute !important;
+  top: auto !important;
+  bottom: 16px !important;
+  left: 12px !important;
+  right: 12px !important;
+  inset-inline-start: 12px !important;
+  inset-inline-end: 12px !important;
+  width: auto !important;
+  max-width: calc(100% - 24px) !important;
+  z-index: 900 !important;
+  pointer-events: none;
+}
+
+.copio-scanner-host .sl-toast-stack sl-alert,
+copio-scanner .sl-toast-stack sl-alert,
+copio-app .sl-toast-stack sl-alert {
+  pointer-events: auto;
+  max-width: 100%;
+}
+
+/* 4. Strictly Container-Scoped Dialogs */
+.copio-scanner-host sl-dialog::part(base),
+copio-scanner sl-dialog::part(base),
+copio-app sl-dialog::part(base) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.copio-scanner-host sl-dialog::part(overlay),
+copio-scanner sl-dialog::part(overlay),
+copio-app sl-dialog::part(overlay) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.copio-scanner-host sl-dialog::part(panel),
+copio-scanner sl-dialog::part(panel),
+copio-app sl-dialog::part(panel) {
+  max-width: calc(100% - 20px);
+  max-height: calc(100% - 20px);
+}
+
+/* 5. Scoped Floating Action Button */
+.copio-fab-wrap {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+}
+
+/* 6. Touch Target Minimums Invariant */
+.copio-btn,
+.copio-stage-tab,
+.copio-tool-btn,
+.dialog-add-edit-btn,
+button,
+sl-button,
+sl-icon-button,
+sl-icon-button::part(base),
+sl-button::part(base) {
+  min-width: var(--copio-touch-target-min, 44px);
+  min-height: var(--copio-touch-target-min, 44px);
+}
+
+/* 7. Container Query Breakpoints */
+
+/* --- Breakpoint 1: Compact Modal (<= 400px, e.g. 360x640, 400x800) --- */
+@container copio-scanner (max-width: 400px) {
+  .copio-hide-compact {
+    display: none !important;
+  }
+
+  .copio-header {
+    padding: 6px 10px;
+    min-height: 48px;
+  }
+
+  .dialog-add-edit sl-dialog::part(panel),
+  .text-dialog sl-dialog::part(panel),
+  .crop-dialog sl-dialog::part(panel),
+  sl-dialog::part(panel) {
+    max-width: calc(100% - 12px);
+    max-height: calc(100% - 12px);
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Breakpoint 2: Sidebar Drawer (401px - 767px, e.g. 480x800) --- */
+@container copio-scanner (min-width: 401px) and (max-width: 767px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* --- Breakpoint 3: Standalone Full View (>= 768px, e.g. 100%, 800x500) --- */
+@container copio-scanner (min-width: 768px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

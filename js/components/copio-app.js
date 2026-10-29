@@ -73,6 +73,11 @@ export class CopioApp extends LitElement {
   async firstUpdated() {
     this.hideLoader();
 
+    // Scope notifications to this container if hosted in a constrained container
+    if (this.closest('.copio-scanner-host') || (this.parentElement && this.parentElement !== document.body)) {
+      notify.setContainer(this);
+    }
+
     // Load persisted data via repository
     await this.docRepo.init();
     await this.#refreshDocs();
@@ -411,11 +416,14 @@ export class CopioApp extends LitElement {
       return html`
         <style>
           .empty-state {
+            flex: 1 1 auto;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: calc(100vh - 64px);
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
             padding: 1.5rem;
             text-align: center;
             color: white;
@@ -503,7 +511,7 @@ export class CopioApp extends LitElement {
 
       <article
         class="copio-items"
-        style="display: ${this.showCarousel ? 'none' : 'block'}"
+        style="display: ${this.showCarousel ? 'none' : 'flex'}"
       >
         <copio-header
           @header:link-device=${this.startSyncAsHost}
@@ -518,7 +526,7 @@ export class CopioApp extends LitElement {
           @copio:ocr-page=${this.handleOcrPage}
         ></copio-add-edit-dialog>
 
-        <div class="mr2 mb2 fixed bottom-0 right-0 z4">
+        <div class="copio-fab-wrap mr2 mb2 bottom-0 right-0 z4">
           <sl-icon-button
             class="dialog-add-edit-btn"
             name="plus-circle"

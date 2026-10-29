@@ -23,6 +23,12 @@ export default {
     <!doctype html>
     <html>
       <head>
+        <link rel="stylesheet" href="/css/reset.css" />
+        <link rel="stylesheet" href="/css/shoelace.css" />
+        <link rel="stylesheet" href="/css/container.css" />
+        <link rel="stylesheet" href="/css/utils.css" />
+        <link rel="stylesheet" href="/css/cropper.css" />
+        <link rel="stylesheet" href="/css/main.css" />
       </head>
       <body>
         <script type="module" src="${testFramework}"></script>
