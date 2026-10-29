@@ -161,7 +161,7 @@ export class CopioAddEditDialog extends LitElement {
         @sl-after-hide=${this.#handleHide}
         @keydown=${this.#handleKeydown}
       >
-        <div class="relative" style="min-height: min(65cqh, 420px); min-height: 350px;">
+        <div style="position: relative; min-height: min(65cqh, 420px); min-height: 350px;">
           <sl-input
             disabled
             class="dialog-add-edit-input-id"
@@ -189,7 +189,8 @@ export class CopioAddEditDialog extends LitElement {
           <br />
 
           <sl-button
-            class="dialog-add-edit-savebtn abm w-full"
+            class="dialog-add-edit-savebtn"
+            style="width: 100%; margin-top: auto;"
             slot="footer"
             variant="primary"
             @click=${this.#handleSave}

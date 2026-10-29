@@ -7,7 +7,12 @@
  */
 
 // Driving UI Adapters & Web Components
-export { CopioScanner } from './scanner.js';
+export {
+  CopioScanner,
+  scannerCss,
+  getScannerStyleSheet,
+  adoptScannerStyles,
+} from './scanner.js';
 export { CopioImages } from '../js/routes/doc/copio-images.js';
 export { CopioCarousel } from '../js/routes/doc/copio-carousel.js';
 export { CopioDocOcrDialog } from '../js/routes/ocr/copio-doc-ocr-dialog.js';

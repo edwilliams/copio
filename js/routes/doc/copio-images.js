@@ -19,6 +19,7 @@ import {
 import { renderPdfPagesToDataUrls } from '../../utils/pdf-utils.js';
 import { notify } from '../../services/notify.js';
 import { loadCropper } from '../../utils/module-loader.js';
+import { cropperCss } from '../../styles/cropper-styles.js';
 export class CopioImages extends HTMLElement {
   #images = [];
   #cropper = null;
@@ -134,7 +135,9 @@ export class CopioImages extends HTMLElement {
 
   #initShell() {
     const styles = `
-      <link rel="stylesheet" href="css/cropper.css">
+      <style>
+        ${cropperCss}
+      </style>
       <style>
         .container {
           display: grid;
