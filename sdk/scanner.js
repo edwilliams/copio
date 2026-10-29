@@ -48,6 +48,7 @@ export class CopioScanner extends BaseElement {
       'max-pages',
       'asset-base',
       'license-key',
+      'theme',
     ];
   }
 
@@ -80,6 +81,44 @@ export class CopioScanner extends BaseElement {
       if (!this.shadowRoot.innerHTML) {
         this.shadowRoot.innerHTML = `
           <div class="copio-scanner-container" part="scanner-root">
+            <header class="copio-header" part="header">
+              <div class="copio-header-left">
+                <span class="copio-mode-badge">${(this.mode || 'document').toUpperCase()}</span>
+                <div class="copio-title-group">
+                  <h2 class="copio-title">Copio Scanner</h2>
+                  <p class="copio-subtitle">Non-destructive mobile document scanner</p>
+                </div>
+              </div>
+              <div class="copio-header-actions">
+                <slot name="header-actions"></slot>
+              </div>
+            </header>
+
+            <div class="copio-viewfinder" part="viewfinder">
+              <slot name="viewfinder"></slot>
+              <div class="copio-shutter-dock" part="shutter-dock">
+                <slot name="shutter-dock">
+                  <button type="button" class="copio-shutter-btn" aria-label="Capture page">
+                    <span class="copio-shutter-btn-inner"></span>
+                  </button>
+                </slot>
+              </div>
+            </div>
+
+            <div class="copio-workbench" part="workbench" style="display: none;">
+              <div class="copio-stage-canvas">
+                <slot name="stage"></slot>
+              </div>
+              <div class="copio-filmstrip">
+                <slot name="filmstrip"></slot>
+              </div>
+              <footer class="copio-toolbar" part="toolbar">
+                <slot name="toolbar">
+                  <button type="button" class="copio-btn copio-btn-primary">Done</button>
+                </slot>
+              </footer>
+            </div>
+
             <slot></slot>
           </div>
         `;
@@ -144,7 +183,24 @@ export class CopioScanner extends BaseElement {
     }
   }
 
-  // --- Configuration Properties (CPO-035) ---
+  // --- Configuration Properties (CPO-035, CPO-038) ---
+
+  /**
+   * Theme variant ('dark' | 'light' | 'brand' | 'auto').
+   * @type {'dark'|'light'|'brand'|'auto'}
+   */
+  get theme() {
+    return typeof this.getAttribute === 'function'
+      ? /** @type {'dark'|'light'|'brand'|'auto'} */ (this.getAttribute('theme') || 'dark')
+      : 'dark';
+  }
+
+  set theme(val) {
+    if (typeof this.setAttribute === 'function') {
+      if (val) this.setAttribute('theme', val);
+      else this.removeAttribute('theme');
+    }
+  }
 
   /**
    * Scanner operational mode: 'single' | 'document'

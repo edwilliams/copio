@@ -93,11 +93,45 @@ export const scannerCss = `
   line-height: 1.5;
   color: var(--copio-color-text);
   background-color: var(--copio-color-bg);
+  color-scheme: dark;
+}
+
+/* Explicit Dark Theme Override */
+:host([theme="dark"]),
+:host(.copio-theme-dark),
+:host-context([data-theme="dark"]),
+:host-context(.sl-theme-dark),
+:host-context(.theme-dark) {
+  --copio-color-bg: #0b0f17;
+  --copio-color-surface: #131b26;
+  --copio-color-surface-elevated: #1c2736;
+  --copio-color-surface-overlay: rgba(15, 22, 32, 0.88);
+  --copio-color-stage-bg: #070a0f;
+  --copio-color-text: #f1f5f9;
+  --copio-color-text-muted: #94a3b8;
+  --copio-color-text-inverse: #090d14;
+  --copio-color-primary: #38bdf8;
+  --copio-color-primary-hover: #7dd3fc;
+  --copio-color-primary-contrast: #06131f;
+  --copio-color-success: #22c55e;
+  --copio-color-warning: #f59e0b;
+  --copio-color-danger: #ef4444;
+  --copio-color-border: rgba(148, 163, 184, 0.18);
+  --copio-color-border-strong: rgba(148, 163, 184, 0.34);
+  --copio-focus-ring: 0 0 0 2px #0b0f17, 0 0 0 4px #38bdf8;
+  --copio-radius-sm: 6px;
+  --copio-radius-md: 10px;
+  --copio-radius-lg: 14px;
+  --copio-shadow-elevated: 0 12px 32px -4px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
 }
 
 /* Light Theme Override */
 :host([theme="light"]),
-:host(.copio-theme-light) {
+:host(.copio-theme-light),
+:host-context([data-theme="light"]),
+:host-context(.sl-theme-light),
+:host-context(.theme-light) {
   --copio-color-bg: #f8fafc;
   --copio-color-surface: #ffffff;
   --copio-color-surface-elevated: #f1f5f9;
@@ -109,16 +143,24 @@ export const scannerCss = `
   --copio-color-primary: #0284c7;
   --copio-color-primary-hover: #0369a1;
   --copio-color-primary-contrast: #ffffff;
+  --copio-color-success: #16a34a;
+  --copio-color-warning: #d97706;
+  --copio-color-danger: #dc2626;
   --copio-color-border: rgba(15, 23, 42, 0.12);
   --copio-color-border-strong: rgba(15, 23, 42, 0.26);
   --copio-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #0284c7;
+  --copio-radius-sm: 6px;
+  --copio-radius-md: 10px;
+  --copio-radius-lg: 14px;
   --copio-shadow-elevated: 0 12px 28px -4px rgba(15, 23, 42, 0.18);
   color-scheme: light;
 }
 
-/* Brand Theme Override */
+/* Brand Theme Override (Emerald) */
 :host([theme="brand"]),
-:host(.copio-theme-brand) {
+:host(.copio-theme-brand),
+:host-context([data-theme="brand"]),
+:host-context(.theme-brand) {
   --copio-color-bg: #0f111a;
   --copio-color-surface: #181b28;
   --copio-color-surface-elevated: #23273a;
@@ -130,12 +172,46 @@ export const scannerCss = `
   --copio-color-primary: #10b981;
   --copio-color-primary-hover: #34d399;
   --copio-color-primary-contrast: #042f2e;
+  --copio-color-success: #10b981;
+  --copio-color-warning: #f59e0b;
+  --copio-color-danger: #ef4444;
   --copio-color-border: rgba(16, 185, 129, 0.22);
   --copio-color-border-strong: rgba(16, 185, 129, 0.42);
   --copio-focus-ring: 0 0 0 2px #0f111a, 0 0 0 4px #10b981;
   --copio-radius-sm: 4px;
   --copio-radius-md: 8px;
   --copio-radius-lg: 12px;
+  --copio-shadow-elevated: 0 12px 32px -4px rgba(0, 0, 0, 0.65);
+  color-scheme: dark;
+}
+
+/* Auto Theme: follows prefers-color-scheme when theme is auto */
+@media (prefers-color-scheme: light) {
+  :host([theme="auto"]),
+  :host(.copio-theme-auto) {
+    --copio-color-bg: #f8fafc;
+    --copio-color-surface: #ffffff;
+    --copio-color-surface-elevated: #f1f5f9;
+    --copio-color-surface-overlay: rgba(255, 255, 255, 0.92);
+    --copio-color-stage-bg: #1e293b;
+    --copio-color-text: #0f172a;
+    --copio-color-text-muted: #475569;
+    --copio-color-text-inverse: #ffffff;
+    --copio-color-primary: #0284c7;
+    --copio-color-primary-hover: #0369a1;
+    --copio-color-primary-contrast: #ffffff;
+    --copio-color-success: #16a34a;
+    --copio-color-warning: #d97706;
+    --copio-color-danger: #dc2626;
+    --copio-color-border: rgba(15, 23, 42, 0.12);
+    --copio-color-border-strong: rgba(15, 23, 42, 0.26);
+    --copio-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #0284c7;
+    --copio-radius-sm: 6px;
+    --copio-radius-md: 10px;
+    --copio-radius-lg: 14px;
+    --copio-shadow-elevated: 0 12px 28px -4px rgba(15, 23, 42, 0.18);
+    color-scheme: light;
+  }
 }
 
 /* ==========================================================================
