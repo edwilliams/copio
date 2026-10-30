@@ -453,6 +453,108 @@ export const scannerCss = `
   border-radius: var(--copio-radius-sm);
 }
 
+/* ==========================================================================
+   NON-DESTRUCTIVE CROP OVERLAY (CPO-025)
+   ========================================================================== */
+.copio-crop-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 8;
+  touch-action: none;
+}
+
+.copio-crop-box {
+  position: absolute;
+  border: 2px solid var(--copio-color-primary);
+  box-shadow: 0 0 0 9999px rgba(5, 8, 14, 0.68);
+  cursor: move;
+  touch-action: none;
+  box-sizing: border-box;
+}
+
+/* Rule-of-thirds crop grid */
+.copio-crop-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(56, 189, 248, 0.28) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(56, 189, 248, 0.28) 1px, transparent 1px);
+  background-size: 33.333% 33.333%;
+}
+
+/* 48px x 48px Touch Target Handles (exceeds 44px requirement) */
+.copio-crop-handle {
+  position: absolute;
+  width: var(--copio-crop-handle-hit);
+  height: var(--copio-crop-handle-hit);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  touch-action: none;
+  box-sizing: border-box;
+}
+
+.copio-crop-handle::after {
+  content: '';
+  width: var(--copio-crop-handle-visual);
+  height: var(--copio-crop-handle-visual);
+  border-radius: 50%;
+  background: var(--copio-color-primary);
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: transform 120ms ease;
+  box-sizing: border-box;
+}
+
+.copio-crop-handle:hover::after,
+.copio-crop-handle:active::after {
+  transform: scale(1.25);
+  background: var(--copio-color-success, #22c55e);
+}
+
+.copio-crop-handle.nw { top: -24px; left: -24px; cursor: nwse-resize; }
+.copio-crop-handle.ne { top: -24px; right: -24px; cursor: nesw-resize; }
+.copio-crop-handle.sw { bottom: -24px; left: -24px; cursor: nesw-resize; }
+.copio-crop-handle.se { bottom: -24px; right: -24px; cursor: nwse-resize; }
+.copio-crop-handle.n  { top: -24px; left: calc(50% - 24px); cursor: ns-resize; }
+.copio-crop-handle.s  { bottom: -24px; left: calc(50% - 24px); cursor: ns-resize; }
+.copio-crop-handle.w  { left: -24px; top: calc(50% - 24px); cursor: ew-resize; }
+.copio-crop-handle.e  { right: -24px; top: calc(50% - 24px); cursor: ew-resize; }
+
+/* Crop Sub-Toolbar Banner */
+.copio-crop-banner {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  right: 12px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--copio-color-surface-overlay, rgba(15, 23, 42, 0.94));
+  border: 1px solid var(--copio-color-primary);
+  border-radius: var(--copio-radius-md);
+  box-shadow: var(--copio-shadow-elevated);
+}
+
+.copio-crop-banner-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--copio-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .copio-filmstrip {
   display: flex;
   align-items: center;

@@ -221,8 +221,21 @@ export class CopioImages extends HTMLElement {
         }
         #crop-image {
           max-width: 100%;
-          max-height: min(60cqh, 450px);
-          max-height: 60%;
+          max-height: 100%;
+          display: block;
+        }
+        .crop-wrapper {
+          width: 100%;
+          height: 360px;
+          max-height: min(50vh, 380px);
+          min-height: 200px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: visible;
+          box-sizing: border-box;
+          margin-bottom: 0.5rem;
         }
         sl-dialog::part(base) {
           position: absolute;
@@ -233,6 +246,41 @@ export class CopioImages extends HTMLElement {
         sl-dialog::part(panel) {
           max-width: calc(100% - 20px);
           max-height: calc(100% - 20px);
+        }
+        .crop-dialog::part(panel) {
+          max-width: min(94%, 560px);
+          max-height: calc(100% - 16px);
+          display: flex;
+          flex-direction: column;
+        }
+        .crop-dialog::part(body) {
+          padding: 24px;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex: 1 1 auto;
+          min-height: 0;
+        }
+        @container copio-scanner (max-width: 400px) {
+          .crop-wrapper {
+            height: 240px;
+            max-height: 42cqh;
+            min-height: 160px;
+          }
+          .crop-dialog::part(panel) {
+            max-width: calc(100% - 12px);
+            max-height: calc(100% - 12px);
+          }
+          .crop-dialog::part(body) {
+            padding: 16px;
+          }
+          .crop-dialog::part(header) {
+            padding: 0.5rem 0.75rem;
+          }
+          .crop-dialog::part(footer) {
+            padding: 0.5rem 0.75rem;
+          }
         }
         .markdown-card {
           width: 100%;
@@ -318,8 +366,8 @@ export class CopioImages extends HTMLElement {
         <sl-button slot="footer" variant="primary" class="close-data">Close</sl-button>
       </sl-dialog>
 
-      <sl-dialog label="Crop Image" class="crop-dialog" style="--width: min(92%, 560px)">
-        <div style="margin-bottom: 1rem;">
+      <sl-dialog label="Crop Image" class="crop-dialog" style="--width: min(94%, 560px)">
+        <div class="crop-wrapper">
           <img id="crop-image" />
         </div>
         <sl-button slot="footer" variant="default" class="cancel-crop">Cancel</sl-button>
@@ -696,12 +744,38 @@ export class CopioImages extends HTMLElement {
       }
       this.#cropper = new Cropper(cropImage, {
         viewMode: 1,
-        autoCropArea: 1,
+        autoCropArea: 0.88,
+        responsive: true,
         ready: () => {
-          if (priorCrop && priorCrop.width > 0 && priorCrop.height > 0) {
+          if (priorCrop) {
             try {
-              this.#cropper.setData(priorCrop);
-            } catch {}
+              if (priorCrop.width > 0 && priorCrop.height > 0) {
+                this.#cropper.setData({
+                  x: priorCrop.x,
+                  y: priorCrop.y,
+                  width: priorCrop.width,
+                  height: priorCrop.height,
+                });
+              } else if (priorCrop.normalized && priorCrop.normalized.w > 0) {
+                const img = this.#cropper.getImageData();
+                this.#cropper.setData({
+                  x: Math.round(priorCrop.normalized.x * img.naturalWidth),
+                  y: Math.round(priorCrop.normalized.y * img.naturalHeight),
+                  width: Math.round(priorCrop.normalized.w * img.naturalWidth),
+                  height: Math.round(priorCrop.normalized.h * img.naturalHeight),
+                });
+              } else if (typeof priorCrop.w === 'number' && priorCrop.w > 0) {
+                const img = this.#cropper.getImageData();
+                this.#cropper.setData({
+                  x: Math.round(priorCrop.x * img.naturalWidth),
+                  y: Math.round(priorCrop.y * img.naturalHeight),
+                  width: Math.round(priorCrop.w * img.naturalWidth),
+                  height: Math.round(priorCrop.h * img.naturalHeight),
+                });
+              }
+            } catch (e) {
+              console.warn('Failed restoring prior crop box:', e);
+            }
           }
         },
       });
@@ -738,6 +812,15 @@ export class CopioImages extends HTMLElement {
 
       page.originalSrc = page.originalSrc || page.src || '';
       const cropData = this.#cropper.getData(true);
+      const imgData = this.#cropper.getImageData();
+      const naturalWidth = imgData?.naturalWidth || 1;
+      const naturalHeight = imgData?.naturalHeight || 1;
+
+      const normX = Math.max(0, Math.min(1, cropData.x / naturalWidth));
+      const normY = Math.max(0, Math.min(1, cropData.y / naturalHeight));
+      const normW = Math.max(0, Math.min(1, cropData.width / naturalWidth));
+      const normH = Math.max(0, Math.min(1, cropData.height / naturalHeight));
+
       page.edits = {
         ...normalizeEdits(page.edits),
         crop: {
@@ -745,6 +828,12 @@ export class CopioImages extends HTMLElement {
           y: Math.round(cropData.y),
           width: Math.round(cropData.width),
           height: Math.round(cropData.height),
+          normalized: {
+            x: Number(normX.toFixed(4)),
+            y: Number(normY.toFixed(4)),
+            w: Number(normW.toFixed(4)),
+            h: Number(normH.toFixed(4)),
+          },
         },
       };
 
