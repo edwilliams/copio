@@ -12,6 +12,45 @@ export class CopioAddEditDialog extends LitElement {
     this.#clearValidation();
   }
 
+  #handleScanClick = async () => {
+    const innerScannerDialog = this.querySelector('.dialog-inner-scanner');
+    const innerScanner = this.querySelector('.inner-copio-scanner');
+    if (innerScanner) {
+      await innerScanner.clear?.();
+    }
+    if (innerScannerDialog) {
+      await innerScannerDialog.show();
+    }
+  };
+
+  #handleInnerScanComplete = (e) => {
+    const detail = e.detail || {};
+    const pages = detail.pages || (detail.page ? [detail.page] : []);
+    const innerScannerDialog = this.querySelector('.dialog-inner-scanner');
+    const copioImages = this.querySelector('copio-images');
+
+    if (copioImages && pages && pages.length > 0) {
+      const current = copioImages.images || [];
+      copioImages.images = [
+        ...current,
+        ...pages.map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
+          id: id || randomId(),
+          src,
+          originalSrc: originalSrc || src,
+          edits: edits || { crop: null, rotation: 0, filter: 'none' },
+          exif,
+          type,
+          name,
+          content,
+        })),
+      ];
+    }
+
+    if (innerScannerDialog && innerScannerDialog.open) {
+      innerScannerDialog.hide();
+    }
+  };
+
   #clearValidation = () => {
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const nameError = this.querySelector('.dialog-name-error');
@@ -180,11 +219,38 @@ export class CopioAddEditDialog extends LitElement {
             >
               Please enter a document name
             </div>
+            <sl-button
+              size="small"
+              variant="neutral"
+              outline
+              class="dialog-scan-camera-btn"
+              style="margin-top: 8px;"
+              @click=${this.#handleScanClick}
+            >
+              <sl-icon slot="prefix" name="camera"></sl-icon>
+              Scan with Camera
+            </sl-button>
           </div>
 
           <copio-images
             style="display: block; margin-top: 1.5rem"
           ></copio-images>
+
+          <sl-dialog
+            label="Scan Pages"
+            class="dialog-inner-scanner"
+            style="--width: min(94%, 600px); --sl-panel-background-color: #0b0f17;"
+          >
+            <div class="copio-scanner-host" style="width: 100%; height: 420px; display: flex;">
+              <copio-scanner
+                class="inner-copio-scanner"
+                mode="batch"
+                aspect="auto"
+                theme="dark"
+                @copio:scan-complete=${this.#handleInnerScanComplete}
+              ></copio-scanner>
+            </div>
+          </sl-dialog>
 
           <br />
 

@@ -74,6 +74,10 @@ export class CopioHeader extends LitElement {
     }
     if (e.detail.item.value === 'clear-cache') {
       this.dispatchEvent(new CustomEvent('header:clear-cache', { bubbles: true, composed: false }));
+      return;
+    }
+    if (e.detail.item.value === 'b2b-playground') {
+      window.location.href = 'demo/index.html';
     }
   }
 
@@ -89,6 +93,8 @@ export class CopioHeader extends LitElement {
               style="font-size: 1.5rem; color: white;"
             ></sl-icon-button>
             <sl-menu @sl-select=${this.#handleSelect}>
+              <sl-menu-item value="b2b-playground">⚡ Live B2B Demo &amp; Playground</sl-menu-item>
+              <sl-divider></sl-divider>
               <sl-menu-item value="link-device">Link another device</sl-menu-item>
               <sl-menu-item value="clear-cache">Clear cache &amp; update</sl-menu-item>
               <sl-divider></sl-divider>
@@ -100,7 +106,16 @@ export class CopioHeader extends LitElement {
           </sl-dropdown>
         </div>
         <h1>COPIO</h1>
-        <div class="header-right"></div>
+        <div class="header-right">
+          <a
+            href="demo/index.html"
+            style="color: #38bdf8; text-decoration: none; font-size: 0.85rem; font-weight: 600; padding: 6px 10px; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; background: rgba(56, 189, 248, 0.08);"
+            title="Open Interactive B2B Playground Demo"
+          >
+            <sl-icon name="play-circle"></sl-icon>
+            B2B Demo
+          </a>
+        </div>
       </header>
     `;
   }

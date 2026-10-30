@@ -7,11 +7,13 @@ import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown }
 import { SyncManager } from '../services/sync-service.js';
 import { notify } from '../services/notify.js';
 import { terminateOcrWorker } from '../services/ocr-service.js';
+import '../../sdk/index.js';
 
 export class CopioApp extends LitElement {
   #syncManager = null;
   #unsubscribeRouter = null;
   #repoUnsubscribe = null;
+  #scannerDocId = null;
 
   static properties = {
     docsData: { type: Object, state: true },
@@ -129,6 +131,9 @@ export class CopioApp extends LitElement {
       case 'add':
         await this.#openAddDialog();
         break;
+      case 'scan':
+        await this.openScanner();
+        break;
       case 'doc-view':
         this.#loadCarouselDoc(params.id);
         break;
@@ -143,6 +148,52 @@ export class CopioApp extends LitElement {
         break;
     }
   }
+
+  async openScanner(opts = {}) {
+    await this.updateComplete;
+    this.#requestPersistentStorage();
+    this.#scannerDocId = opts.docId || null;
+    const dialog = this.querySelector('.copio-scanner-modal');
+    const scanner = this.querySelector('#app-embedded-scanner');
+    if (scanner) {
+      if (opts.mode) scanner.mode = opts.mode;
+      if (opts.aspect) scanner.aspect = opts.aspect;
+      if (opts.docId) {
+        scanner.setAttribute('doc-id', opts.docId);
+      } else {
+        scanner.removeAttribute('doc-id');
+        await scanner.clear?.();
+      }
+    }
+    if (dialog) {
+      await dialog.show();
+    }
+  }
+
+  closeScanner() {
+    const dialog = this.querySelector('.copio-scanner-modal');
+    if (dialog && dialog.open) {
+      dialog.hide();
+    }
+    this.#scannerDocId = null;
+  }
+
+  handleScanComplete = (e) => {
+    const detail = e.detail || {};
+    const pages = detail.pages || (detail.page ? [detail.page] : []);
+    if (!pages || pages.length === 0) return;
+
+    const id = this.#scannerDocId || randomId();
+    const existing = typeof this.docRepo.getDocSync === 'function' ? this.docRepo.getDocSync(id) : null;
+    const name = existing?.name || `Scan ${new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+
+    this.docRepo.saveDoc(id, { name, pages });
+    notify.success(`Saved "${name}" (${pages.length} ${pages.length === 1 ? 'page' : 'pages'})`);
+    this.closeScanner();
+    if (router.getHashPath() !== '/') {
+      router.navigate('/');
+    }
+  };
 
   async #openAddDialog() {
     const dialog = this.querySelector('copio-add-edit-dialog');
@@ -473,10 +524,16 @@ export class CopioApp extends LitElement {
             <p class="empty-state-text">
               Tap here or the button below to add your first image or document.
             </p>
-            <sl-button variant="primary" size="medium" @click=${(e) => { e.stopPropagation(); this.handleAddNew(); }}>
-              <sl-icon slot="prefix" name="plus-circle"></sl-icon>
-              Add Document
-            </sl-button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px;">
+              <sl-button variant="primary" size="medium" class="empty-state-scan-btn" @click=${(e) => { e.stopPropagation(); this.openScanner(); }}>
+                <sl-icon slot="prefix" name="camera"></sl-icon>
+                Scan Document
+              </sl-button>
+              <sl-button variant="default" size="medium" @click=${(e) => { e.stopPropagation(); this.handleAddNew(); }}>
+                <sl-icon slot="prefix" name="plus-circle"></sl-icon>
+                Add Document
+              </sl-button>
+            </div>
           </div>
         </div>
       `;
@@ -526,7 +583,36 @@ export class CopioApp extends LitElement {
           @copio:ocr-page=${this.handleOcrPage}
         ></copio-add-edit-dialog>
 
-        <div class="copio-fab-wrap">
+        <sl-dialog
+          label="Document Scanner"
+          class="copio-scanner-modal"
+          style="--width: min(96%, 680px); --sl-panel-background-color: #0b0f17;"
+          @sl-after-hide=${() => {
+            this.#scannerDocId = null;
+            if (router.getHashPath() === '/scan') router.navigate('/');
+          }}
+        >
+          <div class="copio-scanner-host" style="width: 100%; height: min(72cqh, 560px); min-height: 420px; display: flex;">
+            <copio-scanner
+              id="app-embedded-scanner"
+              mode="batch"
+              aspect="auto"
+              theme="dark"
+              ocr="true"
+              pdf="true"
+              @copio:scan-complete=${this.handleScanComplete}
+            ></copio-scanner>
+          </div>
+        </sl-dialog>
+
+        <div class="copio-fab-wrap" style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+          <sl-icon-button
+            class="dialog-scan-btn"
+            name="camera"
+            label="Scan Document"
+            style="font-size: 1.8rem; background: #38bdf8; color: #06131f; border-radius: 9999px; box-shadow: 0 4px 12px rgba(0,0,0,0.35); min-width: 44px; min-height: 44px;"
+            @click=${() => this.openScanner()}
+          ></sl-icon-button>
           <sl-icon-button
             class="dialog-add-edit-btn"
             name="plus-circle"
