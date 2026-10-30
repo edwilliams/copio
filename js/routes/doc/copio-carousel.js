@@ -22,6 +22,8 @@ export class CopioCarousel extends LitElement {
     docName: { type: String },
     images: { type: Array },
     activeSlideIndex: { type: Number, state: true },
+    ocr: { type: Boolean },
+    pdf: { type: Boolean },
   };
 
   get hasImages() {
@@ -225,6 +227,8 @@ export class CopioCarousel extends LitElement {
     this.docName = '';
     this.images = [];
     this.activeSlideIndex = 0;
+    this.ocr = true;
+    this.pdf = true;
   }
 
   handleBackClick() {
@@ -290,7 +294,7 @@ export class CopioCarousel extends LitElement {
 
   render() {
     const activePage = this.images[this.activeSlideIndex];
-    const canOcr = activePage && activePage.type !== 'markdown' && !!activePage.src;
+    const canOcr = this.ocr !== false && activePage && activePage.type !== 'markdown' && !!activePage.src;
 
     return html`
       <div class="top-bar">
@@ -316,10 +320,14 @@ export class CopioCarousel extends LitElement {
               <sl-icon name="chevron-down" style="font-size: 0.75rem;"></sl-icon>
             </button>
             <sl-menu @sl-select=${this.handleExportSelect}>
-              <sl-menu-item value="pdf" ?disabled=${this.pageCount === 0}>
-                <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
-                Download as PDF
-              </sl-menu-item>
+              ${this.pdf !== false
+                ? html`
+                    <sl-menu-item value="pdf" ?disabled=${this.pageCount === 0}>
+                      <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
+                      Download as PDF
+                    </sl-menu-item>
+                  `
+                : ''}
               <sl-menu-item value="images" ?disabled=${this.pageCount === 0}>
                 <sl-icon slot="prefix" name="images"></sl-icon>
                 Download as Images (ZIP)

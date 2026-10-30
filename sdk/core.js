@@ -29,6 +29,8 @@ import {
 } from '../js/utils/utils.js';
 import { setAssetBase, getAssetBase } from '../js/utils/module-loader.js';
 import { BUILD_DATE, VERSION } from './version.js';
+import { NullOcrAdapter } from '../js/adapters/ocr/null-ocr-adapter.js';
+import { NullPdfAdapter } from '../js/adapters/pdf/null-pdf-adapter.js';
 
 export const DEFAULT_FEATURES = ['crop', 'rotate', 'filter', 'ocr', 'export', 'sync'];
 export const DEFAULT_EXPORT_FORMATS = ['pdf', 'zip', 'png', 'jpg'];
@@ -115,6 +117,8 @@ export class CopioEngine {
   #storage = null;
   #repository = null;
   #services = {};
+  #ocr = true;
+  #pdf = true;
 
   /**
    * @param {Object} [options]
@@ -127,6 +131,8 @@ export class CopioEngine {
    * @param {number} [options.maxPages=0] - Maximum allowed pages (0 = unlimited)
    * @param {string} [options.assetBase] - Base URL for lazy-loaded assets and workers
    * @param {string} [options.licenseKey] - SDK commercial license key
+   * @param {boolean} [options.ocr=true] - Whether OCR module is enabled (developer opt-in CPO-042)
+   * @param {boolean} [options.pdf=true] - Whether PDF module is enabled (developer opt-in CPO-042)
    */
   constructor(options = {}) {
     this.#storage = options.storage || createDefaultAdapter(/** @type {any} */ (options));
@@ -152,6 +158,16 @@ export class CopioEngine {
     }
     if (options.licenseKey !== undefined) {
       this.#licenseKey = String(options.licenseKey || '');
+    }
+    if (options.ocr !== undefined) {
+      this.ocr = Boolean(options.ocr);
+    } else if (options.features !== undefined && !this.hasFeature('ocr')) {
+      this.ocr = false;
+    }
+    if (options.pdf !== undefined) {
+      this.pdf = Boolean(options.pdf);
+    } else if (options.exportFormats !== undefined && !this.#exportFormats.includes('pdf')) {
+      this.pdf = false;
     }
   }
 
@@ -207,6 +223,15 @@ export class CopioEngine {
    */
   setFeatures(features) {
     this.#features = normalizeFeatures(features);
+    if (!this.hasFeature('ocr')) {
+      this.#ocr = false;
+      this.setService('ocr', new NullOcrAdapter());
+    } else {
+      this.#ocr = true;
+      if (this.getService('ocr') instanceof NullOcrAdapter) {
+        this.setService('ocr', getRegisteredService('ocr'));
+      }
+    }
   }
 
   /**
@@ -215,7 +240,14 @@ export class CopioEngine {
    */
   enableFeature(featureName) {
     if (featureName) {
-      this.#features.add(String(featureName).trim().toLowerCase());
+      const name = String(featureName).trim().toLowerCase();
+      this.#features.add(name);
+      if (name === 'ocr') {
+        this.#ocr = true;
+        if (this.getService('ocr') instanceof NullOcrAdapter) {
+          this.setService('ocr', getRegisteredService('ocr'));
+        }
+      }
     }
   }
 
@@ -225,7 +257,56 @@ export class CopioEngine {
    */
   disableFeature(featureName) {
     if (featureName) {
-      this.#features.delete(String(featureName).trim().toLowerCase());
+      const name = String(featureName).trim().toLowerCase();
+      this.#features.delete(name);
+      if (name === 'ocr') {
+        this.#ocr = false;
+        this.setService('ocr', new NullOcrAdapter());
+      }
+    }
+  }
+
+  /**
+   * Developer opt-in status for OCR heavy module (CPO-042).
+   * @type {boolean}
+   */
+  get ocr() {
+    return this.#ocr && this.hasFeature('ocr');
+  }
+
+  set ocr(enabled) {
+    this.#ocr = Boolean(enabled);
+    if (this.#ocr) {
+      this.enableFeature('ocr');
+      if (this.getService('ocr') instanceof NullOcrAdapter) {
+        this.setService('ocr', getRegisteredService('ocr'));
+      }
+    } else {
+      this.disableFeature('ocr');
+      this.setService('ocr', new NullOcrAdapter());
+    }
+  }
+
+  /**
+   * Developer opt-in status for PDF heavy module (CPO-042).
+   * @type {boolean}
+   */
+  get pdf() {
+    return this.#pdf && this.#exportFormats.includes('pdf');
+  }
+
+  set pdf(enabled) {
+    this.#pdf = Boolean(enabled);
+    if (this.#pdf) {
+      if (!this.#exportFormats.includes('pdf')) {
+        this.#exportFormats.push('pdf');
+      }
+      if (this.getService('pdf') instanceof NullPdfAdapter) {
+        this.setService('pdf', getRegisteredService('pdf'));
+      }
+    } else {
+      this.#exportFormats = this.#exportFormats.filter((f) => f !== 'pdf');
+      this.setService('pdf', new NullPdfAdapter());
     }
   }
 
@@ -243,6 +324,15 @@ export class CopioEngine {
    */
   set exportFormats(formats) {
     this.#exportFormats = normalizeList(formats, DEFAULT_EXPORT_FORMATS);
+    if (!this.#exportFormats.includes('pdf')) {
+      this.#pdf = false;
+      this.setService('pdf', new NullPdfAdapter());
+    } else {
+      this.#pdf = true;
+      if (this.getService('pdf') instanceof NullPdfAdapter) {
+        this.setService('pdf', getRegisteredService('pdf'));
+      }
+    }
   }
 
   /**
@@ -543,9 +633,14 @@ export class CopioEngine {
       Object.assign(err, { code: 'FEATURE_DISABLED' });
       throw err;
     }
+    if (!this.#pdf || !this.#exportFormats.includes('pdf')) {
+      const err = new Error('Feature "pdf" is disabled');
+      Object.assign(err, { code: 'FEATURE_DISABLED' });
+      throw err;
+    }
 
     const { docName, pages } = await this.#resolveDocAndPages(docIdOrPages);
-    const exportService = this.getService('export');
+    const exportService = this.getService('pdf') || this.getService('export');
     if (!exportService || typeof exportService.exportDocumentAsPdf !== 'function') {
       throw new Error('Export service (PdfPort) is not registered. Import @copio/sdk or register an exportService.');
     }
@@ -598,7 +693,7 @@ export class CopioEngine {
    * @returns {Promise<{ combinedText: string, text: string, pagesResults: Array<Object>, averageConfidence: number }>}
    */
   async runOcr(docIdOrPages, pageId = null, options = {}) {
-    if (!this.hasFeature('ocr')) {
+    if (!this.#ocr || !this.hasFeature('ocr')) {
       const err = new Error('Feature "ocr" is disabled');
       Object.assign(err, { code: 'FEATURE_DISABLED' });
       throw err;

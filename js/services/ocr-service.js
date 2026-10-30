@@ -5,6 +5,7 @@
  */
 
 import { loadTesseract, resolveAssetUrl } from '../utils/module-loader.js';
+import { notify } from './notify.js';
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'eng', label: 'English', flag: '🇬🇧' },
@@ -88,7 +89,31 @@ export async function getOcrWorker(lang = 'eng', onProgress = null) {
     currentWorkerLang = null;
   }
 
-  const Tesseract = await loadTesseract();
+  let downloadToast = null;
+  const isFirstLoad = typeof window !== 'undefined' && !window.Tesseract;
+  if (isFirstLoad) {
+    if (currentProgressCallback && typeof currentProgressCallback === 'function') {
+      currentProgressCallback({
+        status: 'downloading-engine',
+        progress: 0.05,
+        message: 'Downloading OCR engine (12MB)...',
+      });
+    }
+    try {
+      downloadToast = await notify.progress({
+        message: 'Downloading OCR engine (12MB)...',
+        total: 100,
+        done: 0,
+      });
+    } catch {}
+  }
+
+  let Tesseract;
+  try {
+    Tesseract = await loadTesseract();
+  } finally {
+    downloadToast?.close();
+  }
   const langPath = getLangPath(lang);
 
   const worker = await Tesseract.createWorker(lang, 1, {

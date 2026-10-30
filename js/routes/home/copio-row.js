@@ -7,6 +7,8 @@ export class CopioRow extends LitElement {
     pages: { type: Array },
     isRenaming: { type: Boolean, state: true },
     renameValue: { type: String, state: true },
+    ocr: { type: Boolean },
+    pdf: { type: Boolean },
   };
 
   constructor() {
@@ -15,6 +17,8 @@ export class CopioRow extends LitElement {
     this.pages = [];
     this.isRenaming = false;
     this.renameValue = '';
+    this.ocr = true;
+    this.pdf = true;
   }
 
   get hasImages() {
@@ -252,23 +256,31 @@ export class CopioRow extends LitElement {
               <sl-icon slot="prefix" name="pencil"></sl-icon>
               Rename
             </sl-menu-item>
-            <sl-menu-item
-              value="extract-ocr"
-              ?disabled=${!this.hasImages}
-              title=${!this.hasImages ? 'No image pages in document' : 'Extract text with OCR'}
-            >
-              <sl-icon slot="prefix" name="card-text"></sl-icon>
-              Extract All Text (OCR)
-            </sl-menu-item>
+            ${this.ocr !== false
+              ? html`
+                  <sl-menu-item
+                    value="extract-ocr"
+                    ?disabled=${!this.hasImages}
+                    title=${!this.hasImages ? 'No image pages in document' : 'Extract text with OCR'}
+                  >
+                    <sl-icon slot="prefix" name="card-text"></sl-icon>
+                    Extract All Text (OCR)
+                  </sl-menu-item>
+                `
+              : ''}
             <sl-divider></sl-divider>
-            <sl-menu-item
-              value="download"
-              ?disabled=${this.pageCount === 0}
-              title=${this.pageCount === 0 ? 'Document is empty' : 'Download as PDF'}
-            >
-              <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
-              Download as PDF
-            </sl-menu-item>
+            ${this.pdf !== false
+              ? html`
+                  <sl-menu-item
+                    value="download"
+                    ?disabled=${this.pageCount === 0}
+                    title=${this.pageCount === 0 ? 'Document is empty' : 'Download as PDF'}
+                  >
+                    <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
+                    Download as PDF
+                  </sl-menu-item>
+                `
+              : ''}
             <sl-menu-item
               value="download-images"
               ?disabled=${this.pageCount === 0}

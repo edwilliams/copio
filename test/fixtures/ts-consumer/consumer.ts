@@ -5,6 +5,8 @@ import {
   dispatchCopioEvent,
   MemoryStorageAdapter,
   IndexedDbStorageAdapter,
+  NullOcrAdapter,
+  NullPdfAdapter,
   LicenseManager,
   BUILD_DATE,
   VERSION,
@@ -18,6 +20,8 @@ scanner.maxPages = 20;
 scanner.exportFormats = ['pdf', 'zip'];
 scanner.ocrLanguages = ['eng'];
 scanner.theme = 'light';
+scanner.ocrEnabled = true;
+scanner.pdf = true;
 
 const currentMode: 'single' | 'document' = scanner.mode;
 const currentDocId: string | null = scanner.docId;
@@ -25,6 +29,8 @@ const currentTheme: 'dark' | 'light' | 'brand' | 'auto' = scanner.theme;
 const maxPages: number = scanner.maxPages;
 const isOpen: boolean = scanner.isOpen;
 const hasCrop: boolean = scanner.hasFeature('crop');
+const isOcrEnabled: boolean = scanner.ocrEnabled;
+const isPdfEnabled: boolean = scanner.pdf;
 
 // 2. Test typed methods on CopioScanner
 async function testScannerMethods() {
@@ -54,7 +60,13 @@ const engine = new CopioEngine({
   storage: memoryStorage,
   features: ['crop', 'ocr'],
   maxPages: 10,
+  ocr: false,
+  pdf: false,
 });
+const optInOcr: boolean = engine.ocr;
+const optInPdf: boolean = engine.pdf;
+const nullOcr = new NullOcrAdapter();
+const nullPdf = new NullPdfAdapter();
 
 async function testEngine() {
   await engine.init();
