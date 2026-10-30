@@ -23,7 +23,6 @@ import {
   extractExif,
   applyEdits,
   normalizeEdits,
-  hasActiveEdits,
   renderEditsToCanvas,
   applySauvolaToImageData,
 } from '../js/utils/utils.js';
@@ -31,6 +30,18 @@ import { setAssetBase, getAssetBase } from '../js/utils/module-loader.js';
 import { BUILD_DATE, VERSION } from './version.js';
 import { NullOcrAdapter } from '../js/adapters/ocr/null-ocr-adapter.js';
 import { NullPdfAdapter } from '../js/adapters/pdf/null-pdf-adapter.js';
+import {
+  ImageProcessorPort,
+  Canvas2DAdapter,
+  NullImageProcessorAdapter,
+} from '../js/adapters/image/index.js';
+import {
+  Document,
+  Page,
+  ScanSession,
+  normalizeEditStack,
+  hasActiveEdits,
+} from './models.js';
 
 export const DEFAULT_FEATURES = ['crop', 'rotate', 'filter', 'ocr', 'export', 'sync'];
 export const DEFAULT_EXPORT_FORMATS = ['pdf', 'zip', 'png', 'jpg'];
@@ -119,12 +130,16 @@ export class CopioEngine {
   #services = {};
   #ocr = true;
   #pdf = true;
+  #imageProcessor = null;
+  #undoStack = new Map();
+  #redoStack = new Map();
 
   /**
    * @param {Object} [options]
    * @param {StoragePort} [options.storage] - Persistence adapter implementing StoragePort
    * @param {DocRepository} [options.repository] - Headless document repository instance
-   * @param {Object} [options.services] - Custom driven adapters ({ export, ocr, sync, pdf })
+   * @param {Object} [options.services] - Custom driven adapters ({ export, ocr, sync, pdf, imageProcessor })
+   * @param {ImageProcessorPort} [options.imageProcessor] - Image transform adapter
    * @param {string|string[]} [options.features] - Enabled feature set ('crop rotate filter ocr export sync')
    * @param {string|string[]} [options.exportFormats] - Supported export formats ('pdf', 'zip', 'png', 'jpg')
    * @param {string|string[]} [options.ocrLanguages] - Configured OCR languages ('eng', 'deu', etc.)
@@ -140,6 +155,16 @@ export class CopioEngine {
 
     if (options.services) {
       this.#services = { ...options.services };
+    }
+    if (options.imageProcessor) {
+      this.#imageProcessor = options.imageProcessor;
+      this.#services.imageProcessor = options.imageProcessor;
+    } else if (this.getService('imageProcessor')) {
+      this.#imageProcessor = this.getService('imageProcessor');
+    } else if (typeof document !== 'undefined') {
+      this.#imageProcessor = new Canvas2DAdapter();
+    } else {
+      this.#imageProcessor = new NullImageProcessorAdapter();
     }
     if (options.features !== undefined) {
       this.setFeatures(options.features);
@@ -417,6 +442,32 @@ export class CopioEngine {
     this.#repository = new DocRepository(this.#storage);
   }
 
+  #pushUndo(docId, action) {
+    if (!this.#undoStack.has(docId)) {
+      this.#undoStack.set(docId, []);
+    }
+    const stack = this.#undoStack.get(docId);
+    stack.push(action);
+    if (stack.length > 50) stack.shift();
+    if (this.#redoStack.has(docId)) {
+      this.#redoStack.get(docId).length = 0;
+    }
+  }
+
+  /**
+   * Current ImageProcessorPort adapter.
+   * @type {ImageProcessorPort}
+   */
+  get imageProcessor() {
+    return this.#imageProcessor;
+  }
+
+  setImageProcessor(processor) {
+    if (!processor) return;
+    this.#imageProcessor = processor;
+    this.setService('imageProcessor', processor);
+  }
+
   /**
    * Underlying document repository.
    * @returns {DocRepository}
@@ -456,6 +507,7 @@ export class CopioEngine {
   }
 
   async deletePage(id, pageId, options = {}) {
+    this.#pushUndo(id, { type: 'delete', pageId });
     return this.#repository.deletePage(id, pageId, options);
   }
 
@@ -468,7 +520,133 @@ export class CopioEngine {
   }
 
   async reorderPages(id, pageIds) {
+    const doc = await this.getDocument(id);
+    const priorOrder = doc?.pages ? doc.pages.map((p) => p.id) : [];
+    this.#pushUndo(id, { type: 'reorder', priorOrder, newOrder: [...pageIds] });
     return this.#repository.reorderPages(id, pageIds);
+  }
+
+  async #resolveDocId(docId) {
+    if (docId) return docId;
+    const docs = await this.listDocuments();
+    return docs.length > 0 ? docs[0].id : null;
+  }
+
+  /**
+   * Applies non-destructive edits to a document page (CPO-011, CPO-045).
+   * Generates derived src via ImageProcessorPort while keeping originalSrc intact.
+   * 
+   * @param {string} docId
+   * @param {string} pageId
+   * @param {Object} edits
+   * @returns {Promise<Object>}
+   */
+  async applyEdit(docId, pageId, edits) {
+    const targetDocId = await this.#resolveDocId(docId);
+    const doc = targetDocId ? await this.getDocument(targetDocId) : null;
+    if (!doc || !doc.pages) {
+      throw new Error(`Document with ID "${targetDocId || docId}" not found`);
+    }
+    const page = doc.pages.find((p) => p.id === pageId);
+    if (!page) {
+      throw new Error(`Page with ID "${pageId}" not found in document "${targetDocId}"`);
+    }
+
+    const priorEdits = { ...(page.edits || { crop: null, rotate: 0, filter: 'none' }) };
+    const priorSrc = page.src;
+    const mergedEdits = normalizeEditStack({ ...priorEdits, ...edits });
+    const originalSrc = page.originalSrc || page.src;
+
+    let derivedSrc = originalSrc;
+    if (this.#imageProcessor) {
+      derivedSrc = await this.#imageProcessor.renderEdits(originalSrc, mergedEdits);
+    }
+
+    await this.updatePage(targetDocId, pageId, {
+      originalSrc,
+      src: derivedSrc,
+      edits: mergedEdits,
+    });
+
+    this.#pushUndo(targetDocId, {
+      type: 'edit',
+      pageId,
+      priorEdits,
+      priorSrc,
+      newEdits: mergedEdits,
+      newSrc: derivedSrc,
+    });
+
+    return {
+      ...page,
+      originalSrc,
+      src: derivedSrc,
+      edits: mergedEdits,
+    };
+  }
+
+  /**
+   * Reverts the most recent operation on a document (CPO-016, CPO-045).
+   * @param {string} docId
+   * @returns {Promise<Object|null>}
+   */
+  async undo(docId) {
+    const targetDocId = await this.#resolveDocId(docId);
+    const stack = targetDocId ? this.#undoStack.get(targetDocId) : null;
+    if (!stack || stack.length === 0) return null;
+    const action = stack.pop();
+
+    if (!this.#redoStack.has(targetDocId)) {
+      this.#redoStack.set(targetDocId, []);
+    }
+    this.#redoStack.get(targetDocId).push(action);
+
+    if (action.type === 'edit') {
+      await this.updatePage(targetDocId, action.pageId, {
+        edits: action.priorEdits,
+        src: action.priorSrc,
+      });
+      return { type: 'edit', pageId: action.pageId, restoredEdits: action.priorEdits };
+    } else if (action.type === 'delete') {
+      await this.undoDeletePage(targetDocId, action.pageId);
+      return { type: 'delete', pageId: action.pageId };
+    } else if (action.type === 'reorder') {
+      await this.#repository.reorderPages(targetDocId, action.priorOrder);
+      return { type: 'reorder', priorOrder: action.priorOrder };
+    }
+    return action;
+  }
+
+  /**
+   * Re-applies the most recently reverted operation on a document (CPO-045).
+   * @param {string} docId
+   * @returns {Promise<Object|null>}
+   */
+  async redo(docId) {
+    const targetDocId = await this.#resolveDocId(docId);
+    const stack = targetDocId ? this.#redoStack.get(targetDocId) : null;
+    if (!stack || stack.length === 0) return null;
+    const action = stack.pop();
+
+    if (!this.#undoStack.has(targetDocId)) {
+      this.#undoStack.set(targetDocId, []);
+    }
+    this.#undoStack.get(targetDocId).push(action);
+
+    if (action.type === 'edit') {
+      await this.updatePage(targetDocId, action.pageId, {
+        edits: action.newEdits,
+        src: action.newSrc,
+      });
+      return { type: 'edit', pageId: action.pageId, appliedEdits: action.newEdits };
+    } else if (action.type === 'delete') {
+      await this.deletePage(targetDocId, action.pageId);
+      return { type: 'delete', pageId: action.pageId };
+    } else if (action.type === 'reorder') {
+      await this.reorderPages(targetDocId, action.newOrder);
+      return { type: 'reorder', newOrder: action.newOrder };
+    }
+    return action;
   }
 
   subscribe(callback) {
@@ -538,6 +716,11 @@ export class CopioEngine {
       } else {
         const created = await this.createDocument('Scanned Document', []);
         targetDocId = created.id;
+      }
+    } else {
+      const existing = await this.getDocument(targetDocId);
+      if (!existing) {
+        await this.#repository.saveDoc(targetDocId, { name: 'Scanned Document', pages: [] });
       }
     }
 
@@ -752,6 +935,16 @@ export {
   MemoryStorageAdapter,
   IndexedDbStorageAdapter,
   createDefaultAdapter,
+  ImageProcessorPort,
+  Canvas2DAdapter,
+  NullImageProcessorAdapter,
+  NullOcrAdapter,
+  NullPdfAdapter,
+  Document,
+  Page,
+  ScanSession,
+  normalizeEditStack,
+  hasActiveEdits,
   randomId,
   fileToBase64,
   thresholdSrc,
@@ -760,7 +953,6 @@ export {
   extractExif,
   applyEdits,
   normalizeEdits,
-  hasActiveEdits,
   renderEditsToCanvas,
   applySauvolaToImageData,
   BUILD_DATE,

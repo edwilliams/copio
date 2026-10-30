@@ -100,16 +100,38 @@ export {
   PdfKitAdapter,
 } from '../js/adapters/pdf/index.js';
 
+export {
+  ImageProcessorPort,
+  Canvas2DAdapter,
+  NullImageProcessorAdapter,
+} from '../js/adapters/image/index.js';
+
+export {
+  SyncPort,
+  PeerJsAdapter,
+  NullSyncAdapter,
+} from '../js/adapters/sync/index.js';
+
+export {
+  Document,
+  Page,
+  ScanSession,
+  normalizeEditStack,
+  hasActiveEdits,
+} from './models.js';
+
 // Register Default Driven Ports (Hexagonal Architecture)
 import { registerService } from './core.js';
 import * as exportService from '../js/services/export-utils.js';
 import { SyncManager } from '../js/services/sync-service.js';
 import { TesseractWasmAdapter } from '../js/adapters/ocr/tesseract-wasm-adapter.js';
 import { PdfKitAdapter } from '../js/adapters/pdf/pdfkit-adapter.js';
+import { Canvas2DAdapter } from '../js/adapters/image/canvas2d-adapter.js';
 
 registerService('export', exportService);
 registerService('ocr', new TesseractWasmAdapter());
 registerService('sync', SyncManager);
 registerService('pdf', new PdfKitAdapter());
+registerService('imageProcessor', new Canvas2DAdapter());
 
 export { registerService, getRegisteredService } from './core.js';
