@@ -317,6 +317,40 @@ export const scannerCss = `
   flex-shrink: 0;
 }
 
+/* Interactive Stage Switcher Pill (Viewfinder vs Workbench) */
+.copio-stage-tabs {
+  display: inline-flex;
+  background: var(--copio-color-bg);
+  padding: 2px;
+  border-radius: var(--copio-radius-md);
+  border: 1px solid var(--copio-color-border);
+}
+
+.copio-stage-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--copio-color-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  min-height: var(--copio-touch-target-min);
+  min-width: var(--copio-touch-target-min);
+  border-radius: var(--copio-radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--copio-transition-fast), color var(--copio-transition-fast);
+}
+
+.copio-stage-tab[aria-selected="true"] {
+  background: var(--copio-color-surface-elevated);
+  color: var(--copio-color-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
 /* Touch-Safe Interactive Buttons (>=44px touch invariant) */
 .copio-btn {
   appearance: none;
@@ -365,36 +399,144 @@ export const scannerCss = `
 }
 
 /* Viewfinder (Shadow Part: viewfinder) */
-.copio-viewfinder {
+.copio-viewfinder,
+.copio-viewfinder-stage {
   position: relative;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   background: var(--copio-color-stage-bg);
   overflow: hidden;
   min-height: 0;
+  width: 100%;
 }
 
-.copio-viewfinder-feed {
-  width: 100%;
+.copio-viewfinder-feed,
+.copio-camera-feed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 20px 104px 20px;
+  background: radial-gradient(circle at 50% 45%, #1e293b 0%, #090d14 75%);
+}
+
+/* Framing Guide Overlay (receipt | card | a4 | auto) */
+.copio-framing-guide {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1.5px dashed rgba(56, 189, 248, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(4, 7, 12, 0.52);
+  transition: all var(--copio-transition-normal);
+  overflow: hidden;
+}
+
+.copio-framing-guide[data-aspect="receipt"] {
+  aspect-ratio: 1 / 2.1;
   height: 100%;
-  object-fit: cover;
-  display: block;
+}
+
+.copio-framing-guide[data-aspect="card"] {
+  aspect-ratio: 1.586 / 1;
+  width: 92%;
+  max-height: 82%;
+}
+
+.copio-framing-guide[data-aspect="a4"] {
+  aspect-ratio: 1 / 1.414;
+  height: 96%;
+}
+
+.copio-framing-guide[data-aspect="auto"] {
+  width: 94%;
+  height: 94%;
+}
+
+/* Corner Targeting Brackets */
+.copio-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: var(--copio-color-primary);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.copio-corner.tl { top: 6px; left: 6px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 6px; }
+.copio-corner.tr { top: 6px; right: 6px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 6px; }
+.copio-corner.bl { bottom: 6px; left: 6px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 6px; }
+.copio-corner.br { bottom: 6px; right: 6px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 6px; }
+
+/* Top Viewfinder HUD Overlay (Step Pill + Privacy Assurance Badge) */
+.copio-viewfinder-hud-top {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(to bottom, rgba(7, 10, 15, 0.85), transparent);
+}
+
+.copio-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--copio-radius-pill);
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.copio-privacy-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--copio-radius-pill);
+  background: rgba(22, 101, 52, 0.35);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #86efac;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 /* Shutter Dock (Shadow Part: shutter-dock) */
 .copio-shutter-dock {
+  position: relative;
+  z-index: 3;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--copio-spacing-md);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
   background: var(--copio-color-surface);
   border-top: 1px solid var(--copio-color-border);
-  min-height: 72px;
+  min-height: 84px;
   flex-shrink: 0;
-  z-index: 5;
+}
+
+.copio-shutter-side {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.copio-shutter-side.right {
+  justify-content: flex-end;
 }
 
 .copio-shutter-btn {
@@ -409,48 +551,191 @@ export const scannerCss = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform var(--copio-transition-fast);
+  transition: transform var(--copio-transition-fast), border-color 150ms ease;
+  flex-shrink: 0;
 }
 
-.copio-shutter-btn-inner {
+.copio-shutter-btn:hover {
+  transform: scale(1.04);
+}
+
+.copio-shutter-btn:active {
+  transform: scale(0.94);
+}
+
+.copio-shutter-btn-inner,
+.copio-shutter-inner {
   width: 100%;
   height: 100%;
   border-radius: var(--copio-radius-pill);
   background: var(--copio-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--copio-color-primary-contrast);
   transition: transform var(--copio-transition-fast);
 }
 
-.copio-shutter-btn:active .copio-shutter-btn-inner {
+.copio-shutter-btn:active .copio-shutter-btn-inner,
+.copio-shutter-btn:active .copio-shutter-inner {
   transform: scale(0.88);
 }
 
+/* Stacking Thumbnail Counter Pill in Viewfinder */
+.copio-stack-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--copio-touch-target-min);
+  padding: 4px 12px 4px 6px;
+  border-radius: var(--copio-radius-md);
+  background: var(--copio-color-surface-elevated);
+  border: 1px solid var(--copio-color-primary);
+  color: var(--copio-color-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copio-stack-thumb {
+  width: 30px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: #000;
+}
+
 /* Workbench & Filmstrip (Shadow Part: workbench) */
-.copio-workbench {
+.copio-workbench,
+.copio-workbench-stage {
   position: relative;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  background: var(--copio-color-stage-bg);
+  background: var(--copio-color-bg);
   overflow: hidden;
   min-height: 0;
+  width: 100%;
 }
 
-.copio-stage-canvas {
+.copio-workbench-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.copio-stage-canvas,
+.copio-canvas-viewport {
+  position: relative;
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 16px 20px 44px 20px;
+  background: var(--copio-color-stage-bg);
+  min-height: 180px;
+}
+
+.copio-canvas-viewport.has-card-switcher {
+  padding-top: 66px;
+}
+
+.copio-canvas-viewport.is-cropping {
+  padding: 74px 26px 26px 26px;
+}
+
+/* Card Side Switcher */
+.copio-card-side-switcher {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--copio-color-surface-overlay, rgba(15, 22, 32, 0.88));
+  border: 1px solid var(--copio-color-border-strong);
+  border-radius: var(--copio-radius-pill);
+  backdrop-filter: blur(8px);
+}
+
+.copio-side-pill {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--copio-color-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  min-height: var(--copio-touch-target-min);
+  min-width: var(--copio-touch-target-min);
+  border-radius: var(--copio-radius-pill);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copio-side-pill[aria-selected="true"] {
+  background: var(--copio-color-primary);
+  color: var(--copio-color-primary-contrast);
+}
+
+.copio-stage-figure {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
-  padding: var(--copio-spacing-sm);
-}
-
-.copio-stage-canvas img {
   max-width: 100%;
   max-height: 100%;
+}
+
+.copio-stage-canvas img,
+.copio-stage-img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   box-shadow: var(--copio-shadow-elevated);
   border-radius: var(--copio-radius-sm);
+  user-select: none;
+}
+
+.copio-edit-state-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.copio-status-chip {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--copio-radius-pill);
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 500;
+  backdrop-filter: blur(6px);
 }
 
 /* ==========================================================================
@@ -555,11 +840,20 @@ export const scannerCss = `
   text-overflow: ellipsis;
 }
 
-.copio-filmstrip {
+.copio-crop-banner-actions {
   display: flex;
   align-items: center;
-  gap: var(--copio-spacing-sm);
-  padding: var(--copio-spacing-sm) var(--copio-spacing-md);
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Filmstrip & Reorder Tray */
+.copio-filmstrip,
+.copio-filmstrip-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
   background: var(--copio-color-surface);
   border-top: 1px solid var(--copio-color-border);
   overflow-x: auto;
@@ -567,18 +861,265 @@ export const scannerCss = `
   flex-shrink: 0;
 }
 
-/* Toolbar (Shadow Part: toolbar) */
-.copio-toolbar {
+.copio-thumb-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: var(--copio-radius-sm);
+  background: var(--copio-color-surface-elevated);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--copio-transition-fast);
+}
+
+.copio-thumb-card[aria-selected="true"] {
+  border-color: var(--copio-color-primary);
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.copio-thumb-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.95);
+}
+
+.copio-thumb-img-wrap {
+  width: 48px;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: var(--copio-spacing-xs);
-  padding: var(--copio-spacing-sm);
+  justify-content: center;
+}
+
+.copio-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.copio-thumb-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--copio-color-text-muted);
+}
+
+.copio-filmstrip-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.copio-add-page-tile {
+  min-width: 60px;
+  height: 82px;
+  padding: 0 8px;
+  flex-shrink: 0;
+  border-radius: var(--copio-radius-sm);
+  border: 1.5px dashed var(--copio-color-border-strong);
+  background: transparent;
+  color: var(--copio-color-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all var(--copio-transition-fast);
+}
+
+.copio-add-page-tile:hover {
+  border-color: var(--copio-color-primary);
+  color: var(--copio-color-primary);
+  background: rgba(56, 189, 248, 0.06);
+}
+
+/* Edit Action Toolbar & Primary Completion Dock */
+.copio-toolbar,
+.copio-controls-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
   background: var(--copio-color-surface);
   border-top: 1px solid var(--copio-color-border);
   min-height: 56px;
   flex-shrink: 0;
-  z-index: 5;
+  z-index: 6;
+}
+
+.copio-edit-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+.copio-edit-toolbar.cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.copio-tool-btn {
+  appearance: none;
+  border: 1px solid var(--copio-color-border);
+  background: var(--copio-color-surface-elevated);
+  color: var(--copio-color-text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  min-height: var(--copio-touch-target-min);
+  min-width: var(--copio-touch-target-min);
+  padding: 4px 6px;
+  border-radius: var(--copio-radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all var(--copio-transition-fast);
+}
+
+.copio-tool-btn:hover:not(:disabled) {
+  border-color: var(--copio-color-border-strong);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.copio-tool-btn[aria-pressed="true"] {
+  background: rgba(56, 189, 248, 0.16);
+  color: var(--copio-color-primary);
+  border-color: var(--copio-color-primary);
+}
+
+.copio-tool-btn.danger {
+  color: #fca5a5;
+}
+
+.copio-tool-btn.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.copio-submit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.copio-submit-btn {
+  flex: 1;
+  min-height: 46px;
+  font-size: 14px;
+}
+
+/* Container-Scoped Toast & Undo Notification */
+.copio-toast-region {
+  position: absolute;
+  bottom: 124px;
+  left: 12px;
+  right: 12px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.copio-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--copio-radius-md);
+  background: #0f172a;
+  color: #f8fafc;
+  border: 1px solid var(--copio-color-primary);
+  box-shadow: var(--copio-shadow-elevated);
+  font-size: 12px;
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+}
+
+.copio-toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--copio-color-primary);
+  transition: width 100ms linear;
+}
+
+.copio-toast-undo-btn {
+  appearance: none;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: var(--copio-touch-target-min);
+  min-width: var(--copio-touch-target-min);
+  padding: 0 12px;
+  border-radius: var(--copio-radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Slide-up OCR Extraction Sheet */
+.copio-ocr-sheet {
+  position: absolute;
+  inset: auto 0 0 0;
+  max-height: 78%;
+  background: var(--copio-color-surface);
+  border-top: 1px solid var(--copio-color-primary);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.65);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 10px;
+}
+
+.copio-ocr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.copio-ocr-textarea {
+  width: 100%;
+  min-height: 130px;
+  flex: 1;
+  resize: none;
+  background: var(--copio-color-bg);
+  color: var(--copio-color-text);
+  border: 1px solid var(--copio-color-border);
+  border-radius: var(--copio-radius-sm);
+  padding: 10px;
+  font-family: var(--copio-font-mono);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 /* Container-Scoped Toast Stack */
@@ -610,11 +1151,55 @@ export const scannerCss = `
 /* Modal Breakpoint: <= 400px */
 @container copio-scanner (max-width: 400px) {
   .copio-header {
-    padding: var(--copio-spacing-xs) var(--copio-spacing-sm);
-    min-height: 48px;
+    padding: 6px 10px;
+    min-height: 52px;
+  }
+  .copio-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .copio-mode-badge {
+    font-size: 10px;
+    padding: 2px 6px;
   }
   .copio-subtitle {
     display: none;
+  }
+  .copio-privacy-pill span.hide-compact {
+    display: none;
+  }
+  .copio-crop-banner-text {
+    display: none;
+  }
+  .copio-crop-banner-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .copio-filmstrip-bar {
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  .copio-thumb-card {
+    width: 52px;
+    padding: 3px;
+  }
+  .copio-thumb-img-wrap {
+    width: 42px;
+    height: 52px;
+  }
+  .copio-filmstrip-actions {
+    gap: 4px;
+  }
+  .copio-add-page-tile {
+    min-width: 52px;
+    height: 70px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .copio-tool-btn {
+    font-size: 10px;
+    padding: 3px 4px;
   }
   .copio-btn {
     padding: 0 8px;
@@ -627,12 +1212,45 @@ export const scannerCss = `
   .copio-header {
     padding: var(--copio-spacing-sm) var(--copio-spacing-md);
   }
+  .copio-tool-btn {
+    flex-direction: row;
+    font-size: 12px;
+    gap: 6px;
+  }
 }
 
 /* Full View Breakpoint: >= 768px */
 @container copio-scanner (min-width: 768px) {
   .copio-header {
     padding: var(--copio-spacing-md) var(--copio-spacing-lg);
+  }
+  .copio-workbench-main {
+    flex-direction: row;
+  }
+  .copio-filmstrip-bar {
+    order: -1;
+    flex-direction: column;
+    width: 168px;
+    height: 100%;
+    border-top: none;
+    border-right: 1px solid var(--copio-color-border);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px;
+  }
+  .copio-thumb-card {
+    width: 100%;
+    padding: 8px;
+  }
+  .copio-thumb-img-wrap {
+    width: 100%;
+    height: 110px;
+  }
+  .copio-filmstrip-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-left: 0;
   }
 }
 `;

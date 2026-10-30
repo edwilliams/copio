@@ -15,6 +15,19 @@ export function randomId() {
 }
 
 export async function fileToBase64(file) {
+  if (typeof createImageBitmap === 'undefined' || typeof document === 'undefined') {
+    if (file && typeof file.arrayBuffer === 'function') {
+      const buf = await file.arrayBuffer();
+      const bufCtor = /** @type {any} */ (globalThis).Buffer;
+      const b64 = typeof bufCtor !== 'undefined'
+        ? bufCtor.from(buf).toString('base64')
+        : btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const mime = file.type || 'image/png';
+      return `data:${mime};base64,${b64}`;
+    }
+    if (typeof file === 'string') return file;
+  }
+
   const bitmap = await createImageBitmap(file);
   const MAX_W = 1654;
   const MAX_H = 2339;

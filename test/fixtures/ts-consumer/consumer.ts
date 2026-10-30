@@ -7,6 +7,14 @@ import {
   IndexedDbStorageAdapter,
   NullOcrAdapter,
   NullPdfAdapter,
+  ImageProcessorPort,
+  Canvas2DAdapter,
+  NullImageProcessorAdapter,
+  SyncPort,
+  NullSyncAdapter,
+  Document as CopioDocument,
+  Page as CopioPage,
+  ScanSession,
   LicenseManager,
   BUILD_DATE,
   VERSION,
@@ -77,3 +85,10 @@ async function testEngine() {
   const fetched = await engine.getDocument(doc.id);
   await engine.deleteDocument(doc.id);
 }
+
+// 6. Test Hexagonal Ports & Domain Models
+const imgProcessor: ImageProcessorPort = new NullImageProcessorAdapter();
+const syncPort: SyncPort = new NullSyncAdapter();
+const domainPage = new CopioPage({ id: 'p1', src: 'data:image/png;base64,...' });
+const domainDoc = new CopioDocument({ id: 'd1', name: 'Receipt', pages: [domainPage] });
+const session = new ScanSession({ mode: 'single', aspect: 'receipt' });
