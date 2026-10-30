@@ -291,7 +291,7 @@ describe('Heavy Module Opt-In & Lazy UI (CPO-042 & CPO-043)', () => {
       dialog.open('doc-1', 'Invoice', [{ id: '1', src: 'data:image/png;base64,sample' }]);
       await dialog.updateComplete;
 
-      expect(dialog.statusMessage).to.equal('Downloading OCR engine (12MB)...');
+      expect(dialog.statusMessage).to.equal('Downloading OCR engine...');
       dialog.close();
     });
 

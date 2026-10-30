@@ -182,11 +182,11 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
     const isFirstPdfLoad = typeof window !== 'undefined' && !window.PDFDocument;
     if (isFirstPdfLoad) {
       if (typeof onProgress === 'function') {
-        onProgress(0, total, 'Downloading PDF engine (PDFKit)...');
+        onProgress(0, total, 'Downloading PDF engine...');
       }
       try {
         downloadToast = await notify.progress({
-          message: 'Downloading PDF engine (PDFKit)...',
+          message: 'Downloading PDF engine...',
           total: 100,
           done: 0,
         });

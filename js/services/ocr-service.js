@@ -96,12 +96,12 @@ export async function getOcrWorker(lang = 'eng', onProgress = null) {
       currentProgressCallback({
         status: 'downloading-engine',
         progress: 0.05,
-        message: 'Downloading OCR engine (12MB)...',
+        message: 'Downloading OCR engine...',
       });
     }
     try {
       downloadToast = await notify.progress({
-        message: 'Downloading OCR engine (12MB)...',
+        message: 'Downloading OCR engine...',
         total: 100,
         done: 0,
       });
