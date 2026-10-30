@@ -28,7 +28,7 @@ const staticFiles = [
   'copio.svg',
 ];
 
-const directoriesToScan = ['css', 'js', 'sdk', 'fonts', 'assets/tessdata'];
+const directoriesToScan = ['css', 'js', 'sdk', 'fonts'];
 
 async function getFilesRecursively(dir) {
   const files = [];
@@ -77,7 +77,15 @@ async function generateFilesToCache() {
     filesToCache.push(
       ...files
         .map((f) => relative(rootDir, f))
-        .filter((p) => !p.split('/').pop().startsWith('.') && !p.endsWith('.d.ts') && !p.endsWith('.d.mts'))
+        .filter((p) => {
+          const filename = p.split('/').pop() || '';
+          if (filename.startsWith('.') || p.endsWith('.d.ts') || p.endsWith('.d.mts')) return false;
+          // Heavy modules are lazy-loaded on demand (CPO-042, CPO-043); do not precache on initial SW install
+          if (p.startsWith('js/lib/tesseract-core') || p.startsWith('assets/tessdata') || p === 'js/lib/pdfkit.js') {
+            return false;
+          }
+          return true;
+        })
         .sort(),
     );
   }

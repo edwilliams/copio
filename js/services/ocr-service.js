@@ -50,12 +50,12 @@ function formatStatusMessage(status, progress = 0) {
   const percent = Math.round((progress || 0) * 100);
   switch (status) {
     case 'loading tesseract core':
-      return 'Loading WebAssembly OCR engine...';
+      return `Downloading OCR engine... ${percent > 0 ? percent + '%' : ''}`.trim();
     case 'initializing tesseract':
       return 'Initializing OCR engine...';
     case 'loading language traineddata':
     case 'loaded language traineddata':
-      return `Loading language data... ${percent > 0 ? percent + '%' : ''}`;
+      return `Loading language data... ${percent > 0 ? percent + '%' : ''}`.trim();
     case 'initializing api':
       return 'Preparing text recognition...';
     case 'recognizing text':
@@ -109,29 +109,34 @@ export async function getOcrWorker(lang = 'eng', onProgress = null) {
   }
 
   let Tesseract;
+  let worker;
   try {
     Tesseract = await loadTesseract();
+    const langPath = getLangPath(lang);
+
+    worker = await Tesseract.createWorker(lang, 1, {
+      workerPath: resolveAssetUrl('js/lib/tesseract-worker.min.js'),
+      corePath: resolveAssetUrl('js/lib/tesseract-core'),
+      langPath,
+      logger: (message) => {
+        if (downloadToast && message.status === 'loading tesseract core') {
+          const p = Math.round((message.progress || 0) * 100);
+          downloadToast.update(p, 100, `Downloading OCR engine... ${p > 0 ? p + '%' : ''}`.trim());
+        }
+        if (currentProgressCallback && typeof currentProgressCallback === 'function') {
+          const readableStatus = formatStatusMessage(message.status, message.progress);
+          currentProgressCallback({
+            status: message.status,
+            progress: typeof message.progress === 'number' ? message.progress : 0,
+            message: readableStatus,
+            raw: message,
+          });
+        }
+      },
+    });
   } finally {
     downloadToast?.close();
   }
-  const langPath = getLangPath(lang);
-
-  const worker = await Tesseract.createWorker(lang, 1, {
-    workerPath: resolveAssetUrl('js/lib/tesseract-worker.min.js'),
-    corePath: resolveAssetUrl('js/lib/tesseract-core'),
-    langPath,
-    logger: (message) => {
-      if (currentProgressCallback && typeof currentProgressCallback === 'function') {
-        const readableStatus = formatStatusMessage(message.status, message.progress);
-        currentProgressCallback({
-          status: message.status,
-          progress: typeof message.progress === 'number' ? message.progress : 0,
-          message: readableStatus,
-          raw: message,
-        });
-      }
-    },
-  });
 
   activeWorker = worker;
   currentWorkerLang = lang;
