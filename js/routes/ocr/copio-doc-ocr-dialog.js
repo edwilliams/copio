@@ -102,7 +102,9 @@ export class CopioDocOcrDialog extends LitElement {
     }
 
     this.step = 'processing';
-    this.statusMessage = 'Starting OCR engine...';
+    this.statusMessage = (typeof window !== 'undefined' && !window.Tesseract)
+      ? 'Downloading OCR engine...'
+      : 'Starting OCR engine...';
     this.isOpen = true;
 
     this.startOcr(lang);

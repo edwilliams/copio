@@ -1,4 +1,4 @@
-const CACHE_NAME = 'copio-cache-v19'; // bump this on every deploy
+const CACHE_NAME = 'copio-cache-v20'; // bump this on every deploy
 
 // --------------------------------------------------------
 // install: fetch files-to-cache.json & cache all listed files
@@ -40,13 +40,24 @@ self.addEventListener('activate', (event) => {
 });
 
 // --------------------------------------------------------
-// fetch: cache-first with fallback to network
+// fetch: cache-first with runtime caching for on-demand assets
 // --------------------------------------------------------
 self.addEventListener('fetch', (event) => {
   if (event.request.url.startsWith(self.location.origin)) {
     event.respondWith(
-      caches.match(event.request, { ignoreSearch: true }).then((response) => {
-        return response || fetch(event.request);
+      caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(event.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return networkResponse;
+        });
       }),
     );
   }

@@ -30,6 +30,8 @@ export class CopioImages extends HTMLElement {
   #abortController = null;
   #createdObjectUrls = new Set();
   #activeCameraStream = null;
+  #ocr = true;
+  #pdf = true;
 
   constructor() {
     super();
@@ -570,10 +572,12 @@ export class CopioImages extends HTMLElement {
                 <sl-icon name="three-dots-vertical"></sl-icon>
               </sl-button>
               <sl-menu>
+                ${this.ocr !== false ? `
                 <sl-menu-item value="ocr">
                   <sl-icon slot="prefix" name="card-text"></sl-icon> Extract Text
                 </sl-menu-item>
                 <sl-divider></sl-divider>
+                ` : ''}
                 <sl-menu-item value="crop">Crop</sl-menu-item>
                 <sl-menu-item value="rotate">Rotate</sl-menu-item>
                 <sl-menu-item value="threshold">
@@ -1031,6 +1035,28 @@ export class CopioImages extends HTMLElement {
     } catch (err) {
       console.error('Failed to import files:', err);
       notify.error('Failed to import files');
+    }
+  }
+
+  get ocr() {
+    return this.#ocr !== false;
+  }
+
+  set ocr(val) {
+    this.#ocr = Boolean(val);
+    if (this.#isInitialized) {
+      this.#renderGrid();
+    }
+  }
+
+  get pdf() {
+    return this.#pdf !== false;
+  }
+
+  set pdf(val) {
+    this.#pdf = Boolean(val);
+    if (this.#isInitialized) {
+      this.#renderGrid();
     }
   }
 

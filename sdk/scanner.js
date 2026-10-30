@@ -49,6 +49,8 @@ export class CopioScanner extends BaseElement {
       'asset-base',
       'license-key',
       'theme',
+      'ocr',
+      'pdf',
     ];
   }
 
@@ -71,6 +73,8 @@ export class CopioScanner extends BaseElement {
       if (this.hasAttribute('max-pages')) opts.maxPages = this.getAttribute('max-pages');
       if (this.hasAttribute('asset-base')) opts.assetBase = this.getAttribute('asset-base');
       if (this.hasAttribute('license-key')) opts.licenseKey = this.getAttribute('license-key');
+      if (this.hasAttribute('ocr')) opts.ocr = this.getAttribute('ocr') !== 'false';
+      if (this.hasAttribute('pdf')) opts.pdf = this.getAttribute('pdf') !== 'false';
     }
     this.#engine = new CopioEngine(opts);
   }
@@ -143,6 +147,8 @@ export class CopioScanner extends BaseElement {
     if (this.hasAttribute && this.hasAttribute('asset-base')) {
       setAssetBase(this.getAttribute('asset-base'));
     }
+
+    this.#updateChildViews();
   }
 
   disconnectedCallback() {
@@ -164,9 +170,11 @@ export class CopioScanner extends BaseElement {
     switch (name) {
       case 'features':
         this.#engine.setFeatures(newValue);
+        this.#updateChildViews();
         break;
       case 'export-formats':
         this.#engine.exportFormats = newValue;
+        this.#updateChildViews();
         break;
       case 'ocr-languages':
         this.#engine.ocrLanguages = newValue;
@@ -180,6 +188,29 @@ export class CopioScanner extends BaseElement {
       case 'license-key':
         this.#engine.licenseKey = newValue;
         break;
+      case 'ocr':
+        this.#engine.ocr = newValue !== 'false';
+        this.#updateChildViews();
+        break;
+      case 'pdf':
+        this.#engine.pdf = newValue !== 'false';
+        this.#updateChildViews();
+        break;
+    }
+  }
+
+  #updateChildViews() {
+    if (typeof this.querySelectorAll !== 'function') return;
+    const roots = [];
+    if (this.shadowRoot) roots.push(this.shadowRoot);
+    roots.push(this);
+
+    for (const root of roots) {
+      const children = root.querySelectorAll('copio-carousel, copio-row, copio-images');
+      for (const child of children) {
+        if ('ocr' in child) /** @type {any} */ (child).ocr = this.ocrEnabled;
+        if ('pdf' in child) /** @type {any} */ (child).pdf = this.pdf;
+      }
     }
   }
 
@@ -258,6 +289,44 @@ export class CopioScanner extends BaseElement {
    */
   hasFeature(featureName) {
     return this.#engine ? this.#engine.hasFeature(featureName) : false;
+  }
+
+  /**
+   * Developer opt-in status for OCR module (CPO-042).
+   * @type {boolean}
+   */
+  get ocrEnabled() {
+    return this.#engine ? this.#engine.ocr : true;
+  }
+
+  set ocrEnabled(val) {
+    const enabled = Boolean(val);
+    if (typeof this.setAttribute === 'function') {
+      this.setAttribute('ocr', enabled ? 'true' : 'false');
+    }
+    if (this.#engine) {
+      this.#engine.ocr = enabled;
+    }
+    this.#updateChildViews();
+  }
+
+  /**
+   * Developer opt-in status for PDF module (CPO-042).
+   * @type {boolean}
+   */
+  get pdf() {
+    return this.#engine ? this.#engine.pdf : true;
+  }
+
+  set pdf(val) {
+    const enabled = Boolean(val);
+    if (typeof this.setAttribute === 'function') {
+      this.setAttribute('pdf', enabled ? 'true' : 'false');
+    }
+    if (this.#engine) {
+      this.#engine.pdf = enabled;
+    }
+    this.#updateChildViews();
   }
 
   /**
@@ -611,6 +680,16 @@ export class CopioScanner extends BaseElement {
       });
       throw err;
     }
+  }
+
+  /**
+   * Run optical character recognition on document pages (alias to .ocr()).
+   * @param {string} [pageId]
+   * @param {Object} [opts]
+   * @returns {Promise<Object>}
+   */
+  async runOcr(pageId = null, opts = {}) {
+    return this.ocr(pageId, opts);
   }
 
   /**

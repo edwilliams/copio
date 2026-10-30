@@ -87,16 +87,29 @@ export {
   createDefaultAdapter,
 } from '../js/adapters/storage/index.js';
 
+// Driven Ports & Adapters (Hexagonal Architecture CPO-042, CPO-045)
+export {
+  OcrPort,
+  NullOcrAdapter,
+  TesseractWasmAdapter,
+} from '../js/adapters/ocr/index.js';
+
+export {
+  PdfPort,
+  NullPdfAdapter,
+  PdfKitAdapter,
+} from '../js/adapters/pdf/index.js';
+
 // Register Default Driven Ports (Hexagonal Architecture)
 import { registerService } from './core.js';
 import * as exportService from '../js/services/export-utils.js';
-import * as ocrService from '../js/services/ocr-service.js';
 import { SyncManager } from '../js/services/sync-service.js';
-import { renderPdfPagesToDataUrls } from '../js/utils/pdf-utils.js';
+import { TesseractWasmAdapter } from '../js/adapters/ocr/tesseract-wasm-adapter.js';
+import { PdfKitAdapter } from '../js/adapters/pdf/pdfkit-adapter.js';
 
 registerService('export', exportService);
-registerService('ocr', ocrService);
+registerService('ocr', new TesseractWasmAdapter());
 registerService('sync', SyncManager);
-registerService('pdf', { renderPdfPagesToDataUrls });
+registerService('pdf', new PdfKitAdapter());
 
 export { registerService, getRegisteredService } from './core.js';

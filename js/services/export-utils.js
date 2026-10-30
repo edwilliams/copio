@@ -178,11 +178,32 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
       });
     }
 
+    let downloadToast = null;
+    const isFirstPdfLoad = typeof window !== 'undefined' && !window.PDFDocument;
+    if (isFirstPdfLoad) {
+      if (typeof onProgress === 'function') {
+        onProgress(0, total, 'Downloading PDF engine...');
+      }
+      try {
+        downloadToast = await notify.progress({
+          message: 'Downloading PDF engine...',
+          total: 100,
+          done: 0,
+        });
+      } catch {}
+    }
+
     const hasMarkdown = pages.some((p) => p.type === 'markdown');
-    const [PDFDocument] = await Promise.all([
-      loadPdfKit(),
-      hasMarkdown ? loadMarked() : Promise.resolve(),
-    ]);
+    let PDFDocument;
+    try {
+      const [loadedPdfDoc] = await Promise.all([
+        loadPdfKit(),
+        hasMarkdown ? loadMarked() : Promise.resolve(),
+      ]);
+      PDFDocument = loadedPdfDoc;
+    } finally {
+      downloadToast?.close();
+    }
 
     const A4_WIDTH = 595.28;
     const A4_HEIGHT = 841.89;
