@@ -443,7 +443,12 @@
             <span class="attr">aspect=</span><span class="val">"receipt"</span>
             <span class="attr">theme=</span><span class="val">"dark"</span><span class="tag">&gt;&lt;/copio-scanner&gt;</span>
           </div>
-          <span class="host-dims-pill" id="active-container-dims">360px × 640px (@container ≤400px)</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="host-dims-pill" id="active-container-dims">360px × 640px (@container ≤400px)</span>
+            <button type="button" class="seg-btn" id="btn-load-sample" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-border);" title="Load a generated sample document into the scanner">
+              ✨ Sample
+            </button>
+          </div>
         </div>
 
         <!-- ==================================================================
@@ -894,8 +899,8 @@
       });
     });
 
-    // Wire up simulated camera capture on shutter click in the sandbox
-    scanner.onShutter = async () => {
+    // Optional sample generator button in the sandbox header bar (leaves <copio-scanner> Shutter & Import 100% native for real photos/camera)
+    document.getElementById('btn-load-sample')?.addEventListener('click', async () => {
       const pages = await scanner.getPages();
       let kind = 'receipt';
       let filename = 'receipt.png';
@@ -913,8 +918,7 @@
       const dataUrl = generateDocumentDataUrl(kind);
       const file = await dataUrlToFile(dataUrl, filename);
       await scanner.addFiles([file]);
-      return true;
-    };
+    });
 
     async function loadScenario(scenarioKey) {
       currentScenario = scenarioKey;

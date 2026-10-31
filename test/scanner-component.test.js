@@ -354,7 +354,8 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
       expect(stageImg).to.exist;
       expect(stageImg.getAttribute('src')).to.be.a('string').and.not.be.empty;
 
-      // Adding a second file in single mode selects the newest page and emits it in scan-complete
+      // Adding a second file in single mode (even with max-pages="1") replaces the existing page and emits it in scan-complete
+      scanner.setAttribute('max-pages', '1');
       let lastComplete = null;
       scanner.addEventListener(COPIO_EVENTS.SCAN_COMPLETE, (e) => {
         lastComplete = e.detail;
@@ -366,9 +367,36 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
 
       expect(scanner.stage).to.equal('workbench');
       const allPages = await scanner.getPages();
+      expect(allPages).to.have.lengthOf(1);
       expect(lastComplete).to.exist;
-      expect(lastComplete.page.id).to.equal(allPages[allPages.length - 1].id);
-      expect(stageImg.getAttribute('src')).to.equal(allPages[allPages.length - 1].src);
+      expect(lastComplete.page.id).to.equal(allPages[0].id);
+      expect(stageImg.getAttribute('src')).to.equal(allPages[0].src);
+    });
+
+    it('allows retaking/uploading a replacement side when max-pages="2" is already full', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('mode', 'single');
+      scanner.setAttribute('aspect', 'card');
+      scanner.setAttribute('max-pages', '2');
+      fixtureContainer.appendChild(scanner);
+
+      const front1 = await createTestImageFile('front-1.png', 160, 100, '#0284c7');
+      const back1 = await createTestImageFile('back-1.png', 160, 100, '#047857');
+      await scanner.addFiles([front1, back1]);
+
+      // Select front side (index 0) and click Retake
+      scanner.shadowRoot.querySelector('#btn-card-front').click();
+      scanner.shadowRoot.querySelector('#btn-retake').click();
+      expect(scanner.stage).to.equal('viewfinder');
+
+      const front2 = await createTestImageFile('front-2.png', 160, 100, '#dc2626');
+      await scanner.addFiles([front2]);
+
+      expect(scanner.stage).to.equal('workbench');
+      const pagesAfter = await scanner.getPages();
+      expect(pagesAfter).to.have.lengthOf(2);
+      expect(pagesAfter[0].name).to.equal('front-2.png');
+      expect(pagesAfter[1].name).to.equal('back-1.png');
     });
 
     it('hides #card-side-switcher for single-side card capture (aspect="card" without max-pages="2")', async () => {

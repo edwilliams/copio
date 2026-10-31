@@ -27,6 +27,7 @@ export class CopioScanner extends BaseElement {
   #stage = 'viewfinder'; // 'viewfinder' | 'workbench'
   #activePageIndex = 0;
   #pageCount = 0;
+  #retaking = false;
   #cropMode = false;
   #draftCrop = null;
   #undoTimer = null;
@@ -436,6 +437,7 @@ export class CopioScanner extends BaseElement {
 
     // Workbench tools
     shadow.getElementById('btn-retake')?.addEventListener('click', () => {
+      this.#retaking = true;
       this.#cropMode = false;
       this.stage = 'viewfinder';
     });
@@ -1387,6 +1389,25 @@ export class CopioScanner extends BaseElement {
 
   async addFiles(files) {
     try {
+      const existingPages = await this.getPages();
+      let replaceIndex = null;
+
+      if (existingPages.length > 0) {
+        if (this.mode === 'single' && this.maxPages <= 1) {
+          // Single-page mode: replace the current page when a new file is uploaded/captured
+          await this.#engine.clear(this.#targetDocId);
+        } else if (this.#retaking || (this.maxPages > 0 && existingPages.length >= this.maxPages)) {
+          // Retaking active page or replacing active slot when at maxPages capacity
+          const targetIdx = Math.min(this.#activePageIndex, existingPages.length - 1);
+          const pageToReplace = existingPages[targetIdx];
+          if (pageToReplace) {
+            replaceIndex = targetIdx;
+            await this.#engine.deletePage(this.#targetDocId, pageToReplace.id);
+          }
+        }
+      }
+      this.#retaking = false;
+
       const newPages = await this.#engine.addFiles(files, this.#targetDocId);
       for (let i = 0; i < newPages.length; i++) {
         this.dispatch(COPIO_EVENTS.PAGE_ADDED, {
@@ -1397,10 +1418,22 @@ export class CopioScanner extends BaseElement {
         });
       }
 
-      const allPages = await this.getPages();
+      let allPages = await this.getPages();
+      if (replaceIndex !== null && newPages.length === 1 && replaceIndex < allPages.length - 1) {
+        const pageIds = allPages.map((p) => p.id);
+        const addedId = pageIds.pop();
+        if (addedId) {
+          pageIds.splice(replaceIndex, 0, addedId);
+          await this.#engine.reorderPages(this.#targetDocId, pageIds);
+          allPages = await this.getPages();
+        }
+      }
+
       this.#pageCount = allPages.length;
       if (newPages.length > 0) {
-        this.#activePageIndex = Math.max(0, allPages.length - 1);
+        this.#activePageIndex = replaceIndex !== null
+          ? Math.min(replaceIndex, Math.max(0, allPages.length - 1))
+          : Math.max(0, allPages.length - 1);
         if (this.mode === 'single') {
           this.#stage = 'workbench';
           if (typeof this.setAttribute === 'function' && this.getAttribute('stage') !== 'workbench') {
@@ -1445,6 +1478,7 @@ export class CopioScanner extends BaseElement {
     this.#stopCameraStream();
     this.#activePageIndex = 0;
     this.#pageCount = 0;
+    this.#retaking = false;
     this.#cropMode = false;
     await this.#engine.clear(this.#targetDocId);
     this.dispatch(COPIO_EVENTS.PAGES_CHANGED, {
