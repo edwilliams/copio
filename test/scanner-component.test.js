@@ -425,7 +425,8 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
       expect(res.status).to.equal(200);
       const html = await res.text();
 
-      expect(html).to.include('./dist/scanner.js');
+      expect(html).to.include("import { COPIO_EVENTS } from './dist/scanner.js'");
+      expect(html).to.include("import { registerService } from './dist/core.js'");
       expect(html).to.include('<copio-scanner');
       expect(html).to.include('data-container-btn="modal"');
       expect(html).to.include('data-container-btn="drawer"');
@@ -437,6 +438,14 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
       expect(html).to.include('data-theme-btn="light"');
       expect(html).to.include('data-theme-btn="brand"');
       expect(html).to.include('id="inspector-drawer"');
+
+      // Verify the ESM modules exported by sdk/scanner.js and sdk/core.js resolve cleanly
+      const scannerMod = await import('../sdk/scanner.js');
+      const coreMod = await import('../sdk/core.js');
+      expect(scannerMod.COPIO_EVENTS).to.be.an('object');
+      expect(scannerMod.COPIO_EVENTS.SCAN_COMPLETE).to.equal('copio:scan-complete');
+      expect(coreMod.COPIO_EVENTS).to.be.an('object');
+      expect(coreMod.registerService).to.be.a('function');
     });
   });
 });
