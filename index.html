@@ -1,60 +1,1006 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover"
-    />
-    <meta
-      name="description"
-      content="Offline first image and document scanner"
-    />
-    <meta property="og:title" content="Copio" />
-    <meta name="theme-color" content="#151F2A" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="icon" href="copio.svg" type="image/svg+xml" />
-    <link rel="icon" href="favicon.ico" sizes="any" />
-    <link rel="stylesheet" href="css/reset.css" />
-    <link rel="stylesheet" href="css/shoelace.css" />
-    <link rel="stylesheet" href="css/container.css" />
-    <link rel="stylesheet" href="css/utils.css" />
-    <link rel="stylesheet" href="css/cropper.css" />
-    <link rel="stylesheet" href="css/main.css" />
-    <title>COPIO</title>
-  </head>
-  <body>
-    <copio-app></copio-app>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Copio SDK — Embeddable Document Scanner Web Component</title>
+  <meta name="description" content="Embeddable, zero-config &lt;copio-scanner&gt; Web Component for mobile document scanning, non-destructive crop/rotate/B&amp;W editing, and client-side OCR." />
+  <meta name="theme-color" content="#0b0f17" />
+  <link rel="icon" type="image/png" href="assets/icons/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg" />
+  <link rel="shortcut icon" href="assets/icons/favicon.ico" />
+  <style>
+    /* ==========================================================================
+       1. SANDBOX SHELL & TOKENS (Outer Host Demo Frame)
+       ========================================================================== */
+    :root {
+      --sandbox-bg: #080b10;
+      --sandbox-surface: #111621;
+      --sandbox-surface-elevated: #192130;
+      --sandbox-border: #243044;
+      --sandbox-text: #f1f5f9;
+      --sandbox-text-muted: #94a3b8;
+      --sandbox-accent: #38bdf8;
+      --sandbox-accent-soft: rgba(56, 189, 248, 0.14);
+      --sandbox-success: #22c55e;
+      --sandbox-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --sandbox-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    }
 
-    <script type="module" src="js/lib/shoelace.js"></script>
-    <script type="module" src="js/core/register-components.js"></script>
-    <script type="module">
-      import { notify } from './js/services/notify.js';
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
 
-      // set to false if testing SW locally
-      // http://192.168.x.x:3000 won't work as only localhost works this SWs or SSL is needed
-      const isDev = window.location.hostname === 'localhost';
-      if (!isDev && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--sandbox-bg);
+      color: var(--sandbox-text);
+      font-family: var(--sandbox-font);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
 
-        // Capture whether a SW was already controlling this page at load time.
-        // If not (fresh install or post-unregister reload), we don't show the toast.
-        const hadController = !!navigator.serviceWorker.controller;
+    .sandbox-layout {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
 
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!hadController) return;
-          notify.info('Update available', {
-            icon: 'arrow-clockwise',
-            duration: Infinity,
-            action: {
-              text: 'Reload',
-              onClick: () => window.location.reload(),
-            },
-          });
-        });
+    /* Top Control Bar */
+    .sandbox-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 18px;
+      background: var(--sandbox-surface);
+      border-bottom: 1px solid var(--sandbox-border);
+      z-index: 20;
+    }
+
+    .sandbox-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sandbox-brand-logo {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35);
+    }
+
+    .sandbox-brand-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+    }
+
+    .sandbox-brand-tag {
+      font-size: 11px;
+      font-family: var(--sandbox-mono);
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--sandbox-accent-soft);
+      color: var(--sandbox-accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .sandbox-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sandbox-text-muted);
+      margin-right: 2px;
+    }
+
+    .seg-group {
+      display: inline-flex;
+      background: var(--sandbox-bg);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--sandbox-border);
+      gap: 2px;
+    }
+
+    .seg-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--sandbox-text-muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 140ms ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .seg-btn:hover {
+      color: var(--sandbox-text);
+    }
+
+    .seg-btn[aria-pressed="true"] {
+      background: var(--sandbox-surface-elevated);
+      color: var(--sandbox-accent);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      font-weight: 600;
+    }
+
+    /* Main Workspace Area */
+    .sandbox-workspace {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(56, 189, 248, 0.06), transparent 60%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px, 24px 24px;
+    }
+
+    .sandbox-stage-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: auto;
+      position: relative;
+    }
+
+    /* Host Mount Code Preview Bar */
+    .host-mount-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(17, 22, 33, 0.85);
+      border: 1px solid var(--sandbox-border);
+      font-family: var(--sandbox-mono);
+      font-size: 11px;
+      color: #cbd5e1;
+      max-width: 100%;
+      backdrop-filter: blur(8px);
+    }
+
+    .host-mount-code {
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .host-mount-code .tag { color: #38bdf8; }
+    .host-mount-code .attr { color: #a5b4fc; }
+    .host-mount-code .val { color: #86efac; }
+
+    .host-dims-pill {
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--sandbox-text-muted);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    /* ==========================================================================
+       2. HOST CONTAINER FRAME (<copio-scanner> Mount Boundary)
+       Strictly uses CSS Container Queries (`container-type: size`)
+       ========================================================================== */
+    .host-container-frame {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      border-radius: 14px;
+      border: 1px solid var(--sandbox-border);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+      overflow: hidden;
+      transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1), height 240ms cubic-bezier(0.22, 1, 0.36, 1);
+      background: #0b0f17;
+    }
+
+    .host-container-frame[data-container="modal"] {
+      width: 360px;
+      height: 640px;
+    }
+
+    .host-container-frame[data-container="drawer"] {
+      width: 480px;
+      height: 800px;
+      max-height: calc(100% - 48px);
+    }
+
+    .host-container-frame[data-container="full"] {
+      width: 100%;
+      height: 100%;
+      max-width: 1160px;
+      max-height: calc(100% - 48px);
+    }
+
+    .host-container-frame copio-scanner {
+      width: 100%;
+      height: 100%;
+      flex: 1;
+    }
+
+    /* ==========================================================================
+       3. RIGHT SLIDE-OUT EVENT & TOKEN INSPECTOR DRAWER
+       ========================================================================== */
+    .inspector-drawer {
+      width: 350px;
+      background: var(--sandbox-surface);
+      border-left: 1px solid var(--sandbox-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 15;
+      transition: margin-right 220ms ease;
+    }
+
+    .inspector-drawer.collapsed {
+      margin-right: -350px;
+    }
+
+    .inspector-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--sandbox-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .inspector-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sandbox-text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .inspector-section {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--sandbox-border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .inspector-log-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-family: var(--sandbox-mono);
+      font-size: 11px;
+    }
+
+    .event-card {
+      background: var(--sandbox-bg);
+      border: 1px solid var(--sandbox-border);
+      border-left: 3px solid var(--sandbox-accent);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .event-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: var(--sandbox-accent);
+      font-weight: 700;
+    }
+
+    .event-card-pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #cbd5e1;
+      max-height: 220px;
+      overflow-y: auto;
+      font-size: 10.5px;
+      line-height: 1.45;
+    }
+
+    .token-pill-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-family: var(--sandbox-mono);
+      font-size: 10px;
+    }
+
+    .token-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      background: var(--sandbox-bg);
+      border: 1px solid var(--sandbox-border);
+      border-radius: 4px;
+      color: #cbd5e1;
+    }
+
+    .token-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="sandbox-layout">
+    <!-- Top Sandbox Control Bar -->
+    <header class="sandbox-topbar">
+      <div class="sandbox-brand">
+        <div class="sandbox-brand-logo">C</div>
+        <div>
+          <div class="sandbox-brand-title">Copio SDK Sandbox</div>
+        </div>
+        <span class="sandbox-brand-tag">&lt;copio-scanner&gt; · @container</span>
+      </div>
+
+      <div class="sandbox-controls">
+        <!-- Container Footprint Switcher -->
+        <div class="control-group" role="group" aria-label="Container Size">
+          <span class="control-label">Container</span>
+          <div class="seg-group">
+            <button type="button" class="seg-btn" data-container-btn="modal" aria-pressed="true">
+              360×640 Modal
+            </button>
+            <button type="button" class="seg-btn" data-container-btn="drawer" aria-pressed="false">
+              480×800 Sidebar
+            </button>
+            <button type="button" class="seg-btn" data-container-btn="full" aria-pressed="false">
+              100% Full View
+            </button>
+          </div>
+        </div>
+
+        <!-- Commercial Scenario Switcher -->
+        <div class="control-group" role="group" aria-label="Commercial Scenario">
+          <span class="control-label">Scenario</span>
+          <div class="seg-group">
+            <button type="button" class="seg-btn" data-scenario-btn="receipt" aria-pressed="true">
+              1. Single Receipt
+            </button>
+            <button type="button" class="seg-btn" data-scenario-btn="card" aria-pressed="false">
+              2. ID Card (Front/Back)
+            </button>
+            <button type="button" class="seg-btn" data-scenario-btn="invoice" aria-pressed="false">
+              3. Batch Invoice (3p)
+            </button>
+          </div>
+        </div>
+
+        <!-- Theme Switcher -->
+        <div class="control-group" role="group" aria-label="Theme">
+          <span class="control-label">Theme</span>
+          <div class="seg-group">
+            <button type="button" class="seg-btn" data-theme-btn="dark" aria-pressed="true">Dark</button>
+            <button type="button" class="seg-btn" data-theme-btn="light" aria-pressed="false">Light</button>
+            <button type="button" class="seg-btn" data-theme-btn="brand" aria-pressed="false">Emerald</button>
+          </div>
+        </div>
+
+        <!-- Inspector Toggle -->
+        <button type="button" class="seg-btn" id="toggle-inspector-btn" aria-pressed="true" style="border: 1px solid var(--sandbox-border);">
+          Inspector <span id="event-count-badge" class="sandbox-brand-tag" style="margin-left:4px;">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Interactive Workspace -->
+    <div class="sandbox-workspace">
+      <div class="sandbox-stage-center">
+        <!-- Host Mount Code Preview Bar -->
+        <div class="host-mount-bar">
+          <div class="host-mount-code" id="mount-code-preview">
+            <span class="tag">&lt;copio-scanner</span>
+            <span class="attr">mode=</span><span class="val">"single"</span>
+            <span class="attr">aspect=</span><span class="val">"receipt"</span>
+            <span class="attr">theme=</span><span class="val">"dark"</span><span class="tag">&gt;&lt;/copio-scanner&gt;</span>
+          </div>
+          <span class="host-dims-pill" id="active-container-dims">360px × 640px (@container ≤400px)</span>
+        </div>
+
+        <!-- ==================================================================
+             THE HOST CONTAINER FRAME (<copio-scanner> Live Custom Element)
+             ================================================================== -->
+        <div
+          id="host-container-frame"
+          class="host-container-frame"
+          data-container="modal"
+        >
+          <copio-scanner
+            id="live-scanner"
+            mode="single"
+            aspect="receipt"
+            theme="dark"
+          ></copio-scanner>
+        </div>
+      </div>
+
+      <!-- Right Slide-Out Event & CSS Token Inspector Drawer -->
+      <aside class="inspector-drawer" id="inspector-drawer" aria-label="SDK Event & Token Inspector">
+        <div class="inspector-header">
+          <div class="inspector-title">
+            <span>⚡ SDK Event &amp; Token Inspector</span>
+          </div>
+          <button type="button" class="seg-btn" id="clear-events-btn" style="font-size:11px; padding:2px 6px;">Clear</button>
+        </div>
+
+        <div class="inspector-section">
+          <div class="control-label">Active CSS Custom Properties &amp; ::part()</div>
+          <div class="token-pill-grid" id="token-inspector-grid">
+            <div class="token-pill"><span class="token-swatch" id="swatch-bg" style="background:#0b0f17"></span>--copio-color-bg</div>
+            <div class="token-pill"><span class="token-swatch" id="swatch-surface" style="background:#131b26"></span>--copio-color-surface</div>
+            <div class="token-pill"><span class="token-swatch" id="swatch-primary" style="background:#38bdf8"></span>--copio-color-primary</div>
+            <div class="token-pill"><span class="token-swatch" id="swatch-success" style="background:#22c55e"></span>--copio-color-success</div>
+          </div>
+          <div style="font-size:10px; color:var(--sandbox-text-muted); font-family:var(--sandbox-mono);">
+            Shadow Parts: <code>::part(header)</code>, <code>::part(viewfinder)</code>, <code>::part(shutter-dock)</code>, <code>::part(workbench)</code>, <code>::part(toolbar)</code>
+          </div>
+        </div>
+
+        <div class="inspector-header" style="border-top:none;">
+          <div class="inspector-title">Dispatched CustomEvents</div>
+        </div>
+        <div class="inspector-log-list" id="event-log-list">
+          <div style="color:var(--sandbox-text-muted); font-size:11px;">
+            Interact with the scanner or click <strong>✓ Use Photo / Complete Scan</strong> to inspect the unified <code>copio:scan-complete</code> payload.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script type="module">
+    import './dist/scanner.js';
+    import { registerService, COPIO_EVENTS } from './dist/core.js';
+    import * as ocrService from './dist/ocr.js';
+    import * as exportService from './dist/export.js';
+
+    // Register optional OCR & PDF/Export ports so workbench OCR and exports work out-of-the-box
+    registerService('ocr', ocrService);
+    registerService('pdf', exportService);
+    registerService('export', exportService);
+
+    // Unregister any legacy PWA service workers so copio.netlify.app always serves fresh SDK assets
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const reg of registrations) {
+          reg.unregister();
+        }
+      }).catch(() => {});
+    }
+
+    const SCENARIOS = {
+      receipt: {
+        id: 'receipt',
+        title: 'Expense Receipt Capture',
+        mode: 'single',
+        aspect: 'receipt',
+        maxPages: 1,
+      },
+      card: {
+        id: 'card',
+        title: 'ID Card Verification (Front & Back)',
+        mode: 'single',
+        aspect: 'card',
+        maxPages: 2,
+      },
+      invoice: {
+        id: 'invoice',
+        title: 'Multi-Page Vendor Invoice',
+        mode: 'batch',
+        aspect: 'a4',
+        maxPages: 0,
+      },
+    };
+
+    const THEME_SWATCHES = {
+      dark: { bg: '#0b0f17', surface: '#131b26', primary: '#38bdf8', success: '#22c55e' },
+      light: { bg: '#f8fafc', surface: '#ffffff', primary: '#0284c7', success: '#16a34a' },
+      brand: { bg: '#0f111a', surface: '#181b28', primary: '#10b981', success: '#10b981' },
+    };
+
+    const documentCache = new Map();
+
+    function generateDocumentDataUrl(kind) {
+      if (documentCache.has(kind)) return documentCache.get(kind);
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (kind === 'receipt') {
+        canvas.width = 480;
+        canvas.height = 880;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#fdfefc';
+        ctx.fillRect(36, 28, 408, 824);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 24px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('NORDIC COFFEE ROASTERS', 240, 82);
+
+        ctx.font = '14px monospace';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('412 Market St · San Francisco, CA', 240, 108);
+        ctx.fillText('Tel: (415) 555-0194 · Reg #04', 240, 128);
+
+        ctx.strokeStyle = '#94a3b8';
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(64, 150);
+        ctx.lineTo(416, 150);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '15px monospace';
+        const items = [
+          ['1x Cortado Oat Milk', '$5.25'],
+          ['2x Cardamom Kouign-Amann', '$11.50'],
+          ['1x Whole Bean Ethiopia 250g', '$21.00'],
+          ['1x Sparkling Mineral Water', '$3.75'],
+        ];
+        let y = 190;
+        for (const [name, price] of items) {
+          ctx.textAlign = 'left';
+          ctx.fillText(name, 64, y);
+          ctx.textAlign = 'right';
+          ctx.fillText(price, 416, y);
+          y += 38;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(64, y + 10);
+        ctx.lineTo(416, y + 10);
+        ctx.stroke();
+
+        y += 45;
+        ctx.font = '15px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('Subtotal', 64, y);
+        ctx.textAlign = 'right';
+        ctx.fillText('$41.50', 416, y);
+
+        y += 30;
+        ctx.textAlign = 'left';
+        ctx.fillText('CA Sales Tax (8.625%)', 64, y);
+        ctx.textAlign = 'right';
+        ctx.fillText('$3.58', 416, y);
+
+        y += 44;
+        ctx.font = 'bold 22px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('TOTAL PAID', 64, y);
+        ctx.textAlign = 'right';
+        ctx.fillText('$45.08', 416, y);
+
+        y += 55;
+        ctx.font = '13px monospace';
+        ctx.fillStyle = '#334155';
+        ctx.textAlign = 'left';
+        ctx.fillText('VISA CONTACTLESS **** 4821', 64, y);
+        ctx.fillText('AUTH CODE: 89412C · AID: A0000000031010', 64, y + 24);
+        ctx.fillText('DATE: 2026-04-12 09:42:18 PST', 64, y + 48);
+
+        y += 105;
+        ctx.fillStyle = '#0f172a';
+        for (let x = 84; x < 396; x += (x % 3 === 0 ? 6 : 4)) {
+          ctx.fillRect(x, y, x % 2 === 0 ? 3 : 1.5, 54);
+        }
+        ctx.textAlign = 'center';
+        ctx.font = '12px monospace';
+        ctx.fillText('RCP-2026-0412-88419', 240, y + 74);
+      } else if (kind === 'card-front' || kind === 'card-back') {
+        canvas.width = 680;
+        canvas.height = 440;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = kind === 'card-front' ? '#f0f9ff' : '#f8fafc';
+        ctx.beginPath();
+        ctx.roundRect(36, 32, 608, 376, 20);
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#bae6fd';
+        ctx.stroke();
+
+        if (kind === 'card-front') {
+          ctx.fillStyle = '#0369a1';
+          ctx.beginPath();
+          ctx.roundRect(36, 32, 608, 68, [20, 20, 0, 0]);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 20px sans-serif';
+          ctx.fillText('REPUBLIC OF CASCADIA · DRIVER LICENSE', 64, 74);
+
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(64, 128, 150, 190);
+          ctx.fillStyle = '#64748b';
+          ctx.beginPath();
+          ctx.arc(139, 195, 36, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(139, 295, 58, Math.PI, 0);
+          ctx.fill();
+
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 18px monospace';
+          ctx.fillText('DL NO: C948-2041-8839', 242, 152);
+          ctx.font = 'bold 22px sans-serif';
+          ctx.fillText('MORGAN, ELENA CLAIRE', 242, 190);
+
+          ctx.font = '15px sans-serif';
+          ctx.fillStyle = '#334155';
+          ctx.fillText('742 EVERGREEN TERRACE, APT 4B', 242, 222);
+          ctx.fillText('PORTLAND, OR 97205', 242, 244);
+
+          ctx.font = 'bold 14px monospace';
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText('DOB: 1991-08-19    EXP: 2030-08-19', 242, 286);
+          ctx.fillText('CLASS: C           ISS: 2025-08-19', 242, 312);
+          ctx.fillText('SEX: F   HGT: 5\'-07"   EYES: BLU', 242, 338);
+        } else {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(36, 68, 608, 56);
+
+          ctx.fillStyle = '#0f172a';
+          for (let y = 152; y < 224; y += 6) {
+            for (let x = 68; x < 612; x += 12) {
+              if ((x + y) % 18 !== 0) {
+                ctx.fillRect(x, y, 8, 4);
+              }
+            }
+          }
+
+          ctx.font = '14px monospace';
+          ctx.fillStyle = '#1e293b';
+          ctx.fillText('ENDORSEMENTS: NONE · RESTRICTIONS: CORRECTIVE LENSES', 68, 264);
+          ctx.fillText('DD: 009481029481029481024 · ORGAN DONOR: YES', 68, 290);
+
+          ctx.font = 'bold 17px monospace';
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText('IDUSA94820418839<<<<<<<<<<<<<<', 68, 342);
+          ctx.fillText('9108194F3008198USA<<<<<<<<<<<6', 68, 366);
+          ctx.fillText('MORGAN<<ELENA<CLAIRE<<<<<<<<<<', 68, 390);
+        }
+      } else {
+        const pageNum = Number(kind.split('-')[1] || 1);
+        canvas.width = 560;
+        canvas.height = 780;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(34, 28, 492, 724);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('ACME INDUSTRIAL LOGISTICS INC.', 64, 78);
+
+        ctx.fillStyle = '#0284c7';
+        ctx.font = 'bold 15px monospace';
+        ctx.fillText(`COMMERCIAL INVOICE #INV-2026-0892 · PAGE ${pageNum} OF 3`, 64, 108);
+
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(64, 126);
+        ctx.lineTo(496, 126);
+        ctx.stroke();
+
+        ctx.fillStyle = '#334155';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('BILL TO: Horizon Manufacturing Corp · 880 Harbor Blvd', 64, 156);
+        ctx.fillText('TERMS: Net 30 Days · PO NUMBER: PO-99412-B', 64, 178);
+
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(64, 204, 432, 32);
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px monospace';
+        ctx.fillText('SKU / DESCRIPTION                     QTY     AMOUNT', 76, 225);
+
+        const rowsByPage = {
+          1: [
+            ['CNC-4401  Precision Linear Rail 1200mm', '12', '$2,880.00'],
+            ['SRV-8820  Brushless Servo Motor 750W', '6', '$3,240.00'],
+            ['PLC-1040  Safety Relay Controller Mod', '4', '$1,680.00'],
+            ['CAB-0092  Shielded Encoder Harness 5m', '18', '$990.00'],
+          ],
+          2: [
+            ['PNU-3102  High-Speed Solenoid Valve', '24', '$2,160.00'],
+            ['SEN-7741  Photoelectric Proximity Sensor', '30', '$1,950.00'],
+            ['FRM-5002  Anodized Extrusion Frame Kit', '2', '$1,420.00'],
+            ['lbr-0010  Factory Calibration & QA Cert', '1', '$850.00'],
+          ],
+          3: [
+            ['FRT-9001  Insured Freight Pallet Delivery', '1', '$640.00'],
+            ['WAR-3600  3-Year Extended Hardware SLA', '1', '$1,200.00'],
+          ],
+        };
+
+        let y = 268;
+        ctx.font = '13px monospace';
+        for (const [desc, qty, amt] of rowsByPage[pageNum] || rowsByPage[1]) {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText(desc, 72, y);
+          ctx.fillText(qty, 378, y);
+          ctx.fillText(amt, 422, y);
+          y += 44;
+        }
+
+        if (pageNum === 3) {
+          ctx.strokeStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.moveTo(64, 460);
+          ctx.lineTo(496, 460);
+          ctx.stroke();
+
+          ctx.font = 'bold 18px monospace';
+          ctx.fillText('GRAND TOTAL DUE (USD):           $17,010.00', 72, 502);
+          ctx.font = '13px monospace';
+          ctx.fillStyle = '#15803d';
+          ctx.fillText('STATUS: APPROVED FOR WIRE SETTLEMENT', 72, 540);
+        }
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px monospace';
+        ctx.fillText(`Page ${pageNum} of 3 · SHA256: 9f86d081884c7d659a2feaa0c55ad015`, 64, 718);
       }
-    </script>
-  </body>
+
+      const url = canvas.toDataURL('image/png');
+      documentCache.set(kind, url);
+      return url;
+    }
+
+    async function dataUrlToFile(dataUrl, filename) {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      return new File([blob], filename, { type: 'image/png' });
+    }
+
+    const hostFrame = document.getElementById('host-container-frame');
+    const scanner = document.getElementById('live-scanner');
+    const mountCodePreview = document.getElementById('mount-code-preview');
+    const activeContainerDims = document.getElementById('active-container-dims');
+    const eventLogList = document.getElementById('event-log-list');
+    const eventCountBadge = document.getElementById('event-count-badge');
+    const inspectorDrawer = document.getElementById('inspector-drawer');
+
+    let currentContainer = 'modal';
+    let currentScenario = 'receipt';
+    let currentTheme = 'dark';
+    let eventCounter = 0;
+    let inspectorOpen = true;
+
+    function updateMountBarUi() {
+      const scenarioCfg = SCENARIOS[currentScenario];
+      const maxAttr = scenarioCfg.maxPages > 0 ? ` <span class="attr">max-pages=</span><span class="val">"${scenarioCfg.maxPages}"</span>` : '';
+      mountCodePreview.innerHTML =
+        `<span class="tag">&lt;copio-scanner</span> ` +
+        `<span class="attr">mode=</span><span class="val">"${scenarioCfg.mode}"</span> ` +
+        `<span class="attr">aspect=</span><span class="val">"${scenarioCfg.aspect}"</span>` +
+        maxAttr +
+        ` <span class="attr">theme=</span><span class="val">"${currentTheme}"</span>` +
+        `<span class="tag">&gt;&lt;/copio-scanner&gt;</span>`;
+
+      const dimsMap = {
+        modal: '360px × 640px (@container ≤400px)',
+        drawer: '480px × 800px (@container 401..767px)',
+        full: '100% Full View (@container ≥768px)',
+      };
+      activeContainerDims.textContent = dimsMap[currentContainer];
+
+      const swatches = THEME_SWATCHES[currentTheme] || THEME_SWATCHES.dark;
+      document.getElementById('swatch-bg').style.background = swatches.bg;
+      document.getElementById('swatch-surface').style.background = swatches.surface;
+      document.getElementById('swatch-primary').style.background = swatches.primary;
+      document.getElementById('swatch-success').style.background = swatches.success;
+    }
+
+    function logCustomEvent(eventName, detail) {
+      if (eventCounter === 0) {
+        eventLogList.innerHTML = '';
+      }
+      eventCounter += 1;
+      eventCountBadge.textContent = String(eventCounter);
+
+      // Summarize large base64 strings for readable inspection
+      const sanitized = JSON.parse(JSON.stringify(detail, (key, value) => {
+        if ((key === 'src' || key === 'originalSrc') && typeof value === 'string' && value.length > 48) {
+          return `${value.slice(0, 32)}... (${value.length} chars)`;
+        }
+        return value;
+      }));
+
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      const time = new Date().toLocaleTimeString([], { hour12: false });
+      card.innerHTML = `
+        <div class="event-card-head">
+          <span>${eventName}</span>
+          <span style="color:var(--sandbox-text-muted); font-weight:400;">${time}</span>
+        </div>
+        <pre class="event-card-pre">${JSON.stringify(sanitized, null, 2)}</pre>
+      `;
+      eventLogList.prepend(card);
+    }
+
+    // Listen to real CustomEvents emitted by <copio-scanner>
+    [
+      COPIO_EVENTS.SCAN_COMPLETE,
+      COPIO_EVENTS.PAGE_ADDED,
+      COPIO_EVENTS.PAGE_REMOVED,
+      COPIO_EVENTS.OCR_COMPLETE,
+      COPIO_EVENTS.EXPORT_COMPLETE,
+      COPIO_EVENTS.ERROR,
+    ].forEach((evtName) => {
+      scanner.addEventListener(evtName, (e) => {
+        logCustomEvent(evtName, e.detail);
+      });
+    });
+
+    // Wire up simulated camera capture on shutter click in the sandbox
+    scanner.onShutter = async () => {
+      const pages = await scanner.getPages();
+      let kind = 'receipt';
+      let filename = 'receipt.png';
+
+      if (currentScenario === 'card') {
+        const isBack = pages.length === 1;
+        kind = isBack ? 'card-back' : 'card-front';
+        filename = isBack ? 'id-card-back.png' : 'id-card-front.png';
+      } else if (currentScenario === 'invoice') {
+        const nextNum = (pages.length % 3) + 1;
+        kind = `invoice-${nextNum}`;
+        filename = `invoice-page-${nextNum}.png`;
+      }
+
+      const dataUrl = generateDocumentDataUrl(kind);
+      const file = await dataUrlToFile(dataUrl, filename);
+      await scanner.addFiles([file]);
+      return true;
+    };
+
+    async function loadScenario(scenarioKey) {
+      currentScenario = scenarioKey;
+      const cfg = SCENARIOS[scenarioKey];
+
+      await scanner.clear();
+      scanner.setAttribute('mode', cfg.mode);
+      scanner.setAttribute('aspect', cfg.aspect);
+      if (cfg.maxPages > 0) {
+        scanner.setAttribute('max-pages', String(cfg.maxPages));
+      } else {
+        scanner.removeAttribute('max-pages');
+      }
+
+      updateMountBarUi();
+
+      // Seed scenario with realistic sample document(s) and open workbench preview
+      if (scenarioKey === 'receipt') {
+        const file = await dataUrlToFile(generateDocumentDataUrl('receipt'), 'receipt.png');
+        await scanner.addFiles([file]);
+        scanner.stage = 'workbench';
+      } else if (scenarioKey === 'card') {
+        const front = await dataUrlToFile(generateDocumentDataUrl('card-front'), 'id-card-front.png');
+        const back = await dataUrlToFile(generateDocumentDataUrl('card-back'), 'id-card-back.png');
+        await scanner.addFiles([front, back]);
+        scanner.stage = 'workbench';
+      } else if (scenarioKey === 'invoice') {
+        const p1 = await dataUrlToFile(generateDocumentDataUrl('invoice-1'), 'invoice-page-1.png');
+        const p2 = await dataUrlToFile(generateDocumentDataUrl('invoice-2'), 'invoice-page-2.png');
+        const p3 = await dataUrlToFile(generateDocumentDataUrl('invoice-3'), 'invoice-page-3.png');
+        await scanner.addFiles([p1, p2, p3]);
+        scanner.stage = 'workbench';
+      }
+    }
+
+    // Container Footprint Switcher
+    document.querySelectorAll('[data-container-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentContainer = btn.getAttribute('data-container-btn');
+        hostFrame.setAttribute('data-container', currentContainer);
+        document.querySelectorAll('[data-container-btn]').forEach((b) => {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        updateMountBarUi();
+      });
+    });
+
+    // Commercial Scenario Switcher
+    document.querySelectorAll('[data-scenario-btn]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const scenarioKey = btn.getAttribute('data-scenario-btn');
+        document.querySelectorAll('[data-scenario-btn]').forEach((b) => {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        await loadScenario(scenarioKey);
+      });
+    });
+
+    // Theme Switcher
+    document.querySelectorAll('[data-theme-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentTheme = btn.getAttribute('data-theme-btn');
+        scanner.setAttribute('theme', currentTheme);
+        document.querySelectorAll('[data-theme-btn]').forEach((b) => {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        updateMountBarUi();
+      });
+    });
+
+    // Inspector Drawer Toggle & Clear
+    const toggleInspectorBtn = document.getElementById('toggle-inspector-btn');
+    toggleInspectorBtn.addEventListener('click', () => {
+      inspectorOpen = !inspectorOpen;
+      toggleInspectorBtn.setAttribute('aria-pressed', String(inspectorOpen));
+      inspectorDrawer.classList.toggle('collapsed', !inspectorOpen);
+    });
+
+    document.getElementById('clear-events-btn').addEventListener('click', () => {
+      eventCounter = 0;
+      eventCountBadge.textContent = '0';
+      eventLogList.innerHTML = `<div style="color:var(--sandbox-text-muted); font-size:11px;">Event log cleared.</div>`;
+    });
+
+    // Initialize default scenario
+    loadScenario('receipt');
+  </script>
+</body>
 </html>

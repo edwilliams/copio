@@ -334,4 +334,109 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
       expect(scannerB.stage).to.equal('viewfinder');
     });
   });
+
+  describe('CPO-041: Workbench Preview CSS, Single-Mode Transition & Netlify Sandbox Showcase', () => {
+    it('automatically transitions to workbench and populates #stage-img src when addFiles() is called in single mode', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('mode', 'single');
+      scanner.setAttribute('aspect', 'receipt');
+      fixtureContainer.appendChild(scanner);
+
+      expect(scanner.stage).to.equal('viewfinder');
+
+      const file1 = await createTestImageFile('receipt-1.png', 120, 200, '#0284c7');
+      await scanner.addFiles([file1]);
+
+      expect(scanner.stage).to.equal('workbench');
+      expect(scanner.getAttribute('stage')).to.equal('workbench');
+
+      const stageImg = scanner.shadowRoot.querySelector('#stage-img');
+      expect(stageImg).to.exist;
+      expect(stageImg.getAttribute('src')).to.be.a('string').and.not.be.empty;
+
+      // Adding a second file in single mode selects the newest page and emits it in scan-complete
+      let lastComplete = null;
+      scanner.addEventListener(COPIO_EVENTS.SCAN_COMPLETE, (e) => {
+        lastComplete = e.detail;
+      });
+
+      scanner.stage = 'viewfinder';
+      const file2 = await createTestImageFile('receipt-2.png', 120, 200, '#16a34a');
+      await scanner.addFiles([file2]);
+
+      expect(scanner.stage).to.equal('workbench');
+      const allPages = await scanner.getPages();
+      expect(lastComplete).to.exist;
+      expect(lastComplete.page.id).to.equal(allPages[allPages.length - 1].id);
+      expect(stageImg.getAttribute('src')).to.equal(allPages[allPages.length - 1].src);
+    });
+
+    it('hides #card-side-switcher for single-side card capture (aspect="card" without max-pages="2")', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('mode', 'single');
+      scanner.setAttribute('aspect', 'card');
+      fixtureContainer.appendChild(scanner);
+
+      const cardFile = await createTestImageFile('business-card.png', 160, 100, '#0f172a');
+      await scanner.addFiles([cardFile]);
+
+      const cardSwitcher = scanner.shadowRoot.querySelector('#card-side-switcher');
+      expect(cardSwitcher).to.exist;
+      expect(cardSwitcher.style.display).to.equal('none');
+    });
+
+    it('applies workbench preview, filmstrip, and toolbar layout styles inside Shadow DOM', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.style.width = '360px';
+      scanner.style.height = '640px';
+      scanner.setAttribute('mode', 'single');
+      fixtureContainer.appendChild(scanner);
+
+      const file = await createTestImageFile('tall-receipt.png', 300, 600, '#2563eb');
+      await scanner.addFiles([file]);
+
+      const wrapper = scanner.shadowRoot.querySelector('.copio-canvas-wrapper');
+      const stageImg = scanner.shadowRoot.querySelector('.copio-stage-image');
+      const thumbContainer = scanner.shadowRoot.querySelector('.copio-thumb-container');
+      const toolbarTools = scanner.shadowRoot.querySelector('.copio-toolbar-tools');
+
+      expect(wrapper).to.exist;
+      expect(stageImg).to.exist;
+      expect(thumbContainer).to.exist;
+      expect(toolbarTools).to.exist;
+
+      const wrapperStyle = window.getComputedStyle(wrapper);
+      expect(wrapperStyle.display).to.equal('flex');
+      expect(wrapperStyle.maxWidth).to.equal('100%');
+      expect(wrapperStyle.maxHeight).to.equal('100%');
+
+      const imgStyle = window.getComputedStyle(stageImg);
+      expect(imgStyle.objectFit).to.equal('contain');
+      expect(imgStyle.maxWidth).to.equal('100%');
+      expect(imgStyle.maxHeight).to.equal('100%');
+
+      const thumbStyle = window.getComputedStyle(thumbContainer);
+      expect(thumbStyle.width).to.equal('56px');
+      expect(thumbStyle.height).to.equal('70px');
+    });
+
+    it('serves the interactive <copio-scanner> container-query sandbox on root index.html importing ./dist/scanner.js', async () => {
+      const res = await fetch('/index.html');
+      expect(res.status).to.equal(200);
+      const html = await res.text();
+
+      expect(html).to.include('./dist/scanner.js');
+      expect(html).to.include('<copio-scanner');
+      expect(html).to.include('data-container-btn="modal"');
+      expect(html).to.include('data-container-btn="drawer"');
+      expect(html).to.include('data-container-btn="full"');
+      expect(html).to.include('data-scenario-btn="receipt"');
+      expect(html).to.include('data-scenario-btn="card"');
+      expect(html).to.include('data-scenario-btn="invoice"');
+      expect(html).to.include('data-theme-btn="dark"');
+      expect(html).to.include('data-theme-btn="light"');
+      expect(html).to.include('data-theme-btn="brand"');
+      expect(html).to.include('id="inspector-drawer"');
+    });
+  });
 });

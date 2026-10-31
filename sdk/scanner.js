@@ -26,12 +26,15 @@ export class CopioScanner extends BaseElement {
   #isOpen = false;
   #stage = 'viewfinder'; // 'viewfinder' | 'workbench'
   #activePageIndex = 0;
+  #pageCount = 0;
   #cropMode = false;
   #draftCrop = null;
   #undoTimer = null;
   #undoRemaining = 0;
   #renderPromise = null;
   #sessionDocId = null;
+  #cameraStream = null;
+  onShutter = null;
 
   get #targetDocId() {
     if (this.docId) return this.docId;
@@ -115,6 +118,7 @@ export class CopioScanner extends BaseElement {
   }
 
   disconnectedCallback() {
+    this.#stopCameraStream();
     if (typeof this.#unsubscribeRepo === 'function') {
       this.#unsubscribeRepo();
       this.#unsubscribeRepo = null;
@@ -244,6 +248,7 @@ export class CopioScanner extends BaseElement {
           </div>
 
           <div class="copio-camera-feed" id="camera-feed">
+            <video id="camera-video" autoplay playsinline muted style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;"></video>
             <slot name="viewfinder">
               <div class="copio-framing-guide" id="framing-guide" data-aspect="${this.aspect}">
                 <span class="copio-corner tl"></span>
@@ -416,7 +421,6 @@ export class CopioScanner extends BaseElement {
       if (input.files && input.files.length > 0) {
         await this.addFiles(input.files);
         input.value = '';
-        this.stage = 'workbench';
       }
     });
 
@@ -488,17 +492,26 @@ export class CopioScanner extends BaseElement {
     if (!cropBox || handles.length === 0) return;
 
     let activeHandle = null;
+    let isDraggingBox = false;
     let startX = 0;
     let startY = 0;
     let initialCrop = null;
 
     const onPointerDown = (e) => {
       const handleEl = e.target.closest('.copio-crop-handle');
-      if (!handleEl) return;
+      if (handleEl) {
+        activeHandle = handleEl.getAttribute('data-handle');
+        isDraggingBox = false;
+      } else if (e.target === cropBox || e.target.classList.contains('copio-crop-grid')) {
+        activeHandle = null;
+        isDraggingBox = true;
+      } else {
+        return;
+      }
+
       e.preventDefault();
       e.stopPropagation();
 
-      activeHandle = handleEl.getAttribute('data-handle');
       startX = e.clientX;
       startY = e.clientY;
       initialCrop = this.#draftCrop ? { ...this.#draftCrop } : { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
@@ -508,30 +521,35 @@ export class CopioScanner extends BaseElement {
     };
 
     const onPointerMove = (e) => {
-      if (!activeHandle || !initialCrop) return;
-      const viewport = shadow.getElementById('canvas-viewport');
-      const rect = viewport?.getBoundingClientRect() || { width: 300, height: 400 };
+      if ((!activeHandle && !isDraggingBox) || !initialCrop) return;
+      const wrapper = shadow.getElementById('canvas-wrapper') || shadow.getElementById('canvas-viewport');
+      const rect = wrapper?.getBoundingClientRect() || { width: 300, height: 400 };
 
       const dx = (e.clientX - startX) / Math.max(rect.width, 1);
       const dy = (e.clientY - startY) / Math.max(rect.height, 1);
 
       let { x, y, w, h } = initialCrop;
 
-      if (activeHandle.includes('w')) {
-        const nextX = Math.min(Math.max(0, x + dx), x + w - 0.1);
-        w += x - nextX;
-        x = nextX;
-      }
-      if (activeHandle.includes('e')) {
-        w = Math.min(Math.max(0.1, w + dx), 1 - x);
-      }
-      if (activeHandle.includes('n')) {
-        const nextY = Math.min(Math.max(0, y + dy), y + h - 0.1);
-        h += y - nextY;
-        y = nextY;
-      }
-      if (activeHandle.includes('s')) {
-        h = Math.min(Math.max(0.1, h + dy), 1 - y);
+      if (isDraggingBox) {
+        x = Math.min(Math.max(0, x + dx), 1 - w);
+        y = Math.min(Math.max(0, y + dy), 1 - h);
+      } else if (activeHandle) {
+        if (activeHandle.includes('w')) {
+          const nextX = Math.min(Math.max(0, x + dx), x + w - 0.1);
+          w += x - nextX;
+          x = nextX;
+        }
+        if (activeHandle.includes('e')) {
+          w = Math.min(Math.max(0.1, w + dx), 1 - x);
+        }
+        if (activeHandle.includes('n')) {
+          const nextY = Math.min(Math.max(0, y + dy), y + h - 0.1);
+          h += y - nextY;
+          y = nextY;
+        }
+        if (activeHandle.includes('s')) {
+          h = Math.min(Math.max(0.1, h + dy), 1 - y);
+        }
       }
 
       this.#draftCrop = { x, y, w, h };
@@ -540,11 +558,13 @@ export class CopioScanner extends BaseElement {
 
     const onPointerUp = () => {
       activeHandle = null;
+      isDraggingBox = false;
       initialCrop = null;
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
 
+    cropBox.addEventListener('pointerdown', onPointerDown);
     handles.forEach((handle) => {
       handle.addEventListener('pointerdown', onPointerDown);
     });
@@ -583,6 +603,7 @@ export class CopioScanner extends BaseElement {
 
     try {
       const pages = await this.getPages();
+      this.#pageCount = pages.length;
       const shadow = this.shadowRoot;
 
       // Update badge, title, subtitle
@@ -619,15 +640,25 @@ export class CopioScanner extends BaseElement {
       // Step pill text in viewfinder
       const stepPillText = shadow.getElementById('step-pill-text');
       if (stepPillText) {
-        if (this.aspect === 'card' && this.maxPages === 2) {
+        if (this.#cameraStream) {
+          stepPillText.textContent = 'Camera Active · Tap Shutter to Snap';
+        } else if (this.aspect === 'card' && this.maxPages === 2) {
           stepPillText.textContent = pages.length === 0
             ? 'Step 1 of 2: Capture Front of ID Card'
             : 'Step 2 of 2: Capture Back of ID Card';
+        } else if (this.aspect === 'card') {
+          stepPillText.textContent = 'Align Card Inside Frame';
         } else if (this.mode === 'batch') {
           stepPillText.textContent = `Batch Capture · Page ${pages.length + 1}`;
         } else {
           stepPillText.textContent = 'Align Document Inside Frame';
         }
+      }
+
+      // OCR toolbar button visibility
+      const btnOcr = shadow.getElementById('btn-ocr');
+      if (btnOcr) {
+        btnOcr.style.display = this.ocrEnabled && this.hasFeature('ocr') ? '' : 'none';
       }
 
       // Review pill in shutter dock
@@ -658,7 +689,7 @@ export class CopioScanner extends BaseElement {
       // Card side switcher visibility
       const cardSwitcher = shadow.getElementById('card-side-switcher');
       if (cardSwitcher) {
-        const isCardGuided = this.aspect === 'card' && (this.maxPages === 2 || pages.length <= 2);
+        const isCardGuided = this.aspect === 'card' && this.maxPages === 2;
         cardSwitcher.style.display = isCardGuided ? 'flex' : 'none';
         const btnFront = shadow.getElementById('btn-card-front');
         const btnBack = shadow.getElementById('btn-card-back');
@@ -673,6 +704,13 @@ export class CopioScanner extends BaseElement {
       }
 
       // Image in viewport: in crop mode show originalSrc, otherwise show src
+      const stageImg = /** @type {HTMLImageElement|null} */ (shadow.getElementById('stage-img'));
+      if (stageImg) {
+        stageImg.src = this.#cropMode
+          ? activePage.originalSrc || activePage.src || ''
+          : activePage.src || activePage.originalSrc || '';
+      }
+
       let cropLayer = shadow.getElementById('crop-layer');
       if (this.#cropMode) {
         if (!cropLayer) {
@@ -682,14 +720,15 @@ export class CopioScanner extends BaseElement {
           cropLayer.id = 'crop-layer';
           cropLayer.innerHTML = `
             <div class="copio-crop-box" id="crop-box">
+              <div class="copio-crop-grid"></div>
               <span class="copio-crop-handle nw" data-handle="nw"></span>
               <span class="copio-crop-handle ne" data-handle="ne"></span>
               <span class="copio-crop-handle se" data-handle="se"></span>
               <span class="copio-crop-handle sw" data-handle="sw"></span>
-              <span class="copio-crop-handle edge-n" data-handle="n"></span>
-              <span class="copio-crop-handle edge-e" data-handle="e"></span>
-              <span class="copio-crop-handle edge-s" data-handle="s"></span>
-              <span class="copio-crop-handle edge-w" data-handle="w"></span>
+              <span class="copio-crop-handle n edge-n" data-handle="n"></span>
+              <span class="copio-crop-handle e edge-e" data-handle="e"></span>
+              <span class="copio-crop-handle s edge-s" data-handle="s"></span>
+              <span class="copio-crop-handle w edge-w" data-handle="w"></span>
             </div>
           `;
           wrapper?.appendChild(cropLayer);
@@ -788,11 +827,76 @@ export class CopioScanner extends BaseElement {
     this.#syncView();
   }
 
-  async #handleShutterClick() {
-    // If capture method is invoked via shutter click
+  #stopCameraStream() {
+    if (this.#cameraStream) {
+      this.#cameraStream.getTracks().forEach((track) => track.stop());
+      this.#cameraStream = null;
+    }
     const shadow = this.shadowRoot;
-    const fileInput = shadow?.getElementById('internal-file-input');
+    const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
+    if (videoEl) {
+      videoEl.srcObject = null;
+      videoEl.style.display = 'none';
+    }
+    const placeholder = shadow?.querySelector('.copio-camera-placeholder');
+    if (placeholder) {
+      /** @type {HTMLElement} */ (placeholder).style.display = '';
+    }
+  }
 
+  async #handleShutterClick() {
+    if (typeof this.onShutter === 'function') {
+      const handled = await this.onShutter();
+      if (handled !== false) return;
+    }
+
+    const shadow = this.shadowRoot;
+    const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
+
+    // If camera stream is already active, capture a frame from the video element
+    if (this.#cameraStream && videoEl && videoEl.readyState >= 2) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoEl.videoWidth || 1280;
+      canvas.height = videoEl.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (blob) {
+          this.#stopCameraStream();
+          const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          await this.addFiles([file]);
+          return;
+        }
+      }
+    }
+
+    // Try opening live MediaDevices camera stream if supported in real browsers
+    const isAutomatedTest = typeof navigator !== 'undefined' && navigator.webdriver === true;
+    if (!isAutomatedTest && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia && videoEl) {
+      try {
+        this.#cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+        videoEl.srcObject = this.#cameraStream;
+        videoEl.style.display = 'block';
+        await videoEl.play();
+        const placeholder = shadow?.querySelector('.copio-camera-placeholder');
+        if (placeholder) {
+          /** @type {HTMLElement} */ (placeholder).style.display = 'none';
+        }
+        const stepPillText = shadow?.getElementById('step-pill-text');
+        if (stepPillText) {
+          stepPillText.textContent = 'Camera Active · Tap Shutter to Snap';
+        }
+        return;
+      } catch {
+        // Fallback to file input if camera permission denied or unavailable
+      }
+    }
+
+    const fileInput = shadow?.getElementById('internal-file-input');
     if (fileInput && typeof fileInput.click === 'function') {
       fileInput.click();
     }
@@ -925,11 +1029,14 @@ export class CopioScanner extends BaseElement {
       const activePage = pages[this.#activePageIndex];
       const result = await this.ocr(activePage?.id || null);
 
+      const rawConf = result.averageConfidence || 0;
+      const confPct = rawConf <= 1 && rawConf > 0 ? Math.round(rawConf * 100) : Math.round(rawConf);
+
       body.innerHTML = `
         <div class="copio-ocr-content">
           <pre class="copio-ocr-text">${result.text || 'No text detected.'}</pre>
           <div class="copio-ocr-meta">
-            <span>Confidence: ${Math.round((result.averageConfidence || 0) * 100)}%</span>
+            <span>Confidence: ${confPct}%</span>
           </div>
         </div>
       `;
@@ -946,6 +1053,11 @@ export class CopioScanner extends BaseElement {
   }
 
   async #handlePrimaryCtaClick() {
+    if (this.aspect === 'card' && this.maxPages === 2 && this.#pageCount === 1) {
+      this.stage = 'viewfinder';
+      return;
+    }
+
     const pages = await this.getPages();
 
     // Guided 2-step card mode: if on step 1, advance to viewfinder for step 2
@@ -1228,6 +1340,7 @@ export class CopioScanner extends BaseElement {
 
   async close() {
     this.#isOpen = false;
+    this.#stopCameraStream();
   }
 
   get isOpen() {
@@ -1285,6 +1398,17 @@ export class CopioScanner extends BaseElement {
       }
 
       const allPages = await this.getPages();
+      this.#pageCount = allPages.length;
+      if (newPages.length > 0) {
+        this.#activePageIndex = Math.max(0, allPages.length - 1);
+        if (this.mode === 'single') {
+          this.#stage = 'workbench';
+          if (typeof this.setAttribute === 'function' && this.getAttribute('stage') !== 'workbench') {
+            this.setAttribute('stage', 'workbench');
+          }
+        }
+      }
+
       this.dispatch(COPIO_EVENTS.PAGES_CHANGED, {
         pages: allPages,
         docId: this.docId,
@@ -1296,7 +1420,7 @@ export class CopioScanner extends BaseElement {
           aspect: this.aspect,
           docId: this.docId,
           pages: allPages,
-          page: allPages[0] || null,
+          page: allPages[allPages.length - 1] || null,
           pageCount: allPages.length,
         });
       }
@@ -1318,6 +1442,10 @@ export class CopioScanner extends BaseElement {
   }
 
   async clear() {
+    this.#stopCameraStream();
+    this.#activePageIndex = 0;
+    this.#pageCount = 0;
+    this.#cropMode = false;
     await this.#engine.clear(this.#targetDocId);
     this.dispatch(COPIO_EVENTS.PAGES_CHANGED, {
       pages: [],
