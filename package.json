@@ -76,7 +76,6 @@
     "build": "npm run build --prefix scripts/bundle",
     "build:sdk": "node scripts/build-sdk.mjs",
     "build:types": "node scripts/build-types.mjs",
-    "export:cards": "node scripts/export-cards.mjs",
     "lint": "oxlint",
     "typecheck": "node scripts/sync-vendor-types.mjs && tsc --noEmit",
     "prepare": "node scripts/sync-vendor-types.mjs",
