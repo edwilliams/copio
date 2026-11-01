@@ -7,13 +7,14 @@ import { LicenseManager } from '../sdk/license.js';
 import { BUILD_DATE, VERSION } from '../sdk/version.js';
 
 describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
-  it('exports CopioScanner and LicenseManager named exports from SDK root', () => {
+  it('exports CopioScanner and LicenseManager named exports from SDK root', async () => {
     expect(SDK.CopioScanner).to.be.a('function');
     expect(SDK.LicenseManager).to.be.a('function');
     expect(SDK.CopioEngine).to.be.a('function');
     expect(SDK.MemoryStorageAdapter).to.be.a('function');
     expect(SDK.BUILD_DATE).to.be.a('string');
-    expect(SDK.VERSION).to.equal('0.1.0');
+    const pkg = await fetch('/package.json').then((r) => r.json());
+    expect(SDK.VERSION).to.equal(pkg.version);
   });
 
   it('exports headless domain and storage adapters from @copio/sdk/core', async () => {
@@ -84,10 +85,11 @@ describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
     expect(Sync.getIceServers).to.be.a('function');
   });
 
-  it('injects build date and version', () => {
+  it('injects build date and version', async () => {
     expect(BUILD_DATE).to.be.a('string');
     expect(new Date(BUILD_DATE).getTime()).to.be.greaterThan(0);
-    expect(VERSION).to.equal('0.1.0');
+    const pkg = await fetch('/package.json').then((r) => r.json());
+    expect(VERSION).to.equal(pkg.version);
   });
 
   it('defines package.json types and customElements manifest entries (CPO-063)', async () => {

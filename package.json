@@ -1,6 +1,6 @@
 {
   "name": "@copio/sdk",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Embeddable Web Components and Headless Services for Document Scanning, OCR, Editing, and P2P Sync.",
   "type": "module",
   "main": "./dist/index.js",
@@ -36,10 +36,13 @@
     "./styles/*": "./css/*"
   },
   "files": [
-    "dist",
+    "dist/*.js",
+    "dist/*.d.ts",
+    "dist/*.json",
+    "dist/adapters",
+    "dist/types",
     "sdk",
-    "css",
-    "assets"
+    "css"
   ],
   "sideEffects": [
     "dist/cdn.js",
@@ -47,6 +50,28 @@
     "sdk/scanner.js",
     "*.css"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/edwilliams/copio.git"
+  },
+  "homepage": "https://copio.netlify.app",
+  "keywords": [
+    "copio",
+    "scanner",
+    "web-components",
+    "camera",
+    "ocr",
+    "pdf",
+    "document-scanner",
+    "crop",
+    "image-processing",
+    "pwa"
+  ],
+  "author": "Ed Williams",
+  "license": "AGPL-3.0",
   "scripts": {
     "build": "npm run build --prefix scripts/bundle",
     "build:sdk": "node scripts/build-sdk.mjs",
@@ -54,7 +79,7 @@
     "export:cards": "node scripts/export-cards.mjs",
     "lint": "oxlint",
     "typecheck": "node scripts/sync-vendor-types.mjs && tsc --noEmit",
-    "postinstall": "node scripts/sync-vendor-types.mjs",
+    "prepare": "node scripts/sync-vendor-types.mjs",
     "check:size": "node scripts/check-bundle-size.mjs",
     "check:consumer": "tsc -p test/fixtures/ts-consumer/tsconfig.json",
     "check:ci": "npm run lint && npm run typecheck && npm run build:sdk && npm run check:size && npm run check:consumer && npm test",
