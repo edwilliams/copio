@@ -958,3 +958,4 @@ export {
   BUILD_DATE,
   VERSION,
 };
+export { COPIO_EVENTS, dispatchCopioEvent } from './events.js';

@@ -6,10 +6,6 @@
  */
 
 export const scannerCss = `
-/* ==========================================================================
-   1. HOST RESET & BOUNDARY ENCAPSULATION
-   all: initial isolates inherited typography, line-height, text-align, etc.
-   ========================================================================== */
 :host {
   all: initial;
   display: block;
@@ -26,37 +22,25 @@ export const scannerCss = `
   direction: ltr;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /* Typography Design Tokens */
   --copio-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --copio-font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-
-  /* Surface & Background Tokens (Default Dark) */
   --copio-color-bg: #0b0f17;
   --copio-color-surface: #131b26;
   --copio-color-surface-elevated: #1c2736;
   --copio-color-surface-overlay: rgba(15, 22, 32, 0.88);
   --copio-color-stage-bg: #070a0f;
-
-  /* Text & Iconography Tokens */
   --copio-color-text: #f1f5f9;
   --copio-color-text-muted: #94a3b8;
   --copio-color-text-inverse: #090d14;
-
-  /* Brand & Semantic Accent Tokens */
   --copio-color-primary: #38bdf8;
   --copio-color-primary-hover: #7dd3fc;
   --copio-color-primary-contrast: #06131f;
   --copio-color-success: #22c55e;
   --copio-color-warning: #f59e0b;
   --copio-color-danger: #ef4444;
-
-  /* Borders, Dividers & Focus Rings */
   --copio-color-border: rgba(148, 163, 184, 0.18);
   --copio-color-border-strong: rgba(148, 163, 184, 0.34);
   --copio-focus-ring: 0 0 0 2px #0b0f17, 0 0 0 4px #38bdf8;
-
-  /* Geometry, Spacing & Touch Ergonomics (>=44px touch targets) */
   --copio-radius-sm: 6px;
   --copio-radius-md: 10px;
   --copio-radius-lg: 14px;
@@ -72,8 +56,6 @@ export const scannerCss = `
   --copio-shadow-elevated: 0 12px 32px -4px rgba(0, 0, 0, 0.55);
   --copio-transition-fast: 150ms cubic-bezier(0.22, 1, 0.36, 1);
   --copio-transition-normal: 240ms cubic-bezier(0.22, 1, 0.36, 1);
-
-  /* Shoelace Theme Mapping */
   --sl-font-sans: var(--copio-font-family);
   --sl-font-mono: var(--copio-font-mono);
   --sl-color-primary-50: #f0f9ff;
@@ -87,7 +69,6 @@ export const scannerCss = `
   --sl-color-primary-800: #075985;
   --sl-color-primary-900: #0c4a6e;
   --sl-color-primary-950: #082f49;
-
   font-family: var(--copio-font-family);
   font-size: 14px;
   line-height: 1.5;
@@ -96,33 +77,11 @@ export const scannerCss = `
   color-scheme: dark;
 }
 
-/* Explicit Dark Theme Override */
 :host([theme="dark"]),
 :host(.copio-theme-dark),
 :host-context([data-theme="dark"]),
 :host-context(.sl-theme-dark),
 :host-context(.theme-dark) {
-  --copio-color-bg: #0b0f17;
-  --copio-color-surface: #131b26;
-  --copio-color-surface-elevated: #1c2736;
-  --copio-color-surface-overlay: rgba(15, 22, 32, 0.88);
-  --copio-color-stage-bg: #070a0f;
-  --copio-color-text: #f1f5f9;
-  --copio-color-text-muted: #94a3b8;
-  --copio-color-text-inverse: #090d14;
-  --copio-color-primary: #38bdf8;
-  --copio-color-primary-hover: #7dd3fc;
-  --copio-color-primary-contrast: #06131f;
-  --copio-color-success: #22c55e;
-  --copio-color-warning: #f59e0b;
-  --copio-color-danger: #ef4444;
-  --copio-color-border: rgba(148, 163, 184, 0.18);
-  --copio-color-border-strong: rgba(148, 163, 184, 0.34);
-  --copio-focus-ring: 0 0 0 2px #0b0f17, 0 0 0 4px #38bdf8;
-  --copio-radius-sm: 6px;
-  --copio-radius-md: 10px;
-  --copio-radius-lg: 14px;
-  --copio-shadow-elevated: 0 12px 32px -4px rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
 
@@ -475,6 +434,40 @@ export const scannerCss = `
 .copio-corner.bl { bottom: 6px; left: 6px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 6px; }
 .copio-corner.br { bottom: 6px; right: 6px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 6px; }
 
+.copio-edge-quad {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.04);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.copio-camera-placeholder {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+  color: var(--copio-color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.copio-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--copio-color-primary);
+  box-shadow: 0 0 8px var(--copio-color-primary);
+  flex-shrink: 0;
+}
+
 /* Top Viewfinder HUD Overlay (Step Pill + Privacy Assurance Badge) */
 .copio-viewfinder-hud-top {
   position: relative;
@@ -689,7 +682,8 @@ export const scannerCss = `
   color: var(--copio-color-primary-contrast);
 }
 
-.copio-stage-figure {
+.copio-stage-figure,
+.copio-canvas-wrapper {
   position: relative;
   display: flex;
   align-items: center;
@@ -699,7 +693,8 @@ export const scannerCss = `
 }
 
 .copio-stage-canvas img,
-.copio-stage-img {
+.copio-stage-img,
+.copio-stage-image {
   display: block;
   max-width: 100%;
   max-height: 100%;
@@ -711,36 +706,6 @@ export const scannerCss = `
   user-select: none;
 }
 
-.copio-edit-state-bar {
-  position: absolute;
-  bottom: 10px;
-  left: 12px;
-  right: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.copio-status-chip {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--copio-radius-pill);
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  color: #e2e8f0;
-  font-size: 11px;
-  font-weight: 500;
-  backdrop-filter: blur(6px);
-}
-
-/* ==========================================================================
-   NON-DESTRUCTIVE CROP OVERLAY (CPO-025)
-   ========================================================================== */
 .copio-crop-layer {
   position: absolute;
   inset: 0;
@@ -808,44 +773,10 @@ export const scannerCss = `
 .copio-crop-handle.ne { top: -24px; right: -24px; cursor: nesw-resize; }
 .copio-crop-handle.sw { bottom: -24px; left: -24px; cursor: nesw-resize; }
 .copio-crop-handle.se { bottom: -24px; right: -24px; cursor: nwse-resize; }
-.copio-crop-handle.n  { top: -24px; left: calc(50% - 24px); cursor: ns-resize; }
-.copio-crop-handle.s  { bottom: -24px; left: calc(50% - 24px); cursor: ns-resize; }
-.copio-crop-handle.w  { left: -24px; top: calc(50% - 24px); cursor: ew-resize; }
-.copio-crop-handle.e  { right: -24px; top: calc(50% - 24px); cursor: ew-resize; }
-
-/* Crop Sub-Toolbar Banner */
-.copio-crop-banner {
-  position: absolute;
-  top: 8px;
-  left: 12px;
-  right: 12px;
-  z-index: 12;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px;
-  background: var(--copio-color-surface-overlay, rgba(15, 23, 42, 0.94));
-  border: 1px solid var(--copio-color-primary);
-  border-radius: var(--copio-radius-md);
-  box-shadow: var(--copio-shadow-elevated);
-}
-
-.copio-crop-banner-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--copio-color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.copio-crop-banner-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
+.copio-crop-handle.n, .copio-crop-handle.edge-n { top: -24px; left: calc(50% - 24px); cursor: ns-resize; }
+.copio-crop-handle.s, .copio-crop-handle.edge-s { bottom: -24px; left: calc(50% - 24px); cursor: ns-resize; }
+.copio-crop-handle.w, .copio-crop-handle.edge-w { left: -24px; top: calc(50% - 24px); cursor: ew-resize; }
+.copio-crop-handle.e, .copio-crop-handle.edge-e { right: -24px; top: calc(50% - 24px); cursor: ew-resize; }
 
 /* Filmstrip & Reorder Tray */
 .copio-filmstrip,
@@ -861,92 +792,80 @@ export const scannerCss = `
   flex-shrink: 0;
 }
 
-.copio-thumb-card {
-  position: relative;
+.copio-filmstrip-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copio-filmstrip-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 60px;
+  gap: 4px;
   flex-shrink: 0;
-  padding: 4px;
+}
+
+.copio-thumb-container {
+  position: relative;
+  width: 56px;
+  height: 70px;
   border-radius: var(--copio-radius-sm);
-  background: var(--copio-color-surface-elevated);
-  border: 2px solid transparent;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid var(--copio-color-border);
   cursor: pointer;
   transition: all var(--copio-transition-fast);
 }
 
-.copio-thumb-card[aria-selected="true"] {
+.copio-filmstrip-item.is-active .copio-thumb-container {
   border-color: var(--copio-color-primary);
-  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
 }
 
-.copio-thumb-card.dragging {
-  opacity: 0.4;
-  transform: scale(0.95);
-}
-
-.copio-thumb-img-wrap {
-  width: 48px;
-  height: 60px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: #000;
-  display: flex;
+.copio-thumb-num {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.copio-thumb-reorder {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copio-reorder-btn {
+  appearance: none;
+  border: 1px solid var(--copio-color-border);
+  background: var(--copio-color-surface-elevated);
+  color: var(--copio-color-text-muted);
+  border-radius: 4px;
+  font-size: 9px;
+  padding: 2px 5px;
+  cursor: pointer;
+}
+
+.copio-reorder-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .copio-thumb-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.copio-thumb-meta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-top: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--copio-color-text-muted);
-}
-
-.copio-filmstrip-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.copio-add-page-tile {
-  min-width: 60px;
-  height: 82px;
-  padding: 0 8px;
-  flex-shrink: 0;
-  border-radius: var(--copio-radius-sm);
-  border: 1.5px dashed var(--copio-color-border-strong);
-  background: transparent;
-  color: var(--copio-color-text-muted);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: all var(--copio-transition-fast);
-}
-
-.copio-add-page-tile:hover {
-  border-color: var(--copio-color-primary);
-  color: var(--copio-color-primary);
-  background: rgba(56, 189, 248, 0.06);
 }
 
 /* Edit Action Toolbar & Primary Completion Dock */
@@ -963,15 +882,28 @@ export const scannerCss = `
   z-index: 6;
 }
 
-.copio-edit-toolbar {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.copio-edit-toolbar,
+.copio-toolbar-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   width: 100%;
 }
 
-.copio-edit-toolbar.cols-5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+.copio-toolbar-tools .copio-tool-btn {
+  flex: 1 1 56px;
+}
+
+.copio-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.copio-toolbar-actions .copio-btn-primary {
+  width: 100%;
 }
 
 .copio-tool-btn {
@@ -1015,20 +947,6 @@ export const scannerCss = `
   border-color: rgba(239, 68, 68, 0.45);
 }
 
-.copio-submit-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.copio-submit-btn {
-  flex: 1;
-  min-height: 46px;
-  font-size: 14px;
-}
-
-/* Container-Scoped Toast & Undo Notification */
 .copio-toast-region {
   position: absolute;
   bottom: 124px;
@@ -1068,7 +986,8 @@ export const scannerCss = `
   transition: width 100ms linear;
 }
 
-.copio-toast-undo-btn {
+.copio-toast-undo-btn,
+.copio-btn-toast-undo {
   appearance: none;
   border: 1px solid rgba(56, 189, 248, 0.45);
   background: rgba(56, 189, 248, 0.16);
@@ -1082,6 +1001,32 @@ export const scannerCss = `
   border-radius: var(--copio-radius-sm);
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.copio-ocr-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.copio-ocr-text {
+  margin: 0;
+  padding: 10px;
+  max-height: 180px;
+  overflow: auto;
+  background: var(--copio-color-bg);
+  color: var(--copio-color-text);
+  border: 1px solid var(--copio-color-border);
+  border-radius: var(--copio-radius-sm);
+  font-family: var(--copio-font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.copio-ocr-meta {
+  font-size: 11px;
+  color: var(--copio-color-text-muted);
 }
 
 /* Slide-up OCR Extraction Sheet */
@@ -1148,7 +1093,6 @@ export const scannerCss = `
    4. @container BREAKPOINTS (Strictly Container Queries)
    ========================================================================== */
 
-/* Modal Breakpoint: <= 400px */
 @container copio-scanner (max-width: 400px) {
   .copio-header {
     padding: 6px 10px;
@@ -1166,36 +1110,10 @@ export const scannerCss = `
   .copio-subtitle {
     display: none;
   }
-  .copio-privacy-pill span.hide-compact {
-    display: none;
-  }
-  .copio-crop-banner-text {
-    display: none;
-  }
-  .copio-crop-banner-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
+  .copio-filmstrip,
   .copio-filmstrip-bar {
     gap: 6px;
     padding: 6px 8px;
-  }
-  .copio-thumb-card {
-    width: 52px;
-    padding: 3px;
-  }
-  .copio-thumb-img-wrap {
-    width: 42px;
-    height: 52px;
-  }
-  .copio-filmstrip-actions {
-    gap: 4px;
-  }
-  .copio-add-page-tile {
-    min-width: 52px;
-    height: 70px;
-    padding: 0 6px;
-    font-size: 10px;
   }
   .copio-tool-btn {
     font-size: 10px;
@@ -1207,7 +1125,6 @@ export const scannerCss = `
   }
 }
 
-/* Drawer Breakpoint: 401px..767px */
 @container copio-scanner (min-width: 401px) and (max-width: 767px) {
   .copio-header {
     padding: var(--copio-spacing-sm) var(--copio-spacing-md);
@@ -1219,7 +1136,6 @@ export const scannerCss = `
   }
 }
 
-/* Full View Breakpoint: >= 768px */
 @container copio-scanner (min-width: 768px) {
   .copio-header {
     padding: var(--copio-spacing-md) var(--copio-spacing-lg);
@@ -1227,6 +1143,7 @@ export const scannerCss = `
   .copio-workbench-main {
     flex-direction: row;
   }
+  .copio-filmstrip,
   .copio-filmstrip-bar {
     order: -1;
     flex-direction: column;
@@ -1238,19 +1155,27 @@ export const scannerCss = `
     overflow-x: hidden;
     padding: 12px;
   }
-  .copio-thumb-card {
+  .copio-filmstrip-scroll {
+    flex-direction: column;
     width: 100%;
-    padding: 8px;
   }
-  .copio-thumb-img-wrap {
-    width: 100%;
-    height: 110px;
+  .copio-thumb-container {
+    width: 112px;
+    height: 84px;
   }
-  .copio-filmstrip-actions {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-left: 0;
+  .copio-toolbar,
+  .copio-controls-dock {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .copio-toolbar-tools {
+    width: auto;
+    flex: 1;
+  }
+  .copio-toolbar-actions {
+    width: auto;
+    min-width: 200px;
   }
 }
 `;

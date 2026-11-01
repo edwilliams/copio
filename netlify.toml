@@ -1,3 +1,7 @@
+[build]
+  command = "npm run build:sdk"
+  publish = "."
+
 [build.environment]
   GIT_SUBMODULE_STRATEGY = "none"
 
