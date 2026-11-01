@@ -98,5 +98,17 @@ describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
     expect(pkg.exports['./core'].types).to.equal('./dist/types/sdk/core.d.ts');
     expect(pkg.exports['./scanner'].types).to.equal('./dist/types/sdk/scanner.d.ts');
     expect(pkg.exports['./sync'].types).to.equal('./dist/types/sdk/sync.d.ts');
+    expect(pkg.scripts['export:cards']).to.equal('node scripts/export-cards.mjs');
+  });
+
+  it('exports self-contained <copio-scanner> bundle in dist/scanner.js for external consumers (CPO-049)', async () => {
+    const res = await fetch('/dist/scanner.js');
+    expect(res.status).to.equal(200);
+    const content = await res.text();
+    expect(content).to.include('/* @copio/sdk <copio-scanner> Web Component bundle */');
+    // Self-contained bundle should NOT import external chunk-*.js files
+    expect(content).to.not.include('from"./chunk-');
+    expect(content).to.not.include("from './chunk-");
+    expect(content).to.include('copio-scanner');
   });
 });
