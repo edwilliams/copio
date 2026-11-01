@@ -89,7 +89,28 @@ async function buildSdk() {
     metafile: true,
   });
 
-  // 3. Build standalone CDN bundle
+  // 3. Build standalone <copio-scanner> bundle (CPO-049)
+  console.log('🏷️ Generating self-contained <copio-scanner> bundle in dist/scanner.js...');
+  await esbuild.build({
+    entryPoints: {
+      scanner: path.join(rootDir, 'sdk/scanner.js'),
+    },
+    bundle: true,
+    format: 'esm',
+    outfile: path.join(distDir, 'scanner.js'),
+    minify: true,
+    sourcemap: true,
+    target: ['es2022'],
+    banner: {
+      js: '/* @copio/sdk <copio-scanner> Web Component bundle */',
+    },
+    plugins: [browserShimPlugin],
+    define: {
+      __BUILD_DATE__: JSON.stringify(buildDate),
+    },
+  });
+
+  // 4. Build standalone CDN bundle
   console.log('🌐 Generating standalone CDN bundle...');
   await esbuild.build({
     entryPoints: {
@@ -167,6 +188,9 @@ async function buildSdk() {
     const size = (esmResult.metafile.outputs[out].bytes / 1024).toFixed(2);
     console.log(`   - ${out}: ${size} KB`);
   }
+
+  const scannerStat = await stat(path.join(distDir, 'scanner.js'));
+  console.log(`   - dist/scanner.js: ${(scannerStat.size / 1024).toFixed(2)} KB (standalone <copio-scanner> bundle)`);
 
   const cdnStat = await stat(path.join(distDir, 'cdn.js'));
   console.log(`   - dist/cdn.js: ${(cdnStat.size / 1024).toFixed(2)} KB (standalone CDN)`);
