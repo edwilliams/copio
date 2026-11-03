@@ -233,7 +233,7 @@ export async function recognizeImageText(image, options = {}) {
 
 /**
  * Batch recognize text from multiple pages
- * @param {Array<{ id: string, src?: string, type?: string, content?: string, name?: string }>} pages
+ * @param {Array<{ id: string, src?: string, blob?: Blob, type?: string, content?: string, name?: string }>} pages
  * @param {Object} options
  * @param {string} [options.lang='eng']
  * @param {Function} [options.onPageProgress] - ({ pageIndex, totalPages, pageProgress, overallProgress, message })
@@ -242,7 +242,7 @@ export async function recognizeImageText(image, options = {}) {
  */
 export async function recognizeDocumentPages(pages, options = {}) {
   const { lang = 'eng', onPageProgress = null, abortSignal = null } = options;
-  const imagePages = (pages || []).filter((p) => p.type !== 'markdown' && p.src);
+  const imagePages = (pages || []).filter((p) => p.type !== 'markdown' && (p.blob || p.src));
 
   if (imagePages.length === 0) {
     return {
@@ -267,7 +267,7 @@ export async function recognizeDocumentPages(pages, options = {}) {
     const pageNum = i + 1;
     const total = imagePages.length;
 
-    const pageResult = await recognizeImageText(page.src, {
+    const pageResult = await recognizeImageText(page.blob || page.src, {
       lang,
       abortSignal,
       onProgress: (p) => {

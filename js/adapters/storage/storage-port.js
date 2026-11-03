@@ -60,6 +60,19 @@ export class StoragePort {
   }
 
   /**
+   * Renames an existing document.
+   * @param {string} _id
+   * @param {string} _name
+   * @returns {Promise<void>}
+   */
+  async renameDoc(_id, _name) {
+    const doc = await this.getDoc(_id);
+    if (!doc) throw new Error(`Document "${_id}" not found`);
+    doc.name = _name;
+    await this.saveDoc(_id, doc);
+  }
+
+  /**
    * Deletes a document and its associated pages.
    * @param {string} _id
    * @returns {Promise<void>}

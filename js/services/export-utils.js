@@ -255,15 +255,25 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
 
       if (page.type === 'markdown') {
         renderMarkdownToPdf(doc, page.content);
-      } else {
+      } else if (page.src || page.blob) {
         const img = new Image();
+        let objectUrlToRevoke = null;
+        let imgSrc = page.src;
+        if (page.blob instanceof Blob && (!imgSrc || imgSrc instanceof Blob)) {
+          imgSrc = URL.createObjectURL(page.blob);
+          objectUrlToRevoke = imgSrc;
+        } else if (page.src instanceof Blob) {
+          imgSrc = URL.createObjectURL(page.src);
+          objectUrlToRevoke = imgSrc;
+        }
+
         await new Promise((resolve) => {
           img.onload = resolve;
           img.onerror = (err) => {
             console.warn('Page image failed to load for PDF:', err);
             resolve(undefined);
           };
-          img.src = page.src;
+          img.src = imgSrc;
         });
 
         if (img.width && img.height) {
@@ -279,10 +289,36 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
           const x = (A4_WIDTH - scaledWidth) / 2;
           const y = (A4_HEIGHT - scaledHeight) / 2;
 
-          doc.image(page.src, x, y, {
-            width: scaledWidth,
-            height: scaledHeight,
-          });
+          let imageBuffer = null;
+          if (page.blob instanceof Blob) {
+            imageBuffer = await page.blob.arrayBuffer();
+          } else if (page.src instanceof Blob) {
+            imageBuffer = await page.src.arrayBuffer();
+          } else if (typeof page.src === 'string' && page.src.startsWith('blob:')) {
+            try {
+              const resp = await fetch(page.src);
+              const b = await resp.blob();
+              imageBuffer = await b.arrayBuffer();
+            } catch {}
+          }
+
+          if (imageBuffer) {
+            doc.image(imageBuffer, x, y, {
+              width: scaledWidth,
+              height: scaledHeight,
+            });
+          } else {
+            doc.image(imgSrc, x, y, {
+              width: scaledWidth,
+              height: scaledHeight,
+            });
+          }
+        }
+
+        if (objectUrlToRevoke) {
+          try {
+            URL.revokeObjectURL(objectUrlToRevoke);
+          } catch {}
         }
       }
 
@@ -346,27 +382,44 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
     if (pages.length === 1 && pages[0].type !== 'markdown') {
       const page = pages[0];
       let ext = 'jpg';
-      if (page.src.startsWith('data:')) {
-        const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,/);
-        if (match && match[1].includes('png')) ext = 'png';
-      }
-
-      let downloadUrl = page.src;
+      let downloadUrl = '';
       let shouldRevoke = false;
       let exportBlob = null;
 
-      if (!page.src.startsWith('data:') && !page.src.startsWith('blob:')) {
-        const response = await fetch(page.src);
-        exportBlob = await response.blob();
+      if (page.blob instanceof Blob) {
+        exportBlob = page.blob;
+        if (exportBlob.type && exportBlob.type.includes('png')) ext = 'png';
         downloadUrl = URL.createObjectURL(exportBlob);
         shouldRevoke = true;
-      } else if (page.src.startsWith('data:')) {
-        try {
-          const response = await fetch(page.src);
-          exportBlob = await response.blob();
-        } catch {
-          // Fallback if fetch of data URI is restricted
-          exportBlob = new Blob([page.src], { type: `image/${ext}` });
+      } else if (page.src instanceof Blob) {
+        exportBlob = page.src;
+        if (exportBlob.type && exportBlob.type.includes('png')) ext = 'png';
+        downloadUrl = URL.createObjectURL(exportBlob);
+        shouldRevoke = true;
+      } else if (typeof page.src === 'string') {
+        downloadUrl = page.src;
+        if (page.src.startsWith('data:')) {
+          const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+          if (match && match[1].includes('png')) ext = 'png';
+          try {
+            const response = await fetch(page.src);
+            exportBlob = await response.blob();
+          } catch {
+            exportBlob = new Blob([page.src], { type: `image/${ext}` });
+          }
+        } else if (page.src.startsWith('blob:')) {
+          try {
+            const response = await fetch(page.src);
+            exportBlob = await response.blob();
+            if (exportBlob.type && exportBlob.type.includes('png')) ext = 'png';
+          } catch {}
+        } else {
+          try {
+            const response = await fetch(page.src);
+            exportBlob = await response.blob();
+            downloadUrl = URL.createObjectURL(exportBlob);
+            shouldRevoke = true;
+          } catch {}
         }
       }
 
@@ -427,39 +480,48 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
       if (page.type === 'markdown') {
         pageDataUrls = await renderMarkdownToPageDataUrls(page);
       } else {
-        pageDataUrls = [page.src];
+        pageDataUrls = [page.blob || page.src];
       }
 
       const padLen = Math.max(2, String(pages.length * pageDataUrls.length).length);
 
       for (let subIdx = 0; subIdx < pageDataUrls.length; subIdx++) {
-        const dataUrl = pageDataUrls[subIdx];
+        const item = pageDataUrls[subIdx];
         let ext = 'jpg';
-        let base64Data = '';
+        let arrayBuf = null;
 
-        if (dataUrl && dataUrl.startsWith('data:')) {
-          const match = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
+        if (item instanceof Blob) {
+          if (item.type && item.type.includes('png')) ext = 'png';
+          arrayBuf = await item.arrayBuffer();
+        } else if (typeof item === 'string' && item.startsWith('data:')) {
+          const match = item.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
+          let base64Data = '';
           if (match) {
             if (match[1].includes('png')) ext = 'png';
             base64Data = match[2];
           } else {
-            base64Data = dataUrl.replace(/^data:[^;]+;base64,/, '');
+            base64Data = item.replace(/^data:[^;]+;base64,/, '');
           }
-        } else {
-          const response = await fetch(dataUrl);
-          const blob = await response.blob();
-          const arrayBuf = await blob.arrayBuffer();
+          const pageNum = String(exportIdx + 1).padStart(padLen, '0');
+          const fileName = `${safeName}-${pageNum}.${ext}`;
+          zip.file(fileName, base64Data, { base64: true });
+          exportIdx++;
+          continue;
+        } else if (typeof item === 'string') {
+          try {
+            const response = await fetch(item);
+            const blob = await response.blob();
+            if (blob.type && blob.type.includes('png')) ext = 'png';
+            arrayBuf = await blob.arrayBuffer();
+          } catch {}
+        }
+
+        if (arrayBuf) {
           const pageNum = String(exportIdx + 1).padStart(padLen, '0');
           const fileName = `${safeName}-${pageNum}.${ext}`;
           zip.file(fileName, arrayBuf);
           exportIdx++;
-          continue;
         }
-
-        const pageNum = String(exportIdx + 1).padStart(padLen, '0');
-        const fileName = `${safeName}-${pageNum}.${ext}`;
-        zip.file(fileName, base64Data, { base64: true });
-        exportIdx++;
       }
 
       const done = index + 1;

@@ -478,6 +478,16 @@
         </div>
 
         <div class="inspector-section">
+          <div class="control-label">Active Storage Backend</div>
+          <div class="token-pill-grid">
+            <div class="token-pill" id="storage-status-pill">
+              <span class="token-swatch" id="storage-status-swatch" style="background:#22c55e"></span>
+              <span id="storage-status-text">OPFS (Detecting...)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector-section">
           <div class="control-label">Active CSS Custom Properties &amp; ::part()</div>
           <div class="token-pill-grid" id="token-inspector-grid">
             <div class="token-pill"><span class="token-swatch" id="swatch-bg" style="background:#0b0f17"></span>--copio-color-bg</div>
@@ -1002,6 +1012,20 @@
       eventCountBadge.textContent = '0';
       eventLogList.innerHTML = `<div style="color:var(--sandbox-text-muted); font-size:11px;">Event log cleared.</div>`;
     });
+
+    // Detect and display active storage backend in inspector drawer
+    if (scanner.engine?.storage) {
+      scanner.engine.storage.init().then((info) => {
+        const textEl = document.getElementById('storage-status-text');
+        const swatchEl = document.getElementById('storage-status-swatch');
+        if (textEl && info) {
+          textEl.textContent = `${info.kind.toUpperCase()} (${info.persistent ? 'Persisted' : 'Volatile'})`;
+          if (swatchEl) {
+            swatchEl.style.background = info.kind === 'opfs' ? '#22c55e' : '#f59e0b';
+          }
+        }
+      }).catch(() => {});
+    }
 
     // Initialize default scenario
     loadScenario('receipt');

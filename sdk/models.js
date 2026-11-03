@@ -21,8 +21,9 @@ export function normalizeEditStack(edits = {}) {
 
   /** @type {0|90|180|270} */
   let rotate = 0;
-  if (edits && edits.rotate !== undefined) {
-    const r = ((Math.round(Number(edits.rotate) / 90) * 90) % 360 + 360) % 360;
+  const rawRot = edits?.rotate !== undefined ? edits.rotate : edits?.rotation;
+  if (rawRot !== undefined) {
+    const r = ((Math.round(Number(rawRot) / 90) * 90) % 360 + 360) % 360;
     if (r === 90 || r === 180 || r === 270) {
       rotate = /** @type {0|90|180|270} */ (r);
     }
@@ -40,9 +41,10 @@ export function normalizeEditStack(edits = {}) {
  */
 export function hasActiveEdits(edits) {
   if (!edits) return false;
+  const rot = edits.rotate !== undefined ? edits.rotate : edits.rotation;
   return Boolean(
     edits.crop ||
-    (edits.rotate && edits.rotate !== 0) ||
+    (rot && rot !== 0) ||
     (edits.filter && edits.filter !== 'none')
   );
 }

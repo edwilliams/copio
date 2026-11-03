@@ -17,6 +17,8 @@ export class CopioApp extends LitElement {
     docsData: { type: Object, state: true },
     showCarousel: { type: Boolean, state: true },
     syncState: { type: Object, state: true },
+    storageInfo: { type: Object, state: true },
+    _durabilityNoticeDismissed: { type: Boolean, state: true },
   };
 
   createRenderRoot() {
@@ -31,6 +33,12 @@ export class CopioApp extends LitElement {
     this.showCarousel = false;
     this.syncState = null;
     this.hideLoaderTimer = null;
+    this.storageInfo = null;
+    try {
+      this._durabilityNoticeDismissed = localStorage.getItem('copio-durability-notice-dismissed') === 'true';
+    } catch {
+      this._durabilityNoticeDismissed = false;
+    }
 
     // Document repository
     this.docRepo = docRepository;
@@ -78,13 +86,13 @@ export class CopioApp extends LitElement {
       notify.setContainer(this);
     }
 
-    // Load persisted data via repository
-    await this.docRepo.init();
-    await this.#refreshDocs();
-
     this.#unsubscribeRouter = router.onRouteChange((route) => {
       this.#handleRouteChange(route);
     });
+
+    // Load persisted data via repository
+    this.storageInfo = await this.docRepo.init();
+    await this.#refreshDocs();
 
     const peerId = new URLSearchParams(window.location.search).get('peer');
     if (peerId) {
@@ -179,9 +187,14 @@ export class CopioApp extends LitElement {
   }
 
   async #loadEditDoc(id) {
-    const doc = this.docRepo.getDocSync(id) || await this.docRepo.getDoc(id);
-    if (!doc) return;
+    const syncDoc = this.docRepo.getDocSync(id);
     const dialog = this.querySelector('copio-add-edit-dialog');
+    if (syncDoc && (syncDoc.pages.length === 0 || syncDoc.pages.every((p) => p.src))) {
+      if (dialog) await dialog.openEdit(id, syncDoc.name, syncDoc.pages);
+      return;
+    }
+    const doc = await this.docRepo.getDoc(id);
+    if (!doc) return;
     if (dialog) await dialog.openEdit(id, doc.name, doc.pages);
   }
 
@@ -210,6 +223,14 @@ export class CopioApp extends LitElement {
       carousel.docName = doc.name || 'document';
       carousel.images = doc.pages || [];
       this.showCarousel = true;
+    }
+
+    if (typeof this.docRepo.getDoc === 'function') {
+      this.docRepo.getDoc(id).then((asyncDoc) => {
+        if (asyncDoc && this.showCarousel && carousel && carousel.docId === id) {
+          carousel.images = asyncDoc.pages || [];
+        }
+      });
     }
   }
 
@@ -503,6 +524,73 @@ export class CopioApp extends LitElement {
     `;
   }
 
+  handleDismissDurabilityNotice = () => {
+    this._durabilityNoticeDismissed = true;
+    try {
+      localStorage.setItem('copio-durability-notice-dismissed', 'true');
+    } catch {}
+  };
+
+  async handleExportAll() {
+    const docs = await this.docRepo.listDocs();
+    if (!docs || docs.length === 0) {
+      notify.info('No documents to export');
+      return;
+    }
+    for (const d of docs) {
+      const fullDoc = await this.docRepo.getDoc(d.id);
+      if (fullDoc && fullDoc.pages && fullDoc.pages.length > 0) {
+        await exportDocumentAsImages(fullDoc.name, fullDoc.pages, { showProgress: false });
+      }
+    }
+    notify.success('Export completed');
+  }
+
+  renderDurabilityNotice() {
+    if (this._durabilityNoticeDismissed) return '';
+    // Honest condition from CPO-012: fallback adapter (kind !== 'opfs') OR persist not granted (!persistent)
+    const isHonestWarning =
+      this.storageInfo &&
+      (this.storageInfo.kind !== 'opfs' || !this.storageInfo.persistent);
+    if (!isHonestWarning) return '';
+
+    return html`
+      <div class="durability-notice-wrap" style="padding: 8px 16px;">
+        <sl-alert
+          variant="warning"
+          open
+          closable
+          @sl-after-hide=${this.handleDismissDurabilityNotice}
+        >
+          <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+          <span>
+            This browser may delete your documents if storage runs low.
+            <a
+              href="#"
+              @click=${(e) => {
+                e.preventDefault();
+                this.handleExportAll();
+              }}
+              style="color: inherit; text-decoration: underline; font-weight: 600;"
+              >Export</a
+            >
+            or
+            <a
+              href="#"
+              @click=${(e) => {
+                e.preventDefault();
+                this.startSyncAsHost();
+              }}
+              style="color: inherit; text-decoration: underline; font-weight: 600;"
+              >sync</a
+            >
+            important documents to keep a copy.
+          </span>
+        </sl-alert>
+      </div>
+    `;
+  }
+
   render() {
     return html`
       <copio-loader
@@ -514,9 +602,12 @@ export class CopioApp extends LitElement {
         style="display: ${this.showCarousel ? 'none' : 'flex'}"
       >
         <copio-header
+          .storageKind=${this.storageInfo?.kind}
           @header:link-device=${this.startSyncAsHost}
           @header:clear-cache=${this.handleClearCache}
         ></copio-header>
+
+        ${this.renderDurabilityNotice()}
 
         <div id="copio-rows">${this.renderRows()}</div>
 

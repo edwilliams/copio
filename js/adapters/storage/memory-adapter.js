@@ -123,6 +123,19 @@ export class MemoryStorageAdapter extends StoragePort {
   }
 
   /**
+   * Renames a document in memory.
+   * @param {string} id
+   * @param {string} name
+   * @returns {Promise<void>}
+   */
+  async renameDoc(id, name) {
+    const doc = this.#docs.get(id);
+    if (!doc) throw new Error(`Document "${id}" not found`);
+    doc.name = name;
+    this.#notify();
+  }
+
+  /**
    * Saves page data for a document.
    * @param {string} docId
    * @param {string} pageId

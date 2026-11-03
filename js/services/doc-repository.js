@@ -1,4 +1,5 @@
 import { createDefaultAdapter } from '../adapters/storage/index.js';
+import { blobToDataUrl } from '../adapters/storage/indexeddb-adapter.js';
 import { randomId } from '../utils/utils.js';
 
 /**
@@ -127,6 +128,16 @@ export class DocRepository {
    * @returns {Promise<DocWithPages|null>}
    */
   async getDoc(id) {
+    if (!id) return null;
+    if (typeof this.#adapter.getDoc === 'function') {
+      const row = await this.#adapter.getDoc(id);
+      if (!row) return null;
+      return {
+        id: row.id,
+        name: row.name || '',
+        pages: this.#normalizePages(row.pages),
+      };
+    }
     return this.getDocSync(id);
   }
 
@@ -173,6 +184,9 @@ export class DocRepository {
    * @returns {Promise<void>}
    */
   async renameDoc(id, name) {
+    if (typeof this.#adapter.renameDoc === 'function') {
+      return this.#adapter.renameDoc(id, name);
+    }
     const doc = await this.getDoc(id);
     if (!doc) throw new Error(`Document "${id}" not found`);
 
@@ -440,15 +454,55 @@ export class DocRepository {
 
   /**
    * Exports all documents formatted for wire transmission (e.g. P2P sync).
+   * Rehydrates Blobs to Data URLs so they serialize properly over WebRTC.
    * @returns {Promise<Record<string, { name: string, pages: string }>>}
    */
   async exportAll() {
     const docs = await this.listDocs();
     const result = {};
     for (const doc of docs) {
+      const fullDoc = await this.getDoc(doc.id);
+      const wirePages = [];
+
+      for (const page of fullDoc?.pages || []) {
+        if (!page || page.type === 'markdown') {
+          wirePages.push(page);
+          continue;
+        }
+
+        const copy = { ...page };
+        let blob = copy.blob instanceof Blob ? copy.blob : null;
+        if (!blob && typeof copy.src === 'string' && copy.src.startsWith('blob:')) {
+          try {
+            const resp = await fetch(copy.src);
+            blob = await resp.blob();
+          } catch {}
+        }
+
+        if (blob) {
+          copy.src = await blobToDataUrl(blob);
+        }
+
+        let origBlob = copy.originalBlob instanceof Blob ? copy.originalBlob : null;
+        if (!origBlob && typeof copy.originalSrc === 'string' && copy.originalSrc.startsWith('blob:')) {
+          try {
+            const resp = await fetch(copy.originalSrc);
+            origBlob = await resp.blob();
+          } catch {}
+        }
+
+        if (origBlob) {
+          copy.originalSrc = await blobToDataUrl(origBlob);
+        }
+
+        delete copy.blob;
+        delete copy.originalBlob;
+        wirePages.push(copy);
+      }
+
       result[doc.id] = {
         name: doc.name,
-        pages: JSON.stringify(doc.pages),
+        pages: JSON.stringify(wirePages),
       };
     }
     return result;
