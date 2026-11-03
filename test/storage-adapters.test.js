@@ -110,6 +110,56 @@ describe('CPO-033 / CPO-012: StoragePort Adapters Compliance', () => {
         expect(docAfterDelete.pages[0].id).to.equal('page-b');
       });
 
+      if (name !== 'MemoryStorageAdapter') {
+        it('preserves pristine originalSrc and mints new object URLs when edits update page.src', async () => {
+          const docId = 'doc-edit-test-' + Date.now();
+          const canvas = document.createElement('canvas');
+          canvas.width = 50;
+          canvas.height = 50;
+          const initialDataUrl = canvas.toDataURL('image/jpeg');
+
+          // Initial save with clean capture
+          await adapter.saveDoc(docId, {
+            id: docId,
+            name: 'Edit Pipeline Doc',
+            pages: [
+              { id: 'page-1', src: initialDataUrl, type: 'image' },
+            ],
+          });
+
+          const initialDoc = await adapter.getDoc(docId);
+          expect(initialDoc.pages[0].src).to.be.a('string');
+          const initialSrcUrl = initialDoc.pages[0].src;
+          const initialOrigUrl = initialDoc.pages[0].originalSrc;
+          expect(initialOrigUrl).to.be.a('string');
+
+          // Apply simulated edit (e.g. rotation or crop producing a new data URL)
+          canvas.width = 60;
+          canvas.height = 60;
+          const editedDataUrl = canvas.toDataURL('image/png');
+
+          await adapter.saveDoc(docId, {
+            id: docId,
+            name: 'Edit Pipeline Doc',
+            pages: [
+              {
+                id: 'page-1',
+                src: editedDataUrl,
+                originalSrc: initialOrigUrl,
+                edits: { rotate: 90, filter: 'none', crop: null },
+                type: 'image',
+              },
+            ],
+          });
+
+          const updatedDoc = await adapter.getDoc(docId);
+          expect(updatedDoc.pages[0].src).to.be.a('string');
+          expect(updatedDoc.pages[0].src).to.not.equal(initialSrcUrl);
+          expect(updatedDoc.pages[0].originalSrc).to.equal(initialOrigUrl);
+          expect(updatedDoc.pages[0].edits.rotate).to.equal(90);
+        });
+      }
+
       it('notifies subscribers on document changes', async () => {
         let notified = 0;
         const unsubscribe = adapter.subscribe(() => {

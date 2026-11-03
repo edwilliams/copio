@@ -54,6 +54,8 @@ export class IndexedDbStorageAdapter extends StoragePort {
   #isCustom = false;
   #objectUrls = new Set();
   #docObjectUrls = new Map();
+  #pageObjectUrls = new Map();
+  #pageOrigObjectUrls = new Map();
   #activeDocCache = new Map();
 
   /**
@@ -124,6 +126,22 @@ export class IndexedDbStorageAdapter extends StoragePort {
       }
       this.#docObjectUrls.delete(docId);
     }
+    for (const [key, url] of this.#pageObjectUrls.entries()) {
+      if (key.startsWith(`${docId}:`)) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+        this.#pageObjectUrls.delete(key);
+      }
+    }
+    for (const [key, url] of this.#pageOrigObjectUrls.entries()) {
+      if (key.startsWith(`${docId}:`)) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+        this.#pageOrigObjectUrls.delete(key);
+      }
+    }
     this.#activeDocCache.delete(docId);
   }
 
@@ -138,6 +156,8 @@ export class IndexedDbStorageAdapter extends StoragePort {
     }
     this.#objectUrls.clear();
     this.#docObjectUrls.clear();
+    this.#pageObjectUrls.clear();
+    this.#pageOrigObjectUrls.clear();
     this.#activeDocCache.clear();
   }
 
@@ -233,24 +253,33 @@ export class IndexedDbStorageAdapter extends StoragePort {
     const row = this.#store.getRow('docs', id);
     const parsedPages = this.#parsePages(row.pages);
 
-    // Revoke any previous URLs for this document to prevent memory leaks
-    this.revokeDocUrls(id);
-
     const rehydratedPages = await Promise.all(
       parsedPages.map(async (page) => {
         if (!page || page.type === 'markdown') return page;
 
         const copy = { ...page };
+        const pageKey = `${id}:${page.id}`;
         const blob = await this.#blobStore.get(`${id}:${page.id}`);
         if (blob) {
           copy.blob = blob;
-          copy.src = this.#trackObjectUrl(id, URL.createObjectURL(blob));
+          if (this.#pageObjectUrls.has(pageKey)) {
+            copy.src = this.#pageObjectUrls.get(pageKey);
+          } else {
+            copy.src = this.#trackObjectUrl(id, URL.createObjectURL(blob));
+            this.#pageObjectUrls.set(pageKey, copy.src);
+          }
         }
 
+        const origKey = `${id}:${page.id}:orig`;
         const origBlob = await this.#blobStore.get(`${id}:${page.id}:original`);
         if (origBlob) {
           copy.originalBlob = origBlob;
-          copy.originalSrc = this.#trackObjectUrl(id, URL.createObjectURL(origBlob));
+          if (this.#pageOrigObjectUrls.has(origKey)) {
+            copy.originalSrc = this.#pageOrigObjectUrls.get(origKey);
+          } else {
+            copy.originalSrc = this.#trackObjectUrl(id, URL.createObjectURL(origBlob));
+            this.#pageOrigObjectUrls.set(origKey, copy.originalSrc);
+          }
         } else if (copy.blob) {
           copy.originalBlob = copy.blob;
           copy.originalSrc = copy.src;
@@ -310,26 +339,77 @@ export class IndexedDbStorageAdapter extends StoragePort {
       };
       cleanPages.push(cleanPage);
 
+      const pageKey = `${id}:${page.id}`;
+      const origKey = `${id}:${page.id}:orig`;
       const rehydratedPage = { ...page };
+
+      // Determine if page.src is a new/modified image (e.g. freshly edited data URL or new Blob)
+      const currentSrcUrl = this.#pageObjectUrls.get(pageKey);
+      const isNewSrc =
+        (typeof page.src === 'string' && page.src.startsWith('data:')) ||
+        page.src instanceof Blob ||
+        (page.src && currentSrcUrl && page.src !== currentSrcUrl);
+
       if (srcBlob) {
         rehydratedPage.blob = srcBlob;
-        if (!rehydratedPage.src || typeof rehydratedPage.src !== 'string' || rehydratedPage.src.startsWith('data:')) {
-          rehydratedPage.src = this.#trackObjectUrl(id, URL.createObjectURL(srcBlob));
+        if (isNewSrc || !currentSrcUrl) {
+          if (currentSrcUrl) {
+            try {
+              URL.revokeObjectURL(currentSrcUrl);
+            } catch {}
+            this.#objectUrls.delete(currentSrcUrl);
+          }
+          const newUrl = this.#trackObjectUrl(id, URL.createObjectURL(srcBlob));
+          this.#pageObjectUrls.set(pageKey, newUrl);
+          rehydratedPage.src = newUrl;
+        } else {
+          rehydratedPage.src = currentSrcUrl;
         }
       }
 
-      let origBlob = null;
-      if (page.originalSrc && page.originalSrc !== page.src) {
-        origBlob = dataUrlToBlob(page.originalSrc) || (page.originalSrc instanceof Blob ? page.originalSrc : null) || (page.originalBlob instanceof Blob ? page.originalBlob : null);
-        if (origBlob) {
-          rehydratedPage.originalBlob = origBlob;
-          if (!rehydratedPage.originalSrc || typeof rehydratedPage.originalSrc !== 'string' || rehydratedPage.originalSrc.startsWith('data:')) {
-            rehydratedPage.originalSrc = this.#trackObjectUrl(id, URL.createObjectURL(origBlob));
+      // Handle original page image:
+      // If origBlob is not explicitly provided and originalSrc was not previously set or equal to src,
+      // on the initial save the pristine original IS the initial srcBlob.
+      let origBlob =
+        dataUrlToBlob(page.originalSrc) ||
+        (page.originalSrc instanceof Blob ? page.originalSrc : null) ||
+        (page.originalBlob instanceof Blob ? page.originalBlob : null);
+
+      const currentOrigUrl = this.#pageOrigObjectUrls.get(origKey);
+      const isFirstOriginal = !currentOrigUrl && !origBlob && (!page.originalSrc || page.originalSrc === page.src);
+      if (isFirstOriginal && srcBlob) {
+        origBlob = srcBlob;
+      }
+
+      const isNewOrig =
+        (typeof page.originalSrc === 'string' && page.originalSrc.startsWith('data:')) ||
+        page.originalSrc instanceof Blob ||
+        (isFirstOriginal && !!origBlob);
+
+      if (origBlob) {
+        rehydratedPage.originalBlob = origBlob;
+        if (isNewOrig || !currentOrigUrl) {
+          if (currentOrigUrl && isNewOrig) {
+            try {
+              URL.revokeObjectURL(currentOrigUrl);
+            } catch {}
+            this.#objectUrls.delete(currentOrigUrl);
           }
+          const origUrl = this.#trackObjectUrl(id, URL.createObjectURL(origBlob));
+          this.#pageOrigObjectUrls.set(origKey, origUrl);
+          rehydratedPage.originalSrc = origUrl;
+        } else {
+          rehydratedPage.originalSrc = currentOrigUrl;
         }
-      } else if (rehydratedPage.blob) {
-        rehydratedPage.originalBlob = rehydratedPage.blob;
+      } else if (currentOrigUrl) {
+        rehydratedPage.originalSrc = currentOrigUrl;
+      } else if (page.originalSrc) {
+        rehydratedPage.originalSrc = page.originalSrc;
+      } else {
         rehydratedPage.originalSrc = rehydratedPage.src;
+        if (rehydratedPage.blob) {
+          rehydratedPage.originalBlob = rehydratedPage.blob;
+        }
       }
       rehydratedPages.push(rehydratedPage);
 
@@ -372,7 +452,7 @@ export class IndexedDbStorageAdapter extends StoragePort {
           origBlob = await resp.blob();
         } catch {}
       }
-      if (origBlob && page.originalSrc && page.originalSrc !== page.src) {
+      if (origBlob) {
         await this.#blobStore.put(`${id}:${pageId}:original`, origBlob);
       }
     }
@@ -485,6 +565,22 @@ export class IndexedDbStorageAdapter extends StoragePort {
 
     await this.#blobStore.delete(`${docId}:${pageId}`);
     await this.#blobStore.delete(`${docId}:${pageId}:original`);
+
+    const pageKey = `${docId}:${pageId}`;
+    if (this.#pageObjectUrls.has(pageKey)) {
+      try {
+        URL.revokeObjectURL(this.#pageObjectUrls.get(pageKey));
+      } catch {}
+      this.#pageObjectUrls.delete(pageKey);
+    }
+    const origKey = `${docId}:${pageId}:orig`;
+    if (this.#pageOrigObjectUrls.has(origKey)) {
+      try {
+        URL.revokeObjectURL(this.#pageOrigObjectUrls.get(origKey));
+      } catch {}
+      this.#pageOrigObjectUrls.delete(origKey);
+    }
+
     this.#activeDocCache.delete(docId);
   }
 

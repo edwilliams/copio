@@ -577,28 +577,76 @@ export class OpfsStorageAdapter extends StoragePort {
       cleanPages.push(cleanPage);
 
       const pageKey = `${id}:${page.id}`;
+      const origKey = `${id}:${page.id}:orig`;
       const rehydratedPage = { ...page };
+
+      // Determine if page.src is a new/modified image (e.g. freshly edited data URL or new Blob)
+      const currentSrcUrl = this.#pageObjectUrls.get(pageKey);
+      const isNewSrc =
+        (typeof page.src === 'string' && page.src.startsWith('data:')) ||
+        page.src instanceof Blob ||
+        (page.src && currentSrcUrl && page.src !== currentSrcUrl);
+
       if (srcBlob) {
         rehydratedPage.blob = srcBlob;
-        if (!this.#pageObjectUrls.has(pageKey)) {
-          const url = this.#trackObjectUrl(id, URL.createObjectURL(srcBlob));
-          this.#pageObjectUrls.set(pageKey, url);
+        if (isNewSrc || !currentSrcUrl) {
+          if (currentSrcUrl) {
+            try {
+              URL.revokeObjectURL(currentSrcUrl);
+            } catch {}
+            this.#objectUrls.delete(currentSrcUrl);
+          }
+          const newUrl = this.#trackObjectUrl(id, URL.createObjectURL(srcBlob));
+          this.#pageObjectUrls.set(pageKey, newUrl);
+          rehydratedPage.src = newUrl;
+        } else {
+          rehydratedPage.src = currentSrcUrl;
         }
-        rehydratedPage.src = this.#pageObjectUrls.get(pageKey);
       }
 
-      let origBlob = dataUrlToBlob(page.originalSrc) || (page.originalSrc instanceof Blob ? page.originalSrc : null) || (page.originalBlob instanceof Blob ? page.originalBlob : null);
-      const origKey = `${id}:${page.id}:orig`;
+      // Handle original page image:
+      // If origBlob is not explicitly provided and originalSrc was not previously set or equal to src,
+      // on the initial save the pristine original IS the initial srcBlob.
+      let origBlob =
+        dataUrlToBlob(page.originalSrc) ||
+        (page.originalSrc instanceof Blob ? page.originalSrc : null) ||
+        (page.originalBlob instanceof Blob ? page.originalBlob : null);
+
+      const currentOrigUrl = this.#pageOrigObjectUrls.get(origKey);
+      const isFirstOriginal = !currentOrigUrl && !origBlob && (!page.originalSrc || page.originalSrc === page.src);
+      if (isFirstOriginal && srcBlob) {
+        origBlob = srcBlob;
+      }
+
+      const isNewOrig =
+        (typeof page.originalSrc === 'string' && page.originalSrc.startsWith('data:')) ||
+        page.originalSrc instanceof Blob ||
+        (isFirstOriginal && !!origBlob);
+
       if (origBlob) {
         rehydratedPage.originalBlob = origBlob;
-        if (!this.#pageOrigObjectUrls.has(origKey)) {
+        if (isNewOrig || !currentOrigUrl) {
+          if (currentOrigUrl && isNewOrig) {
+            try {
+              URL.revokeObjectURL(currentOrigUrl);
+            } catch {}
+            this.#objectUrls.delete(currentOrigUrl);
+          }
           const origUrl = this.#trackObjectUrl(id, URL.createObjectURL(origBlob));
           this.#pageOrigObjectUrls.set(origKey, origUrl);
+          rehydratedPage.originalSrc = origUrl;
+        } else {
+          rehydratedPage.originalSrc = currentOrigUrl;
         }
-        rehydratedPage.originalSrc = this.#pageOrigObjectUrls.get(origKey);
-      } else if (rehydratedPage.blob) {
-        rehydratedPage.originalBlob = rehydratedPage.blob;
+      } else if (currentOrigUrl) {
+        rehydratedPage.originalSrc = currentOrigUrl;
+      } else if (page.originalSrc) {
+        rehydratedPage.originalSrc = page.originalSrc;
+      } else {
         rehydratedPage.originalSrc = rehydratedPage.src;
+        if (rehydratedPage.blob) {
+          rehydratedPage.originalBlob = rehydratedPage.blob;
+        }
       }
       rehydratedPages.push(rehydratedPage);
 
@@ -666,7 +714,8 @@ export class OpfsStorageAdapter extends StoragePort {
           } catch {}
         }
 
-        if (origBlob && page.originalSrc && page.originalSrc !== page.src) {
+        // Always save original if available so pristine capture is never lost
+        if (origBlob) {
           try {
             const origHandle = await docDir.getFileHandle(`${pageId}-original.bin`, { create: true });
             const writable = await origHandle.createWritable();

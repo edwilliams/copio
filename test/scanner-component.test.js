@@ -476,4 +476,113 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
       expect(coreMod.registerService).to.be.a('function');
     });
   });
+
+  describe('Interactive Image Workbench Edits (Rotate, B&W filter, Crop)', () => {
+    it('rotates active page by 90 degrees and updates stage image', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('mode', 'single');
+      fixtureContainer.appendChild(scanner);
+
+      const file = await createTestImageFile('rotate-test.png', 100, 140, '#2563eb');
+      await scanner.addFiles([file]);
+
+      const stageImg = scanner.shadowRoot.querySelector('#stage-img');
+      const initialSrc = stageImg.src;
+      expect(initialSrc).to.exist;
+
+      const initialPages = await scanner.getPages();
+      const origUrl = initialPages[0].originalSrc;
+      expect(origUrl).to.exist;
+
+      const btnRotate = scanner.shadowRoot.querySelector('#btn-rotate');
+      expect(btnRotate).to.exist;
+
+      btnRotate.click();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const pages = await scanner.getPages();
+      expect(pages[0].edits.rotate).to.equal(90);
+      expect(stageImg.src).to.exist;
+      expect(stageImg.src).to.not.equal(initialSrc);
+      expect(pages[0].originalSrc).to.equal(origUrl);
+    });
+
+    it('toggles Sauvola adaptive threshold B&W filter and updates stage image', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('mode', 'single');
+      fixtureContainer.appendChild(scanner);
+
+      const file = await createTestImageFile('filter-test.png', 100, 140, '#2563eb');
+      await scanner.addFiles([file]);
+
+      const stageImg = scanner.shadowRoot.querySelector('#stage-img');
+      const initialSrc = stageImg.src;
+
+      const initialPages = await scanner.getPages();
+      const origUrl = initialPages[0].originalSrc;
+      expect(origUrl).to.exist;
+
+      const btnBw = scanner.shadowRoot.querySelector('#btn-filter-bw');
+      expect(btnBw).to.exist;
+
+      // Turn B&W on
+      btnBw.click();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      let pages = await scanner.getPages();
+      expect(pages[0].edits.filter).to.equal('bw');
+      expect(stageImg.src).to.not.equal(initialSrc);
+      expect(pages[0].originalSrc).to.equal(origUrl);
+
+      // Turn B&W off (restore color)
+      btnBw.click();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      pages = await scanner.getPages();
+      expect(pages[0].edits.filter).to.equal('none');
+      expect(pages[0].originalSrc).to.equal(origUrl);
+    });
+
+    it('enters crop mode, adjusts crop, applies crop, and updates stage image while preserving originalSrc', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('mode', 'single');
+      fixtureContainer.appendChild(scanner);
+
+      const file = await createTestImageFile('crop-test.png', 120, 160, '#2563eb');
+      await scanner.addFiles([file]);
+
+      const stageImg = scanner.shadowRoot.querySelector('#stage-img');
+      const initialSrc = stageImg.src;
+
+      const initialPages = await scanner.getPages();
+      const origUrl = initialPages[0].originalSrc;
+      expect(origUrl).to.exist;
+
+      const btnCrop = scanner.shadowRoot.querySelector('#btn-crop');
+      const cropBtnLabel = scanner.shadowRoot.querySelector('#crop-btn-label');
+      expect(btnCrop).to.exist;
+      expect(cropBtnLabel.textContent).to.equal('Crop');
+
+      // Click Crop to enter crop mode
+      btnCrop.click();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(cropBtnLabel.textContent).to.equal('Apply');
+      const cropLayer = scanner.shadowRoot.querySelector('#crop-layer');
+      expect(cropLayer).to.exist;
+
+      // Click Apply to finish crop
+      btnCrop.click();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(cropBtnLabel.textContent).to.equal('Crop');
+      expect(scanner.shadowRoot.querySelector('#crop-layer')).to.be.null;
+
+      const pages = await scanner.getPages();
+      expect(pages[0].edits.crop).to.exist;
+      expect(stageImg.src).to.exist;
+      expect(stageImg.src).to.not.equal(initialSrc);
+      expect(pages[0].originalSrc).to.equal(origUrl);
+    });
+  });
 });

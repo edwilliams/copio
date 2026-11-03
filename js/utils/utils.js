@@ -181,21 +181,32 @@ export function getCroppedSrc(cropper, originalSrc = '') {
 /**
  * Normalizes an edit stack object.
  * @param {Object} [edits]
- * @returns {{ crop: { x: number, y: number, width: number, height: number } | null, rotation: number, filter: string }}
+ * @returns {{ crop: { x: number, y: number, width?: number, height?: number, w?: number, h?: number } | null, rotation: number, filter: string }}
  */
 export function normalizeEdits(edits) {
   if (!edits || typeof edits !== 'object') {
     return { crop: null, rotation: 0, filter: 'none' };
   }
-  const crop = (edits.crop && typeof edits.crop === 'object' && edits.crop.width > 0 && edits.crop.height > 0)
-    ? {
+  let crop = null;
+  if (edits.crop && typeof edits.crop === 'object') {
+    if (edits.crop.width > 0 && edits.crop.height > 0) {
+      crop = {
         x: Math.round(edits.crop.x || 0),
         y: Math.round(edits.crop.y || 0),
         width: Math.round(edits.crop.width),
         height: Math.round(edits.crop.height),
-      }
-    : null;
-  const rotation = ((Math.round(edits.rotation || 0) % 360) + 360) % 360;
+      };
+    } else if (edits.crop.w > 0 && edits.crop.h > 0) {
+      crop = {
+        x: Number(edits.crop.x) || 0,
+        y: Number(edits.crop.y) || 0,
+        w: Number(edits.crop.w) || 1,
+        h: Number(edits.crop.h) || 1,
+      };
+    }
+  }
+  const rawRot = edits.rotation !== undefined ? edits.rotation : edits.rotate;
+  const rotation = ((Math.round(Number(rawRot) || 0) % 360) + 360) % 360;
   const filter = (edits.filter === 'bw') ? 'bw' : 'none';
   return { crop, rotation, filter };
 }
@@ -230,10 +241,18 @@ export function renderEditsToCanvas(imgOrCanvas, edits) {
   let cropY = 0;
 
   if (norm.crop) {
-    cropX = Math.max(0, Math.min(norm.crop.x, srcWidth));
-    cropY = Math.max(0, Math.min(norm.crop.y, srcHeight));
-    cWidth = Math.max(1, Math.min(norm.crop.width, srcWidth - cropX));
-    cHeight = Math.max(1, Math.min(norm.crop.height, srcHeight - cropY));
+    const cropObj = /** @type {any} */ (norm.crop);
+    if ('w' in cropObj && !('width' in cropObj)) {
+      cropX = Math.max(0, Math.min(Math.round(cropObj.x * srcWidth), srcWidth));
+      cropY = Math.max(0, Math.min(Math.round(cropObj.y * srcHeight), srcHeight));
+      cWidth = Math.max(1, Math.min(Math.round(cropObj.w * srcWidth), srcWidth - cropX));
+      cHeight = Math.max(1, Math.min(Math.round(cropObj.h * srcHeight), srcHeight - cropY));
+    } else {
+      cropX = Math.max(0, Math.min(cropObj.x, srcWidth));
+      cropY = Math.max(0, Math.min(cropObj.y, srcHeight));
+      cWidth = Math.max(1, Math.min(cropObj.width, srcWidth - cropX));
+      cHeight = Math.max(1, Math.min(cropObj.height, srcHeight - cropY));
+    }
   }
 
   cropCanvas.width = cWidth;

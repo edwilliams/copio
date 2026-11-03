@@ -187,9 +187,14 @@ export class CopioApp extends LitElement {
   }
 
   async #loadEditDoc(id) {
-    const doc = this.docRepo.getDocSync(id) || await this.docRepo.getDoc(id);
-    if (!doc) return;
+    const syncDoc = this.docRepo.getDocSync(id);
     const dialog = this.querySelector('copio-add-edit-dialog');
+    if (syncDoc && (syncDoc.pages.length === 0 || syncDoc.pages.every((p) => p.src))) {
+      if (dialog) await dialog.openEdit(id, syncDoc.name, syncDoc.pages);
+      return;
+    }
+    const doc = await this.docRepo.getDoc(id);
+    if (!doc) return;
     if (dialog) await dialog.openEdit(id, doc.name, doc.pages);
   }
 

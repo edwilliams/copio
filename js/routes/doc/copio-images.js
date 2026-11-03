@@ -848,7 +848,7 @@ export class CopioImages extends HTMLElement {
           rotation: page.edits.rotation,
           filter: page.edits.filter,
         });
-        const isPng = page.originalSrc.startsWith('data:image/png');
+        const isPng = (typeof page.originalSrc === 'string' && page.originalSrc.startsWith('data:image/png')) || page.originalBlob?.type === 'image/png' || page.mimeType === 'image/png';
         const format = isPng ? 'image/png' : 'image/jpeg';
         page.src = finalCanvas.toDataURL(format, isPng ? undefined : 0.82);
       }
