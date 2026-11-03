@@ -60,7 +60,6 @@ export class CopioScanner extends BaseElement {
       'theme',
       'ocr',
       'pdf',
-      'markdown',
     ];
   }
 
@@ -85,7 +84,6 @@ export class CopioScanner extends BaseElement {
       if (this.hasAttribute('license-key')) opts.licenseKey = this.getAttribute('license-key');
       if (this.hasAttribute('ocr')) opts.ocr = this.getAttribute('ocr') !== 'false';
       if (this.hasAttribute('pdf')) opts.pdf = this.getAttribute('pdf') !== 'false';
-      if (this.hasAttribute('markdown')) opts.markdown = this.getAttribute('markdown') !== 'false';
     }
     this.#engine = new CopioEngine(opts);
   }
@@ -167,10 +165,6 @@ export class CopioScanner extends BaseElement {
         this.#engine.pdf = newValue !== 'false';
         this.#updateChildViews();
         break;
-      case 'markdown':
-        this.#engine.markdown = newValue !== 'false';
-        this.#updateChildViews();
-        break;
       case 'stage':
         if (newValue === 'viewfinder' || newValue === 'workbench') {
           this.#stage = newValue;
@@ -209,7 +203,6 @@ export class CopioScanner extends BaseElement {
       for (const child of children) {
         if ('ocr' in child) /** @type {any} */ (child).ocr = this.ocrEnabled;
         if ('pdf' in child) /** @type {any} */ (child).pdf = this.pdf;
-        if ('markdown' in child) /** @type {any} */ (child).markdown = this.markdown;
       }
     }
   }
@@ -1242,21 +1235,6 @@ export class CopioScanner extends BaseElement {
     }
     if (this.#engine) {
       this.#engine.pdf = enabled;
-    }
-    this.#updateChildViews();
-  }
-
-  get markdown() {
-    return this.#engine ? this.#engine.markdown : false;
-  }
-
-  set markdown(val) {
-    const enabled = Boolean(val);
-    if (typeof this.setAttribute === 'function') {
-      this.setAttribute('markdown', enabled ? 'true' : 'false');
-    }
-    if (this.#engine) {
-      this.#engine.markdown = enabled;
     }
     this.#updateChildViews();
   }

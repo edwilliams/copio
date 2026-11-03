@@ -1,6 +1,6 @@
 import { expect } from '@esm-bundle/chai';
 import '../js/lib/shoelace.js';
-import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../js/services/export-utils.js';
+import { exportDocumentAsPdf, exportDocumentAsImages } from '../js/services/export-utils.js';
 import notify from '../js/services/notify.js';
 import { loadJsZip } from '../js/utils/module-loader.js';
 
@@ -61,7 +61,7 @@ describe('Export Smoke Tests', () => {
   it('exportDocumentAsPdf produces a valid PDF blob without throwing', async () => {
     const pages = [
       { id: 'p1', src: createTestImageDataUrl(40, 40, '#f97316') },
-      { id: 'p2', type: 'markdown', name: 'Meeting Notes', content: '# Summary\nAction points:\n- Point 1\n- Point 2' },
+      { id: 'p2', src: createTestImageDataUrl(40, 40, '#3b82f6') },
     ];
 
     const blobPromise = new Promise((resolve) => {
@@ -85,7 +85,7 @@ describe('Export Smoke Tests', () => {
     const pages = [
       { id: 'p1', src: createTestImageDataUrl(20, 20, '#10b981') },
       { id: 'p2', src: createTestImageDataUrl(20, 20, '#6366f1') },
-      { id: 'p3', type: 'markdown', name: 'Note', content: 'Notes text for page 3' },
+      { id: 'p3', src: createTestImageDataUrl(20, 20, '#a855f7') },
     ];
 
     const blobPromise = new Promise((resolve) => {
@@ -120,29 +120,12 @@ describe('Export Smoke Tests', () => {
     expect(downloadedFilenames).to.include('Single-Scan.png');
   });
 
-  it('exportDocumentAsMarkdown produces a valid Markdown file without throwing', () => {
-    const pages = [
-      { id: 'p1', type: 'markdown', name: 'Checklist', content: '- [x] Done\n- [ ] Todo' },
-    ];
-
-    exportDocumentAsMarkdown('Checklist-Doc', pages);
-
-    expect(createdBlobs.length).to.be.at.least(1);
-    const mdBlob = createdBlobs.find((b) => b.type.includes('markdown'));
-    expect(mdBlob).to.exist;
-    expect(mdBlob.size).to.be.above(0);
-    expect(downloadedFilenames).to.include('Checklist-Doc.md');
-  });
-
   it('handles empty page export gracefully without unhandled exceptions', async () => {
     await exportDocumentAsPdf('Empty', []);
     expect(notifyMessages).to.include('No images to export');
 
     await exportDocumentAsImages('Empty', []);
     expect(notifyMessages).to.include('No images to export');
-
-    exportDocumentAsMarkdown('Empty', []);
-    expect(notifyMessages).to.include('No markdown text in this document');
   });
 
   it('reports determinate progress via onProgress and copio:export-progress during multi-page export', async () => {

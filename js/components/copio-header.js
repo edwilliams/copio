@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { LitElement, html, css } from '../lib/lit-core.min.js';
-import { isMarkdownEnabled, setMarkdownEnabled } from '../services/markdown-module.js';
 
 export class CopioHeader extends LitElement {
   static styles = css`
@@ -38,19 +37,14 @@ export class CopioHeader extends LitElement {
     _storageEstimate: { state: true },
     _isPersisted: { state: true },
     storageKind: { type: String },
-    markdownEnabled: { type: Boolean },
   };
 
   constructor() {
     super();
-    this.markdownEnabled = true;
   }
 
   async connectedCallback() {
     super.connectedCallback();
-    if (this.markdownEnabled === undefined) {
-      this.markdownEnabled = isMarkdownEnabled();
-    }
     await this.#updateStorageInfo();
   }
 
@@ -87,18 +81,6 @@ export class CopioHeader extends LitElement {
       this.dispatchEvent(new CustomEvent('header:clear-cache', { bubbles: true, composed: false }));
       return;
     }
-    if (e.detail?.item?.value === 'toggle-markdown') {
-      const next = !(this.markdownEnabled !== false);
-      this.markdownEnabled = next;
-      setMarkdownEnabled(next);
-      this.dispatchEvent(
-        new CustomEvent('header:toggle-markdown', {
-          bubbles: true,
-          composed: false,
-          detail: { enabled: next },
-        }),
-      );
-    }
   }
 
   render() {
@@ -115,14 +97,6 @@ export class CopioHeader extends LitElement {
             <sl-menu @sl-select=${this.#handleSelect}>
               <sl-menu-item value="link-device">Link another device</sl-menu-item>
               <sl-menu-item value="clear-cache">Clear cache &amp; update</sl-menu-item>
-              <sl-divider></sl-divider>
-              <sl-menu-item
-                type="checkbox"
-                value="toggle-markdown"
-                ?checked=${this.markdownEnabled !== false}
-              >
-                Markdown notes
-              </sl-menu-item>
               <sl-divider></sl-divider>
               <sl-menu-item disabled>
                 Storage: ${this._formatBytes(this._storageEstimate?.usage)} / ${this._formatBytes(this._storageEstimate?.quota)}

@@ -24,19 +24,17 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
 
       const pdfItem = menu.querySelector('sl-menu-item[value="download"]');
       const imagesItem = menu.querySelector('sl-menu-item[value="download-images"]');
-      const mdItem = menu.querySelector('sl-menu-item[value="download-markdown"]');
       const ocrItem = menu.querySelector('sl-menu-item[value="extract-ocr"]');
 
       expect(pdfItem.hasAttribute('disabled')).to.be.true;
       expect(imagesItem.hasAttribute('disabled')).to.be.true;
-      expect(mdItem.hasAttribute('disabled')).to.be.true;
       expect(ocrItem.hasAttribute('disabled')).to.be.true;
 
       expect(pdfItem.getAttribute('title')).to.include('empty');
       expect(ocrItem.getAttribute('title')).to.include('No image pages');
     });
 
-    it('enables OCR and image exports, but disables markdown when doc has only images', async () => {
+    it('enables OCR and image exports when doc has images', async () => {
       row = document.createElement('copio-row');
       row.name = 'Scanned Document';
       row.pages = [
@@ -48,35 +46,11 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
       const menu = row.shadowRoot.querySelector('sl-menu');
       const pdfItem = menu.querySelector('sl-menu-item[value="download"]');
       const imagesItem = menu.querySelector('sl-menu-item[value="download-images"]');
-      const mdItem = menu.querySelector('sl-menu-item[value="download-markdown"]');
       const ocrItem = menu.querySelector('sl-menu-item[value="extract-ocr"]');
 
       expect(pdfItem.hasAttribute('disabled')).to.be.false;
       expect(imagesItem.hasAttribute('disabled')).to.be.false;
       expect(ocrItem.hasAttribute('disabled')).to.be.false;
-      expect(mdItem.hasAttribute('disabled')).to.be.true;
-      expect(mdItem.getAttribute('title')).to.include('No markdown notes');
-    });
-
-    it('enables markdown export, but disables OCR when doc has only markdown notes', async () => {
-      row = document.createElement('copio-row');
-      row.name = 'Notes Document';
-      row.pages = [
-        { id: 'p1', type: 'markdown', name: 'Note 1', content: '# Meeting Notes' },
-      ];
-      document.body.appendChild(row);
-      await row.updateComplete;
-
-      const menu = row.shadowRoot.querySelector('sl-menu');
-      const pdfItem = menu.querySelector('sl-menu-item[value="download"]');
-      const imagesItem = menu.querySelector('sl-menu-item[value="download-images"]');
-      const mdItem = menu.querySelector('sl-menu-item[value="download-markdown"]');
-      const ocrItem = menu.querySelector('sl-menu-item[value="extract-ocr"]');
-
-      expect(pdfItem.hasAttribute('disabled')).to.be.false;
-      expect(imagesItem.hasAttribute('disabled')).to.be.false;
-      expect(mdItem.hasAttribute('disabled')).to.be.false;
-      expect(ocrItem.hasAttribute('disabled')).to.be.true;
     });
   });
 
@@ -174,11 +148,9 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
 
       const pdfItem = exportMenu.querySelector('sl-menu-item[value="pdf"]');
       const imagesItem = exportMenu.querySelector('sl-menu-item[value="images"]');
-      const mdItem = exportMenu.querySelector('sl-menu-item[value="markdown"]');
 
       expect(pdfItem.hasAttribute('disabled')).to.be.false;
       expect(imagesItem.hasAttribute('disabled')).to.be.false;
-      expect(mdItem.hasAttribute('disabled')).to.be.true; // No markdown pages
     });
 
     it('dispatches export events when menu items are selected', async () => {
@@ -187,26 +159,22 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
       carousel.docName = 'Project Proposal';
       carousel.images = [
         { id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
-        { id: 'p2', type: 'markdown', name: 'Notes', content: '# Notes' },
+        { id: 'p2', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
       ];
       document.body.appendChild(carousel);
       await carousel.updateComplete;
 
       let pdfDetail = null;
       let imagesDetail = null;
-      let mdDetail = null;
 
       carousel.addEventListener('doc:download-pdf', (e) => (pdfDetail = e.detail));
       carousel.addEventListener('doc:download-images', (e) => (imagesDetail = e.detail));
-      carousel.addEventListener('doc:download-markdown', (e) => (mdDetail = e.detail));
 
       carousel.handleExportSelect({ detail: { item: { value: 'pdf' } } });
       carousel.handleExportSelect({ detail: { item: { value: 'images' } } });
-      carousel.handleExportSelect({ detail: { item: { value: 'markdown' } } });
 
       expect(pdfDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal' });
       expect(imagesDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal' });
-      expect(mdDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal' });
     });
   });
 

@@ -5,7 +5,6 @@
  * - Cropper.js (window.Cropper)
  * - PDFKit (window.PDFDocument)
  * - JSZip (window.JSZip)
- * - Marked (window.marked)
  * - PeerJS (window.Peer)
  * - QRCode (window.qrcode)
  * - Tesseract.js (window.Tesseract)
@@ -137,14 +136,6 @@ export async function loadPdfKit() {
  */
 export async function loadJsZip() {
   return loadScript('js/lib/jszip.min.js', () => window.JSZip);
-}
-
-/**
- * Lazy loads marked markdown parser on demand.
- * @returns {Promise<any>}
- */
-export async function loadMarked() {
-  return loadScript('js/lib/marked.min.js', () => window.marked);
 }
 
 /**

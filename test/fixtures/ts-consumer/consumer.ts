@@ -30,7 +30,6 @@ scanner.ocrLanguages = ['eng'];
 scanner.theme = 'light';
 scanner.ocrEnabled = true;
 scanner.pdf = true;
-scanner.markdown = false;
 
 const currentMode: 'single' | 'document' = scanner.mode;
 const currentDocId: string | null = scanner.docId;
@@ -40,7 +39,6 @@ const isOpen: boolean = scanner.isOpen;
 const hasCrop: boolean = scanner.hasFeature('crop');
 const isOcrEnabled: boolean = scanner.ocrEnabled;
 const isPdfEnabled: boolean = scanner.pdf;
-const isMarkdownEnabled: boolean = scanner.markdown;
 
 // 2. Test typed methods on CopioScanner
 async function testScannerMethods() {
@@ -75,7 +73,6 @@ const engine = new CopioEngine({
 });
 const optInOcr: boolean = engine.ocr;
 const optInPdf: boolean = engine.pdf;
-const optInMarkdown: boolean = engine.markdown;
 const nullOcr = new NullOcrAdapter();
 const nullPdf = new NullPdfAdapter();
 

@@ -262,7 +262,7 @@ export class IndexedDbStorageAdapter extends StoragePort {
 
     const rehydratedPages = await Promise.all(
       parsedPages.map(async (page) => {
-        if (!page || page.type === 'markdown') return page;
+        if (!page) return page;
 
         const copy = { ...page };
         const pageKey = `${id}:${page.id}`;
@@ -325,11 +325,6 @@ export class IndexedDbStorageAdapter extends StoragePort {
 
     for (const page of rawPages) {
       if (!page) continue;
-      if (page.type === 'markdown') {
-        cleanPages.push(page);
-        rehydratedPages.push(page);
-        continue;
-      }
 
       let srcBlob = dataUrlToBlob(page.src) || (page.src instanceof Blob ? page.src : null) || (page.blob instanceof Blob ? page.blob : null);
       const mimeType = srcBlob?.type || 'image/jpeg';

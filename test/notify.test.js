@@ -183,7 +183,11 @@ describe('Unified Toast / Feedback Service (CPO-022)', () => {
       document.body.appendChild(el);
 
       try {
-        const file = new File(['# Title\nNote text'], 'meeting.md', { type: 'text/markdown' });
+        const base64Png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+        const bin = atob(base64Png);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const file = new File([bytes], 'scan.png', { type: 'image/png' });
         await el.addFiles([file]);
 
         expect(capturedToasts.some((t) => t.variant === 'success' && t.message.includes('Imported 1 page'))).to.be.true;
@@ -192,7 +196,7 @@ describe('Unified Toast / Feedback Service (CPO-022)', () => {
       }
     });
 
-    it('gives feedback when OCR actions (copy, save note) are performed', async () => {
+    it('gives feedback when OCR copy action is performed', async () => {
       const ocrDialog = document.createElement('copio-doc-ocr-dialog');
       document.body.appendChild(ocrDialog);
 
@@ -210,15 +214,6 @@ describe('Unified Toast / Feedback Service (CPO-022)', () => {
         } finally {
           navigator.clipboard.writeText = origWriteText;
         }
-
-        // Test save note
-        let noteSaved = false;
-        ocrDialog.addEventListener('note:save', () => {
-          noteSaved = true;
-        });
-        ocrDialog.saveAsNote();
-        expect(noteSaved).to.be.true;
-        expect(capturedToasts.some((t) => t.variant === 'success' && t.message.includes('Saved OCR text'))).to.be.true;
       } finally {
         ocrDialog.remove();
       }

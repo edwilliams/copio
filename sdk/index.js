@@ -42,23 +42,7 @@ export { SyncManager } from '../js/services/sync-service.js';
 export {
   exportDocumentAsPdf,
   exportDocumentAsImages,
-  exportDocumentAsMarkdown,
 } from '../js/services/export-utils.js';
-
-export {
-  isMarkdownEnabled,
-  setMarkdownEnabled,
-  createMarkdownPage,
-  isMarkdownPage,
-  loadMarkdownParser,
-  renderMarkdownToHtml,
-  parseMarkdownSync,
-} from '../js/services/markdown-module.js';
-
-export {
-  renderMarkdownToPdf,
-  renderMarkdownToPageDataUrls,
-} from '../js/services/markdown-pdf.js';
 
 export {
   notify,
@@ -87,7 +71,6 @@ export {
   loadCropper,
   loadPdfKit,
   loadJsZip,
-  loadMarked,
   loadPeerJs,
   loadQrCode,
   loadTesseract,

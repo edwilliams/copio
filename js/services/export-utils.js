@@ -1,20 +1,5 @@
 import { notify } from './notify.js';
 import { loadPdfKit, loadJsZip } from '../utils/module-loader.js';
-import {
-  isMarkdownPage,
-  loadMarkdownParser,
-  exportDocumentAsMarkdown,
-} from './markdown-module.js';
-import {
-  renderMarkdownToPdf,
-  renderMarkdownToPageDataUrls,
-} from './markdown-pdf.js';
-
-export {
-  renderMarkdownToPdf,
-  renderMarkdownToPageDataUrls,
-  exportDocumentAsMarkdown,
-};
 
 /**
  * Export document pages as a PDF file download.
@@ -60,14 +45,9 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
       } catch {}
     }
 
-    const hasMarkdown = pages.some(isMarkdownPage);
     let PDFDocument;
     try {
-      const [loadedPdfDoc] = await Promise.all([
-        loadPdfKit(),
-        hasMarkdown ? loadMarkdownParser() : Promise.resolve(),
-      ]);
-      PDFDocument = loadedPdfDoc;
+      PDFDocument = await loadPdfKit();
     } finally {
       downloadToast?.close();
     }
@@ -120,9 +100,7 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
       const page = pages[i];
       const done = i + 1;
 
-      if (page.type === 'markdown') {
-        renderMarkdownToPdf(doc, page.content);
-      } else if (page.src || page.blob) {
+      if (page.src || page.blob) {
         const img = new Image();
         let objectUrlToRevoke = null;
         let imgSrc = page.src;
@@ -246,7 +224,7 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
     const sanitize = (str) => str.replace(/[/\\?%*:|"<>]/g, '_');
     const safeName = sanitize(rawName) || 'document';
 
-    if (pages.length === 1 && pages[0].type !== 'markdown') {
+    if (pages.length === 1) {
       const page = pages[0];
       let ext = 'jpg';
       let downloadUrl = '';
@@ -332,23 +310,13 @@ export async function exportDocumentAsImages(docName, pages, options = {}) {
       });
     }
 
-    const hasMarkdown = pages.some(isMarkdownPage);
-    const [JSZip] = await Promise.all([
-      loadJsZip(),
-      hasMarkdown ? Promise.all([loadPdfKit(), loadMarkdownParser()]) : Promise.resolve(),
-    ]);
+    const JSZip = await loadJsZip();
     const zip = new JSZip();
     let exportIdx = 0;
 
     for (let index = 0; index < pages.length; index++) {
       const page = pages[index];
-      let pageDataUrls = [];
-
-      if (page.type === 'markdown') {
-        pageDataUrls = await renderMarkdownToPageDataUrls(page);
-      } else {
-        pageDataUrls = [page.blob || page.src];
-      }
+      const pageDataUrls = [page.blob || page.src];
 
       const padLen = Math.max(2, String(pages.length * pageDataUrls.length).length);
 

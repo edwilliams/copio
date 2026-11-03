@@ -18,7 +18,6 @@ export class CopioDocOcrDialog extends LitElement {
     resultText: { type: String, state: true },
     confidence: { type: Number, state: true },
     copied: { type: Boolean, state: true },
-    markdown: { type: Boolean },
   };
 
   createRenderRoot() {
@@ -44,7 +43,6 @@ export class CopioDocOcrDialog extends LitElement {
     this.lang = 'eng';
     this.step = 'processing';
     this.progress = 0;
-    this.markdown = true;
     this.statusMessage = 'Starting OCR engine...';
     this.resultText = '';
     this.confidence = 0;
@@ -95,7 +93,7 @@ export class CopioDocOcrDialog extends LitElement {
     this.confidence = 0;
     this.copied = false;
 
-    const imagePages = (this.pages || []).filter((p) => p.type !== 'markdown' && p.src);
+    const imagePages = (this.pages || []).filter((p) => p.src);
     if (imagePages.length === 0) {
       this.step = 'empty';
       this.statusMessage = 'This document does not contain any image pages for text recognition.';
@@ -201,19 +199,6 @@ export class CopioDocOcrDialog extends LitElement {
     }
   };
 
-  downloadMarkdown = () => {
-    if (!this.resultText) return;
-    const safeName = (this.docName || 'document').replace(/[/\\?%*:|"<>]/g, '_');
-    const blob = new Blob([this.resultText], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${safeName}-ocr.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-    notify.success(`Exported OCR markdown (${safeName}-ocr.md)`);
-  };
-
   downloadText = () => {
     if (!this.resultText) return;
     const safeName = (this.docName || 'document').replace(/[/\\?%*:|"<>]/g, '_');
@@ -225,22 +210,6 @@ export class CopioDocOcrDialog extends LitElement {
     a.click();
     URL.revokeObjectURL(url);
     notify.success(`Exported OCR text (${safeName}-ocr.txt)`);
-  };
-
-  saveAsNote = () => {
-    if (!this.resultText || !this.docId) return;
-
-    const detail = {
-      docId: this.docId,
-      content: this.resultText,
-      // pageIndex is set in single-page mode so the note is inserted adjacent to the source image
-      pageIndex: this._pageIndex,
-    };
-
-    this.dispatchEvent(new CustomEvent('note:save', { bubbles: true, composed: false, detail }));
-
-    notify.success('Saved OCR text as note');
-    this.close();
   };
 
   get _isSinglePage() {
@@ -365,18 +334,6 @@ export class CopioDocOcrDialog extends LitElement {
                 <sl-icon slot="prefix" name="download"></sl-icon>
                 Download .txt
               </sl-button>
-              ${this.markdown !== false
-                ? html`
-                    <sl-button slot="footer" variant="default" @click=${this.downloadMarkdown}>
-                      <sl-icon slot="prefix" name="download"></sl-icon>
-                      Download .md
-                    </sl-button>
-                    <sl-button slot="footer" variant="primary" @click=${this.saveAsNote}>
-                      <sl-icon slot="prefix" name="file-earmark-plus"></sl-icon>
-                      Save as Note
-                    </sl-button>
-                  `
-                : ''}
             `
           : ''}
       </sl-dialog>

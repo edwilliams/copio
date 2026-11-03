@@ -13,10 +13,10 @@ describe('OCR Service & Dialog (CPO-021)', () => {
       expect(result.pagesResults).to.be.an('array').that.is.empty;
     });
 
-    it('filters out markdown pages when determining image pages', async () => {
+    it('filters out pages without image sources when determining image pages', async () => {
       const pages = [
-        { id: 'm1', type: 'markdown', content: '# Meeting Notes' },
-        { id: 'm2', type: 'markdown', content: 'Second Note' },
+        { id: 'm1', content: 'no image src' },
+        { id: 'm2', name: 'also no src' },
       ];
       const result = await recognizeDocumentPages(pages);
       expect(result.empty).to.be.true;
@@ -94,7 +94,7 @@ describe('OCR Service & Dialog (CPO-021)', () => {
 
     it('handles documents with 0 image pages gracefully without alerts', async () => {
       dialog.open('doc-empty', 'Empty Doc', [
-        { id: 'm1', type: 'markdown', content: 'note only' }
+        { id: 'm1', name: 'page without src' }
       ]);
       await dialog.updateComplete;
 
@@ -126,15 +126,13 @@ describe('OCR Service & Dialog (CPO-021)', () => {
       expect(textarea).to.exist;
       expect(textarea.value).to.equal('Recognized line of text from test page');
 
-      // Verify all actions exist: Close, Copy, Download .txt, Download .md, Save as Note
+      // Verify all actions exist: Close, Copy, Download .txt
       const buttons = Array.from(dialog.querySelectorAll('sl-button[slot="footer"]'));
       const buttonLabels = buttons.map((b) => b.textContent.trim());
 
       expect(buttonLabels.some((l) => l.includes('Close'))).to.be.true;
       expect(buttonLabels.some((l) => l.includes('Copy All'))).to.be.true;
       expect(buttonLabels.some((l) => l.includes('Download .txt'))).to.be.true;
-      expect(buttonLabels.some((l) => l.includes('Download .md'))).to.be.true;
-      expect(buttonLabels.some((l) => l.includes('Save as Note'))).to.be.true;
     });
 
     it('renders Cancel button and aborts on cancel() during processing', async () => {
@@ -164,7 +162,7 @@ describe('OCR Service & Dialog (CPO-021)', () => {
       carousel = document.createElement('copio-carousel');
       carousel.images = [
         { id: 'p1', src: 'data:image/png;base64,page1' },
-        { id: 'm1', type: 'markdown', content: 'note' },
+        { id: 'p2' },
       ];
       document.body.appendChild(carousel);
       await carousel.updateComplete;
@@ -188,7 +186,7 @@ describe('OCR Service & Dialog (CPO-021)', () => {
       ocrBtn.click();
     });
 
-    it('hides Extract Text button when active slide is markdown', async () => {
+    it('hides Extract Text button when active slide has no image src', async () => {
       carousel.activeSlideIndex = 1;
       await carousel.updateComplete;
 

@@ -25,14 +25,12 @@ export class CopioImages extends HTMLElement {
   #cropper = null;
   #sortable = null;
   #cropIndex = null;
-  #textIndex = null;
   #isInitialized = false;
   #abortController = null;
   #createdObjectUrls = new Set();
   #activeCameraStream = null;
   #ocr = true;
   #pdf = true;
-  #markdown = true;
 
   constructor() {
     super();
@@ -68,7 +66,6 @@ export class CopioImages extends HTMLElement {
       this.#cropper = null;
     }
     this.#cropIndex = null;
-    this.#textIndex = null;
 
     // 3. Stop camera tracks
     this.stopCamera();
@@ -285,40 +282,6 @@ export class CopioImages extends HTMLElement {
             padding: 0.5rem 0.75rem;
           }
         }
-        .markdown-card {
-          width: 100%;
-          height: 100%;
-          border: 1px solid #334155;
-          border-radius: 4px;
-          background: #0f172a;
-          color: #f8fafc;
-          padding: 10px;
-          box-sizing: border-box;
-          font-family: monospace;
-          font-size: 0.72rem;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-        }
-        .markdown-card-header {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-weight: bold;
-          font-size: 0.75rem;
-          color: #38bdf8;
-          margin-bottom: 6px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        .markdown-card-body {
-          flex: 1;
-          opacity: 0.8;
-          word-break: break-word;
-          overflow: hidden;
-          line-height: 1.35;
-        }
         button.add-btn {
           width: 100%;
           aspect-ratio: 1;
@@ -353,16 +316,8 @@ export class CopioImages extends HTMLElement {
       ${styles}
       <div class="container"></div>
 
-      <input type="file" class="file-input" accept="image/*,application/pdf,.md,.markdown,text/plain" multiple style="display: none">
+      <input type="file" class="file-input" accept="image/*,application/pdf" multiple style="display: none">
       <input type="file" class="camera-input" accept="image/*" capture="environment" style="display: none">
-
-      <sl-dialog label="Edit Markdown Text" class="text-dialog" style="--width: min(92%, 560px)">
-        <div style="margin-bottom: 1rem;">
-          <sl-textarea class="text-editor" rows="12" placeholder="Enter markdown content..."></sl-textarea>
-        </div>
-        <sl-button slot="footer" variant="default" class="cancel-text">Cancel</sl-button>
-        <sl-button slot="footer" variant="primary" class="apply-text">Save Text</sl-button>
-      </sl-dialog>
 
       <sl-dialog label="Image Data" class="data-dialog">
         <div class="exif-data" style="font-size: 0.85rem; line-height: 1.6;"></div>
@@ -377,8 +332,6 @@ export class CopioImages extends HTMLElement {
         <sl-button slot="footer" variant="primary" class="apply-crop">Apply</sl-button>
       </sl-dialog>
     `;
-
-    this.#updateFileInputAccept();
 
     if (this.#abortController) {
       this.#abortController.abort();
@@ -513,13 +466,9 @@ export class CopioImages extends HTMLElement {
 
     const cancelCropBtn = this.shadowRoot.querySelector('.cancel-crop');
     const applyCropBtn = this.shadowRoot.querySelector('.apply-crop');
-    const cancelTextBtn = this.shadowRoot.querySelector('.cancel-text');
-    const applyTextBtn = this.shadowRoot.querySelector('.apply-text');
 
     if (cancelCropBtn) cancelCropBtn.addEventListener('click', () => this.closeCropDialog(), { signal });
     if (applyCropBtn) applyCropBtn.addEventListener('click', () => this.applyCrop(), { signal });
-    if (cancelTextBtn) cancelTextBtn.addEventListener('click', () => this.closeTextDialog(), { signal });
-    if (applyTextBtn) applyTextBtn.addEventListener('click', () => this.applyTextEdit(), { signal });
 
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
     if (cropDialog) {
@@ -540,34 +489,6 @@ export class CopioImages extends HTMLElement {
 
     const imageHtml = this.#images
       .map((item, index) => {
-        if (item.type === 'markdown') {
-          if (this.#markdown === false) {
-            return '';
-          }
-          const title = item.name || 'Markdown Note';
-          const snippet = (item.content || '').slice(0, 120);
-          return `
-            <div class="image-wrapper" data-index="${index}">
-              <div class="markdown-card">
-                <div class="markdown-card-header">
-                  <sl-icon name="file-earmark-text"></sl-icon> ${title}
-                </div>
-                <div class="markdown-card-body">${snippet}</div>
-              </div>
-              <sl-dropdown class="image-menu" data-index="${index}">
-                <sl-button slot="trigger" variant="default" size="small" circle>
-                  <sl-icon name="three-dots-vertical"></sl-icon>
-                </sl-button>
-                <sl-menu>
-                  <sl-menu-item value="edittext">Edit Text</sl-menu-item>
-                  <sl-menu-item value="download">Download Markdown</sl-menu-item>
-                  <sl-divider></sl-divider>
-                  <sl-menu-item value="delete">Delete</sl-menu-item>
-                </sl-menu>
-              </sl-dropdown>
-            </div>
-          `;
-        }
         const hasEdits = hasActiveEdits(item.edits);
         const isBw = item.edits?.filter === 'bw';
         return `
@@ -607,17 +528,12 @@ export class CopioImages extends HTMLElement {
 
     container.innerHTML = `
       ${imageHtml}
-      <button class="add-btn add-image-btn" title="${this.#markdown !== false ? 'Add image, PDF, or Markdown' : 'Add image or PDF'}" aria-label="Add image or PDF">
+      <button class="add-btn add-image-btn" title="Add image or PDF" aria-label="Add image or PDF">
         <sl-icon name="plus-lg"></sl-icon>
       </button>
       <button class="add-btn add-camera-btn" title="Capture from camera" aria-label="Capture from camera">
         <sl-icon name="camera"></sl-icon>
       </button>
-      ${this.#markdown !== false ? `
-      <button class="add-btn add-note-btn" title="New blank note" aria-label="New blank note">
-        <sl-icon name="file-earmark-plus"></sl-icon>
-      </button>
-      ` : ''}
     `;
 
     const addImageBtn = container.querySelector('.add-image-btn');
@@ -631,13 +547,6 @@ export class CopioImages extends HTMLElement {
     if (addCameraBtn) {
       addCameraBtn.onclick = () => {
         this.shadowRoot.querySelector('.camera-input').click();
-      };
-    }
-
-    const addNoteBtn = container.querySelector('.add-note-btn');
-    if (addNoteBtn) {
-      addNoteBtn.onclick = () => {
-        this.addBlankNote();
       };
     }
 
@@ -674,15 +583,12 @@ export class CopioImages extends HTMLElement {
         } else if (action === 'showdata') {
           dropdown.hide();
           this.showImageData(index);
-        } else if (action === 'edittext') {
-          dropdown.hide();
-          this.openTextDialog(index);
         } else if (action === 'download') {
           this.downloadImage(index);
         } else if (action === 'delete') {
           const [deletedPage] = this.#images.splice(index, 1);
           this.#renderGrid();
-          const pageName = deletedPage.name || (deletedPage.type === 'markdown' ? 'Markdown Note' : `Page ${index + 1}`);
+          const pageName = deletedPage.name || `Page ${index + 1}`;
           notify.undo(
             `Deleted ${pageName}`,
             () => {
@@ -735,7 +641,7 @@ export class CopioImages extends HTMLElement {
   async openCropDialog(index) {
     this.#cropIndex = index;
     const page = this.#images[index];
-    if (!page || page.type === 'markdown') return;
+    if (!page) return;
 
     const cropDialog = this.shadowRoot.querySelector('.crop-dialog');
     const cropImage = this.shadowRoot.querySelector('#crop-image');
@@ -868,7 +774,7 @@ export class CopioImages extends HTMLElement {
 
   async rotateImage(index) {
     const page = this.#images[index];
-    if (!page || page.type === 'markdown') return;
+    if (!page) return;
     page.originalSrc = page.originalSrc || page.src;
     page.edits = {
       ...normalizeEdits(page.edits),
@@ -880,7 +786,7 @@ export class CopioImages extends HTMLElement {
 
   async thresholdImage(index) {
     const page = this.#images[index];
-    if (!page || page.type === 'markdown') return;
+    if (!page) return;
     page.originalSrc = page.originalSrc || page.src;
     const isCurrentlyBw = page.edits?.filter === 'bw';
     page.edits = {
@@ -898,85 +804,40 @@ export class CopioImages extends HTMLElement {
 
   resetImage(index) {
     const page = this.#images[index];
-    if (!page || page.type === 'markdown') return;
+    if (!page) return;
     page.edits = { crop: null, rotation: 0, filter: 'none' };
     page.src = page.originalSrc || page.src;
     this.#renderGrid();
     notify.success('Reset page to original');
   }
 
-  addBlankNote() {
-    if (this.#markdown === false) {
-      notify.warning('Markdown notes are disabled');
-      return;
-    }
-    const newNote = {
-      id: randomId(),
-      type: 'markdown',
-      name: 'New Note',
-      content: '',
-    };
-    this.#images.push(newNote);
-    // Re-render the grid first, then open the editor on the new note
-    this.#renderGrid();
-    this.openTextDialog(this.#images.length - 1);
-  }
-
   downloadImage(index) {
     const page = this.#images[index];
     if (!page) return;
-    if (page.type === 'markdown') {
-      if (this.#markdown === false) {
-        notify.warning('Markdown notes are disabled');
-        return;
-      }
-      const blob = new Blob([page.content || ''], { type: 'text/markdown;charset=utf-8' });
-      const url = this.#trackObjectUrl(URL.createObjectURL(blob));
-      const a = document.createElement('a');
-      const filename = page.name || `document-${index + 1}.md`;
-      a.href = url;
-      a.download = filename;
-      a.click();
-      this.#revokeObjectUrl(url);
-      notify.success(`Downloaded "${filename}"`);
-      return;
-    }
-    if (!page.src) return;
     let ext = 'jpg';
-    if (page.src.startsWith('data:')) {
-      const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,/);
-      if (match && match[1].includes('png')) ext = 'png';
+    let url = page.src;
+    let shouldRevoke = false;
+    if (page.blob instanceof Blob) {
+      if (page.blob.type && page.blob.type.includes('png')) ext = 'png';
+      url = this.#trackObjectUrl(URL.createObjectURL(page.blob));
+      shouldRevoke = true;
+    } else if (page.src) {
+      if (page.src.startsWith('data:')) {
+        const match = page.src.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+        if (match && match[1].includes('png')) ext = 'png';
+      }
+    } else {
+      return;
     }
     const a = document.createElement('a');
     const filename = `image-${index + 1}.${ext}`;
-    a.href = page.src;
+    a.href = url;
     a.download = filename;
     a.click();
-    notify.success(`Downloaded "${filename}"`);
-  }
-
-  openTextDialog(index) {
-    this.#textIndex = index;
-    const textDialog = this.shadowRoot.querySelector('.text-dialog');
-    const textEditor = this.shadowRoot.querySelector('.text-editor');
-    textEditor.value = this.#images[index].content || '';
-    textDialog.label = this.#images[index].name || 'Note';
-    textDialog.show();
-  }
-
-  applyTextEdit() {
-    if (this.#textIndex !== null && this.#images[this.#textIndex]) {
-      const textEditor = this.shadowRoot.querySelector('.text-editor');
-      this.#images[this.#textIndex].content = textEditor.value;
-      this.#renderGrid();
-      this.closeTextDialog();
+    if (shouldRevoke) {
+      this.#revokeObjectUrl(url);
     }
-  }
-
-  closeTextDialog() {
-    const textDialog = this.shadowRoot.querySelector('.text-dialog');
-    this.#textIndex = null;
-    textDialog.hide();
+    notify.success(`Downloaded "${filename}"`);
   }
 
   showImageData(index) {
@@ -1019,23 +880,6 @@ export class CopioImages extends HTMLElement {
         if (file.type === 'application/pdf') {
           const pdfImages = await this.pdfToImages(file);
           allImages.push(...pdfImages);
-        } else if (
-          file.name?.endsWith('.md') ||
-          file.name?.endsWith('.markdown') ||
-          file.type === 'text/markdown' ||
-          file.type === 'text/plain'
-        ) {
-          if (this.#markdown === false) {
-            notify.warning('Markdown notes are disabled');
-            continue;
-          }
-          const content = await file.text();
-          allImages.push({
-            id: randomId(),
-            type: 'markdown',
-            name: file.name,
-            content,
-          });
         } else {
           const [src, exif] = await Promise.all([fileToBase64(file), extractExif(file)]);
           allImages.push({
@@ -1080,27 +924,6 @@ export class CopioImages extends HTMLElement {
     }
   }
 
-  get markdown() {
-    return this.#markdown !== false;
-  }
-
-  set markdown(val) {
-    this.#markdown = val !== false;
-    this.#updateFileInputAccept();
-    if (this.#isInitialized) {
-      this.#renderGrid();
-    }
-  }
-
-  #updateFileInputAccept() {
-    const fileInput = this.shadowRoot?.querySelector('.file-input');
-    if (fileInput) {
-      fileInput.accept = this.#markdown !== false
-        ? 'image/*,application/pdf,.md,.markdown,text/plain'
-        : 'image/*,application/pdf';
-    }
-  }
-
   get images() {
     return this.#images;
   }
@@ -1108,7 +931,7 @@ export class CopioImages extends HTMLElement {
   set images(val) {
     const arr = Array.isArray(val) ? val : [];
     this.#images = arr.map((item) => {
-      if (!item || item.type === 'markdown') return item;
+      if (!item) return item;
       return {
         ...item,
         originalSrc: item.originalSrc || item.src || '',

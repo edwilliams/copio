@@ -3,27 +3,8 @@ import { LitElement, html } from '../../lib/lit-core.min.js';
 import { randomId } from '../../utils/utils.js';
 
 export class CopioAddEditDialog extends LitElement {
-  static properties = {
-    markdown: { type: Boolean },
-  };
-
-  constructor() {
-    super();
-    this.markdown = true;
-  }
-
   createRenderRoot() {
     return this;
-  }
-
-  updated(changedProperties) {
-    super.updated(changedProperties);
-    if (changedProperties.has('markdown')) {
-      const copioImages = this.querySelector('copio-images');
-      if (copioImages && 'markdown' in copioImages) {
-        copioImages.markdown = this.markdown !== false;
-      }
-    }
   }
 
   disconnectedCallback() {
@@ -88,10 +69,6 @@ export class CopioAddEditDialog extends LitElement {
   async open() {
     await this.updateComplete;
     this.#clearValidation();
-    const copioImages = this.querySelector('copio-images');
-    if (copioImages && 'markdown' in copioImages) {
-      copioImages.markdown = this.markdown !== false;
-    }
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
     await dialog.show();
@@ -112,18 +89,12 @@ export class CopioAddEditDialog extends LitElement {
     inputName.value = name;
 
     await customElements.whenDefined('copio-images');
-    if (copioImages && 'markdown' in copioImages) {
-      copioImages.markdown = this.markdown !== false;
-    }
-    copioImages.images = pages.map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
+    copioImages.images = pages.map(({ id, src, originalSrc, edits, exif }) => ({
       id,
       src,
       originalSrc: originalSrc || src,
       edits: edits || { crop: null, rotation: 0, filter: 'none' },
       exif,
-      type,
-      name,
-      content,
     }));
 
     if (!dialog.open) {
@@ -210,7 +181,6 @@ export class CopioAddEditDialog extends LitElement {
 
           <copio-images
             style="display: block; margin-top: 1.5rem"
-            .markdown=${this.markdown !== false}
           ></copio-images>
 
           <br />

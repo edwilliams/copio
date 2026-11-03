@@ -26,7 +26,7 @@ describe('CPO-014: Headless DocRepository', () => {
   it('creates document with custom title and initial pages', async () => {
     const pages = [
       { id: 'p1', src: 'data:image/png;base64,aaa', type: 'image' },
-      { id: 'p2', type: 'markdown', name: 'Note 1', content: 'Notes' },
+      { id: 'p2', src: 'data:image/png;base64,bbb', name: 'Page 2' },
     ];
     const doc = await repo.createDoc('Tax Return 2026', pages);
     expect(doc.name).to.equal('Tax Return 2026');
@@ -70,13 +70,13 @@ describe('CPO-014: Headless DocRepository', () => {
   it('updates an individual page in a document', async () => {
     const doc = await repo.createDoc('Update Page Doc', [
       { id: 'p1', src: 'img1', type: 'image' },
-      { id: 'p2', type: 'markdown', name: 'Draft', content: 'hello' },
+      { id: 'p2', src: 'img2', name: 'Draft', caption: 'hello' },
     ]);
 
-    await repo.updatePage(doc.id, 'p2', { content: 'hello world', name: 'Final' });
+    await repo.updatePage(doc.id, 'p2', { caption: 'hello world', name: 'Final' });
 
     const updated = await repo.getDoc(doc.id);
-    expect(updated.pages[1].content).to.equal('hello world');
+    expect(updated.pages[1].caption).to.equal('hello world');
     expect(updated.pages[1].name).to.equal('Final');
   });
 

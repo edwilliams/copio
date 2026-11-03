@@ -68,14 +68,14 @@ export function dispatchCopioEvent(target, eventName, detail = {}) {
  * @property {number} pageCount - Number of pages in the scan
  * 
  * @typedef {Object} CopioExportProgressDetail
- * @property {string} type - Export format ('pdf' | 'zip' | 'image' | 'markdown')
+ * @property {string} type - Export format ('pdf' | 'zip' | 'image')
  * @property {number} done - Pages completed
  * @property {number} total - Total pages
  * @property {number} percent - Progress percent (0-100)
  * @property {string} [docName] - Document name
  * 
  * @typedef {Object} CopioExportCompleteDetail
- * @property {string} type - Export format ('pdf' | 'zip' | 'image' | 'markdown')
+ * @property {string} type - Export format ('pdf' | 'zip' | 'image')
  * @property {string} format - Duplicate of type for convenience
  * @property {Blob} blob - The generated export binary Blob
  * @property {string} [docName] - Document name

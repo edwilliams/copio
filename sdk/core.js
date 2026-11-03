@@ -130,7 +130,6 @@ export class CopioEngine {
   #services = {};
   #ocr = true;
   #pdf = true;
-  #markdown = false;
   #imageProcessor = null;
   #undoStack = new Map();
   #redoStack = new Map();
@@ -149,7 +148,6 @@ export class CopioEngine {
    * @param {string} [options.licenseKey] - SDK commercial license key
    * @param {boolean} [options.ocr=true] - Whether OCR module is enabled (developer opt-in CPO-042)
    * @param {boolean} [options.pdf=true] - Whether PDF module is enabled (developer opt-in CPO-042)
-   * @param {boolean} [options.markdown=false] - Whether Markdown notes module is enabled (developer opt-in CPO-026)
    */
   constructor(options = {}) {
     this.#storage = options.storage || createDefaultAdapter(/** @type {any} */ (options));
@@ -195,11 +193,6 @@ export class CopioEngine {
       this.pdf = Boolean(options.pdf);
     } else if (options.exportFormats !== undefined && !this.#exportFormats.includes('pdf')) {
       this.pdf = false;
-    }
-    if (options.markdown !== undefined) {
-      this.markdown = Boolean(options.markdown);
-    } else if (options.features !== undefined && this.hasFeature('markdown')) {
-      this.markdown = true;
     }
   }
 
@@ -339,23 +332,6 @@ export class CopioEngine {
     } else {
       this.#exportFormats = this.#exportFormats.filter((f) => f !== 'pdf');
       this.setService('pdf', new NullPdfAdapter());
-    }
-  }
-
-  /**
-   * Developer opt-in status for Markdown notes module (CPO-026).
-   * @type {boolean}
-   */
-  get markdown() {
-    return this.#markdown && this.hasFeature('markdown');
-  }
-
-  set markdown(enabled) {
-    this.#markdown = Boolean(enabled);
-    if (this.#markdown) {
-      this.enableFeature('markdown');
-    } else {
-      this.disableFeature('markdown');
     }
   }
 

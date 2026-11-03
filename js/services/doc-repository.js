@@ -465,7 +465,7 @@ export class DocRepository {
       const wirePages = [];
 
       for (const page of fullDoc?.pages || []) {
-        if (!page || page.type === 'markdown') {
+        if (!page) {
           wirePages.push(page);
           continue;
         }

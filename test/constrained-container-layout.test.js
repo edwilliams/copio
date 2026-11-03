@@ -244,33 +244,33 @@ describe('Constrained-Container Layout Pass (CPO-024)', () => {
       app.closeSyncDialog();
     });
 
-    it('scopes crop and text dialogs inside copio-images Shadow DOM', async () => {
+    it('scopes dialogs inside copio-images Shadow DOM', async () => {
       hostFrame = createHostFrame(360, 640);
       const images = document.createElement('copio-images');
       hostFrame.appendChild(images);
 
       images.images = [
-        { id: 'p1', type: 'markdown', name: 'Note 1', content: 'Sample text' },
+        { id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
       ];
 
-      const textDialog = images.shadowRoot.querySelector('.text-dialog');
-      expect(textDialog).to.exist;
+      const dataDialog = images.shadowRoot.querySelector('.data-dialog');
+      expect(dataDialog).to.exist;
 
-      images.openTextDialog(0);
-      await textDialog.updateComplete;
+      images.showImageData(0);
+      await dataDialog.updateComplete;
 
-      const panel = textDialog.shadowRoot.querySelector('[part~="panel"]');
+      const panel = dataDialog.shadowRoot.querySelector('[part~="panel"]');
       expect(panel).to.exist;
 
       const frameRect = hostFrame.getBoundingClientRect();
-      const textRect = panel.getBoundingClientRect();
+      const dataRect = panel.getBoundingClientRect();
 
-      expect(textRect.width).to.be.at.most(frameRect.width);
-      expect(textRect.height).to.be.at.most(frameRect.height);
-      expect(textRect.left).to.be.at.least(frameRect.left - 1);
-      expect(textRect.right).to.be.at.most(frameRect.right + 1);
+      expect(dataRect.width).to.be.at.most(frameRect.width);
+      expect(dataRect.height).to.be.at.most(frameRect.height);
+      expect(dataRect.left).to.be.at.least(frameRect.left - 1);
+      expect(dataRect.right).to.be.at.most(frameRect.right + 1);
 
-      images.closeTextDialog();
+      dataDialog.hide();
     });
   });
 
