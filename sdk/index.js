@@ -78,12 +78,14 @@ export {
   loadTesseract,
 } from '../js/utils/module-loader.js';
 
-// Data Layer & StoragePort (CPO-014, CPO-033)
+// Data Layer & StoragePort (CPO-014, CPO-033, CPO-012)
 export { DocRepository, docRepository } from '../js/services/doc-repository.js';
 export {
   StoragePort,
   MemoryStorageAdapter,
   IndexedDbStorageAdapter,
+  OpfsStorageAdapter,
+  probeOpfs,
   createDefaultAdapter,
 } from '../js/adapters/storage/index.js';
 

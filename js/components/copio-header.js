@@ -36,6 +36,7 @@ export class CopioHeader extends LitElement {
   static properties = {
     _storageEstimate: { state: true },
     _isPersisted: { state: true },
+    storageKind: { type: String },
   };
 
   async connectedCallback() {
@@ -93,8 +94,10 @@ export class CopioHeader extends LitElement {
               <sl-menu-item value="clear-cache">Clear cache &amp; update</sl-menu-item>
               <sl-divider></sl-divider>
               <sl-menu-item disabled>
-                Storage: ${this._formatBytes(this._storageEstimate?.usage)} 
-                (${this._isPersisted ? 'Persisted' : 'Volatile'})
+                Storage: ${this._formatBytes(this._storageEstimate?.usage)} / ${this._formatBytes(this._storageEstimate?.quota)}
+              </sl-menu-item>
+              <sl-menu-item disabled>
+                Backend: ${(this.storageKind || 'opfs').toUpperCase()} (${this._isPersisted ? 'Persisted' : 'Volatile'})
               </sl-menu-item>
             </sl-menu>
           </sl-dropdown>
