@@ -7,6 +7,7 @@ import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown }
 import { SyncManager } from '../services/sync-service.js';
 import { notify } from '../services/notify.js';
 import { terminateOcrWorker } from '../services/ocr-service.js';
+import { isMarkdownEnabled, setMarkdownEnabled } from '../services/markdown-module.js';
 
 export class CopioApp extends LitElement {
   #syncManager = null;
@@ -19,6 +20,7 @@ export class CopioApp extends LitElement {
     syncState: { type: Object, state: true },
     storageInfo: { type: Object, state: true },
     _durabilityNoticeDismissed: { type: Boolean, state: true },
+    markdownEnabled: { type: Boolean, state: true },
   };
 
   createRenderRoot() {
@@ -34,6 +36,7 @@ export class CopioApp extends LitElement {
     this.syncState = null;
     this.hideLoaderTimer = null;
     this.storageInfo = null;
+    this.markdownEnabled = isMarkdownEnabled();
     try {
       this._durabilityNoticeDismissed = localStorage.getItem('copio-durability-notice-dismissed') === 'true';
     } catch {
@@ -286,9 +289,20 @@ export class CopioApp extends LitElement {
     await exportDocumentAsImages(doc.name, doc.pages);
   }
 
+  handleToggleMarkdown = (e) => {
+    const enabled = e.detail?.enabled ?? !this.markdownEnabled;
+    this.markdownEnabled = enabled;
+    setMarkdownEnabled(enabled);
+    notify.info(`Markdown notes ${enabled ? 'enabled' : 'disabled'}`);
+    this.requestUpdate();
+  };
+
   async handleRowDownloadMarkdown(e) {
+    if (this.markdownEnabled === false) {
+      notify.warning('Markdown notes are disabled');
+      return;
+    }
     const id = e.detail?.id;
-    if (!id) return;
     const doc = await this.docRepo.getDoc(id);
     if (!doc) return;
     exportDocumentAsMarkdown(doc.name, doc.pages);
@@ -305,6 +319,10 @@ export class CopioApp extends LitElement {
   }
 
   async handleCarouselDownloadMarkdown(e) {
+    if (this.markdownEnabled === false) {
+      notify.warning('Markdown notes are disabled');
+      return;
+    }
     const { docName, pages } = e.detail || {};
     exportDocumentAsMarkdown(docName, pages);
   }
@@ -355,6 +373,10 @@ export class CopioApp extends LitElement {
   }
 
   async handleOcrSaveNote(e) {
+    if (this.markdownEnabled === false) {
+      notify.warning('Markdown notes are disabled');
+      return;
+    }
     const { docId, content, pageIndex } = e.detail || {};
     if (!docId || !content) return;
 
@@ -510,6 +532,7 @@ export class CopioApp extends LitElement {
             id=${id}
             name=${doc.name}
             .pages=${doc.pages || []}
+            .markdown=${this.markdownEnabled}
             @doc:edit=${this.handleRowEdit}
             @doc:rename=${this.handleRowRename}
             @doc:view=${this.handleRowView}
@@ -603,8 +626,10 @@ export class CopioApp extends LitElement {
       >
         <copio-header
           .storageKind=${this.storageInfo?.kind}
+          .markdownEnabled=${this.markdownEnabled}
           @header:link-device=${this.startSyncAsHost}
           @header:clear-cache=${this.handleClearCache}
+          @header:toggle-markdown=${this.handleToggleMarkdown}
         ></copio-header>
 
         ${this.renderDurabilityNotice()}
@@ -612,6 +637,7 @@ export class CopioApp extends LitElement {
         <div id="copio-rows">${this.renderRows()}</div>
 
         <copio-add-edit-dialog
+          .markdown=${this.markdownEnabled}
           @dialog:save=${this.handleAddEditSave}
           @dialog:close=${this.handleAddEditHide}
           @copio:ocr-page=${this.handleOcrPage}
@@ -630,6 +656,7 @@ export class CopioApp extends LitElement {
 
       <copio-carousel
         style="display: ${this.showCarousel ? 'block' : 'none'}"
+        .markdown=${this.markdownEnabled}
         @dialog:close=${this.handleCarouselClose}
         @copio:ocr-page=${this.handleOcrPage}
         @doc:download-pdf=${this.handleCarouselDownloadPdf}
@@ -642,6 +669,7 @@ export class CopioApp extends LitElement {
         @dialog:close=${this.closeSyncDialog}
       ></copio-sync-dialog>` : ''}
       <copio-doc-ocr-dialog
+        .markdown=${this.markdownEnabled}
         @note:save=${this.handleOcrSaveNote}
       ></copio-doc-ocr-dialog>
     `;

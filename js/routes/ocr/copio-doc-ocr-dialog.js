@@ -18,6 +18,7 @@ export class CopioDocOcrDialog extends LitElement {
     resultText: { type: String, state: true },
     confidence: { type: Number, state: true },
     copied: { type: Boolean, state: true },
+    markdown: { type: Boolean },
   };
 
   createRenderRoot() {
@@ -43,6 +44,7 @@ export class CopioDocOcrDialog extends LitElement {
     this.lang = 'eng';
     this.step = 'processing';
     this.progress = 0;
+    this.markdown = true;
     this.statusMessage = 'Starting OCR engine...';
     this.resultText = '';
     this.confidence = 0;
@@ -363,14 +365,18 @@ export class CopioDocOcrDialog extends LitElement {
                 <sl-icon slot="prefix" name="download"></sl-icon>
                 Download .txt
               </sl-button>
-              <sl-button slot="footer" variant="default" @click=${this.downloadMarkdown}>
-                <sl-icon slot="prefix" name="download"></sl-icon>
-                Download .md
-              </sl-button>
-              <sl-button slot="footer" variant="primary" @click=${this.saveAsNote}>
-                <sl-icon slot="prefix" name="file-earmark-plus"></sl-icon>
-                Save as Note
-              </sl-button>
+              ${this.markdown !== false
+                ? html`
+                    <sl-button slot="footer" variant="default" @click=${this.downloadMarkdown}>
+                      <sl-icon slot="prefix" name="download"></sl-icon>
+                      Download .md
+                    </sl-button>
+                    <sl-button slot="footer" variant="primary" @click=${this.saveAsNote}>
+                      <sl-icon slot="prefix" name="file-earmark-plus"></sl-icon>
+                      Save as Note
+                    </sl-button>
+                  `
+                : ''}
             `
           : ''}
       </sl-dialog>

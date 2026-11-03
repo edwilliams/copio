@@ -46,6 +46,21 @@ export {
 } from '../js/services/export-utils.js';
 
 export {
+  isMarkdownEnabled,
+  setMarkdownEnabled,
+  createMarkdownPage,
+  isMarkdownPage,
+  loadMarkdownParser,
+  renderMarkdownToHtml,
+  parseMarkdownSync,
+} from '../js/services/markdown-module.js';
+
+export {
+  renderMarkdownToPdf,
+  renderMarkdownToPageDataUrls,
+} from '../js/services/markdown-pdf.js';
+
+export {
   notify,
   setContainer,
   getContainer,

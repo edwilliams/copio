@@ -11,7 +11,7 @@ export class CopioCarousel extends LitElement {
   updated(changedProperties) {
     super.updated(changedProperties);
     if (changedProperties.has('images') && Array.isArray(this.images)) {
-      if (this.images.some((img) => img.type === 'markdown') && (!window.marked || !window.marked.parse)) {
+      if (this.markdown !== false && this.images.some((img) => img.type === 'markdown') && (!window.marked || !window.marked.parse)) {
         loadMarked().then(() => this.requestUpdate());
       }
     }
@@ -24,18 +24,23 @@ export class CopioCarousel extends LitElement {
     activeSlideIndex: { type: Number, state: true },
     ocr: { type: Boolean },
     pdf: { type: Boolean },
+    markdown: { type: Boolean },
   };
+
+  get visibleImages() {
+    return (this.images || []).filter((img) => this.markdown !== false || img.type !== 'markdown');
+  }
 
   get hasImages() {
     return (this.images || []).some((img) => img.type !== 'markdown' && !!img.src);
   }
 
   get hasMarkdown() {
-    return (this.images || []).some((img) => img.type === 'markdown');
+    return this.markdown !== false && (this.images || []).some((img) => img.type === 'markdown');
   }
 
   get pageCount() {
-    return (this.images || []).length;
+    return this.visibleImages.length;
   }
 
   static styles = css`
@@ -229,6 +234,7 @@ export class CopioCarousel extends LitElement {
     this.activeSlideIndex = 0;
     this.ocr = true;
     this.pdf = true;
+    this.markdown = true;
   }
 
   handleBackClick() {
@@ -275,6 +281,9 @@ export class CopioCarousel extends LitElement {
 
   renderItem(img) {
     if (img.type === 'markdown') {
+      if (this.markdown === false) {
+        return html``;
+      }
       const rawContent = img.content || '';
       const htmlContent = window.marked && window.marked.parse ? window.marked.parse(rawContent) : rawContent;
       return html`
@@ -293,7 +302,7 @@ export class CopioCarousel extends LitElement {
   }
 
   render() {
-    const activePage = this.images[this.activeSlideIndex];
+    const activePage = this.visibleImages[this.activeSlideIndex];
     const canOcr = this.ocr !== false && activePage && activePage.type !== 'markdown' && !!activePage.src;
 
     return html`
@@ -332,10 +341,14 @@ export class CopioCarousel extends LitElement {
                 <sl-icon slot="prefix" name="images"></sl-icon>
                 Download as Images (ZIP)
               </sl-menu-item>
-              <sl-menu-item value="markdown" ?disabled=${!this.hasMarkdown}>
-                <sl-icon slot="prefix" name="markdown"></sl-icon>
-                Download as Markdown
-              </sl-menu-item>
+              ${this.markdown !== false
+                ? html`
+                    <sl-menu-item value="markdown" ?disabled=${!this.hasMarkdown}>
+                      <sl-icon slot="prefix" name="markdown"></sl-icon>
+                      Download as Markdown
+                    </sl-menu-item>
+                  `
+                : ''}
             </sl-menu>
           </sl-dropdown>
         </div>
@@ -346,7 +359,7 @@ export class CopioCarousel extends LitElement {
         orientation="vertical"
         @sl-slide-change=${this.handleSlideChange}
       >
-        ${this.images.map((img) => this.renderItem(img))}
+        ${this.visibleImages.map((img) => this.renderItem(img))}
       </sl-carousel>
     `;
   }

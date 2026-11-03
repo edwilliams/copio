@@ -9,6 +9,7 @@ export class CopioRow extends LitElement {
     renameValue: { type: String, state: true },
     ocr: { type: Boolean },
     pdf: { type: Boolean },
+    markdown: { type: Boolean },
   };
 
   constructor() {
@@ -19,6 +20,7 @@ export class CopioRow extends LitElement {
     this.renameValue = '';
     this.ocr = true;
     this.pdf = true;
+    this.markdown = true;
   }
 
   get hasImages() {
@@ -26,11 +28,15 @@ export class CopioRow extends LitElement {
   }
 
   get hasMarkdown() {
-    return (this.pages || []).some((p) => p.type === 'markdown');
+    return this.markdown !== false && (this.pages || []).some((p) => p.type === 'markdown');
+  }
+
+  get visiblePages() {
+    return (this.pages || []).filter((p) => this.markdown !== false || p.type !== 'markdown');
   }
 
   get pageCount() {
-    return (this.pages || []).length;
+    return this.visiblePages.length;
   }
 
   static styles = css`
@@ -289,14 +295,18 @@ export class CopioRow extends LitElement {
               <sl-icon slot="prefix" name="images"></sl-icon>
               Download as Images
             </sl-menu-item>
-            <sl-menu-item
-              value="download-markdown"
-              ?disabled=${!this.hasMarkdown}
-              title=${!this.hasMarkdown ? 'No markdown notes in document' : 'Download as Markdown'}
-            >
-              <sl-icon slot="prefix" name="markdown"></sl-icon>
-              Download as Markdown
-            </sl-menu-item>
+            ${this.markdown !== false
+              ? html`
+                  <sl-menu-item
+                    value="download-markdown"
+                    ?disabled=${!this.hasMarkdown}
+                    title=${!this.hasMarkdown ? 'No markdown notes in document' : 'Download as Markdown'}
+                  >
+                    <sl-icon slot="prefix" name="markdown"></sl-icon>
+                    Download as Markdown
+                  </sl-menu-item>
+                `
+              : ''}
             <sl-divider></sl-divider>
             <sl-menu-item value="delete">
               <sl-icon slot="prefix" name="trash"></sl-icon>

@@ -55,6 +55,8 @@
   "js/services/doc-repository.js",
   "js/services/export-utils.js",
   "js/services/ice-servers.js",
+  "js/services/markdown-module.js",
+  "js/services/markdown-pdf.js",
   "js/services/notify.js",
   "js/services/ocr-service.js",
   "js/services/sync-service.js",

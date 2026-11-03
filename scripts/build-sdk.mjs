@@ -56,6 +56,7 @@ async function buildSdk() {
       sync: path.join(rootDir, 'sdk/sync.js'),
       ocr: path.join(rootDir, 'js/services/ocr-service.js'),
       export: path.join(rootDir, 'js/services/export-utils.js'),
+      markdown: path.join(rootDir, 'js/services/markdown-module.js'),
       'adapters/index': path.join(rootDir, 'js/adapters/index.js'),
       'adapters/memory-adapter': path.join(rootDir, 'js/adapters/storage/memory-adapter.js'),
       'adapters/indexeddb-adapter': path.join(rootDir, 'js/adapters/storage/indexeddb-adapter.js'),

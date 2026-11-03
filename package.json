@@ -28,6 +28,11 @@
       "import": "./dist/sync.js",
       "default": "./dist/sync.js"
     },
+    "./markdown": {
+      "types": "./dist/types/js/services/markdown-module.d.ts",
+      "import": "./dist/markdown.js",
+      "default": "./dist/markdown.js"
+    },
     "./adapters/*": {
       "import": "./dist/adapters/*.js",
       "default": "./dist/adapters/*.js"
