@@ -42,7 +42,6 @@ export { SyncManager } from '../js/services/sync-service.js';
 export {
   exportDocumentAsPdf,
   exportDocumentAsImages,
-  exportDocumentAsMarkdown,
 } from '../js/services/export-utils.js';
 
 export {
@@ -72,7 +71,6 @@ export {
   loadCropper,
   loadPdfKit,
   loadJsZip,
-  loadMarked,
   loadPeerJs,
   loadQrCode,
   loadTesseract,

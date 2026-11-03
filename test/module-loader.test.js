@@ -6,7 +6,6 @@ import {
   loadCropper,
   loadPdfKit,
   loadJsZip,
-  loadMarked,
   loadPeerJs,
   loadQrCode,
   loadTesseract,
@@ -86,16 +85,6 @@ describe('CPO-031: Module & Asset Loader', () => {
       expect(typeof zip.file).to.equal('function');
     });
 
-    it('loadMarked dynamically loads marked (window.marked)', async () => {
-      const marked = await loadMarked();
-      expect(marked).to.exist;
-      expect(window.marked).to.equal(marked);
-      expect(typeof marked.parse).to.equal('function');
-
-      const parsed = marked.parse('# Heading');
-      expect(parsed).to.include('<h1');
-    });
-
     it('loadPeerJs dynamically loads PeerJS (window.Peer)', async () => {
       const Peer = await loadPeerJs();
       expect(Peer).to.exist;
@@ -121,7 +110,7 @@ describe('CPO-031: Module & Asset Loader', () => {
   });
 
   describe('Verification: Zero Third-Party Classic Script Tags in index.html', () => {
-    it('index.html contains no classic third-party <script> tags for cropper, pdfkit, jszip, marked, peerjs, qrcode, or tesseract', async () => {
+    it('index.html contains no classic third-party <script> tags for cropper, pdfkit, jszip, peerjs, qrcode, or tesseract', async () => {
       const res = await fetch('/index.html');
       const html = await res.text();
 
@@ -136,7 +125,6 @@ describe('CPO-031: Module & Asset Loader', () => {
           src.includes('cropper.js') ||
           src.includes('pdfkit.js') ||
           src.includes('jszip.min.js') ||
-          src.includes('marked.min.js') ||
           src.includes('peerjs.min.js') ||
           src.includes('qrcode.js') ||
           src.includes('tesseract.min.js')

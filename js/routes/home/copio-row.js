@@ -22,15 +22,15 @@ export class CopioRow extends LitElement {
   }
 
   get hasImages() {
-    return (this.pages || []).some((p) => p.type !== 'markdown' && !!p.src);
+    return (this.pages || []).some((p) => !!p.src);
   }
 
-  get hasMarkdown() {
-    return (this.pages || []).some((p) => p.type === 'markdown');
+  get visiblePages() {
+    return this.pages || [];
   }
 
   get pageCount() {
-    return (this.pages || []).length;
+    return this.visiblePages.length;
   }
 
   static styles = css`
@@ -109,7 +109,6 @@ export class CopioRow extends LitElement {
     if (selected === 'extract-ocr') this.handleExtractOcr();
     if (selected === 'download') this.handleDownload();
     if (selected === 'download-images') this.handleDownloadImages();
-    if (selected === 'download-markdown') this.handleDownloadMarkdown();
   }
 
   startRename(e) {
@@ -198,11 +197,6 @@ export class CopioRow extends LitElement {
     this.dispatchEvent(new CustomEvent('doc:download-images', { bubbles: true, composed: false, detail }));
   }
 
-  handleDownloadMarkdown() {
-    const detail = { id: this.getAttribute('id') };
-    this.dispatchEvent(new CustomEvent('doc:download-markdown', { bubbles: true, composed: false, detail }));
-  }
-
   render() {
     return html`
       <div class="wrapper" @click=${this.#handleWrapperClick}>
@@ -288,14 +282,6 @@ export class CopioRow extends LitElement {
             >
               <sl-icon slot="prefix" name="images"></sl-icon>
               Download as Images
-            </sl-menu-item>
-            <sl-menu-item
-              value="download-markdown"
-              ?disabled=${!this.hasMarkdown}
-              title=${!this.hasMarkdown ? 'No markdown notes in document' : 'Download as Markdown'}
-            >
-              <sl-icon slot="prefix" name="markdown"></sl-icon>
-              Download as Markdown
             </sl-menu-item>
             <sl-divider></sl-divider>
             <sl-menu-item value="delete">

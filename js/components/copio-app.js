@@ -1,9 +1,8 @@
 // @ts-nocheck
 import { LitElement, html } from '../lib/lit-core.min.js';
 import { router } from '../core/router.js';
-import { randomId } from '../utils/utils.js';
 import { docRepository } from '../services/doc-repository.js';
-import { exportDocumentAsPdf, exportDocumentAsImages, exportDocumentAsMarkdown } from '../services/export-utils.js';
+import { exportDocumentAsPdf, exportDocumentAsImages } from '../services/export-utils.js';
 import { SyncManager } from '../services/sync-service.js';
 import { notify } from '../services/notify.js';
 import { terminateOcrWorker } from '../services/ocr-service.js';
@@ -12,6 +11,10 @@ export class CopioApp extends LitElement {
   #syncManager = null;
   #unsubscribeRouter = null;
   #repoUnsubscribe = null;
+  #readyResolver = null;
+  ready = new Promise((resolve) => {
+    this.#readyResolver = resolve;
+  });
 
   static properties = {
     docsData: { type: Object, state: true },
@@ -101,6 +104,7 @@ export class CopioApp extends LitElement {
     } else {
       router.handleRoute();
     }
+    this.#readyResolver?.();
   }
 
   // Cleanup
@@ -286,14 +290,6 @@ export class CopioApp extends LitElement {
     await exportDocumentAsImages(doc.name, doc.pages);
   }
 
-  async handleRowDownloadMarkdown(e) {
-    const id = e.detail?.id;
-    if (!id) return;
-    const doc = await this.docRepo.getDoc(id);
-    if (!doc) return;
-    exportDocumentAsMarkdown(doc.name, doc.pages);
-  }
-
   async handleCarouselDownloadPdf(e) {
     const { docName, pages } = e.detail || {};
     await exportDocumentAsPdf(docName, pages);
@@ -302,11 +298,6 @@ export class CopioApp extends LitElement {
   async handleCarouselDownloadImages(e) {
     const { docName, pages } = e.detail || {};
     await exportDocumentAsImages(docName, pages);
-  }
-
-  async handleCarouselDownloadMarkdown(e) {
-    const { docName, pages } = e.detail || {};
-    exportDocumentAsMarkdown(docName, pages);
   }
 
   // Document OCR Handlers
@@ -352,40 +343,6 @@ export class CopioApp extends LitElement {
     if (ocrDialog) {
       ocrDialog.openPage(docId, doc.name, page, pageIndex);
     }
-  }
-
-  async handleOcrSaveNote(e) {
-    const { docId, content, pageIndex } = e.detail || {};
-    if (!docId || !content) return;
-
-    const doc = await this.docRepo.getDoc(docId);
-    if (!doc) return;
-
-    const noteName =
-      pageIndex !== null && pageIndex !== undefined
-        ? `OCR — Page ${pageIndex + 1}`
-        : 'OCR Full Transcript';
-
-    const newNote = {
-      id: randomId(),
-      type: 'markdown',
-      name: noteName,
-      content,
-    };
-
-    const pages = [...(doc.pages || [])];
-    if (pageIndex !== null && pageIndex !== undefined) {
-      // Insert right after the source image page
-      pages.splice(pageIndex + 1, 0, newNote);
-    } else {
-      // Full-document mode: append at the end
-      pages.push(newNote);
-    }
-
-    await this.docRepo.saveDoc(docId, {
-      ...doc,
-      pages,
-    });
   }
 
   handleCarouselClose() {
@@ -517,7 +474,6 @@ export class CopioApp extends LitElement {
             @doc:delete=${this.handleRowDelete}
             @doc:download=${this.handleRowDownload}
             @doc:download-images=${this.handleRowDownloadImages}
-            @doc:download-markdown=${this.handleRowDownloadMarkdown}
           ></copio-row>
         `,
       )}
@@ -634,16 +590,13 @@ export class CopioApp extends LitElement {
         @copio:ocr-page=${this.handleOcrPage}
         @doc:download-pdf=${this.handleCarouselDownloadPdf}
         @doc:download-images=${this.handleCarouselDownloadImages}
-        @doc:download-markdown=${this.handleCarouselDownloadMarkdown}
       ></copio-carousel>
 
       ${this.syncState ? html`<copio-sync-dialog
         .syncState=${this.syncState}
         @dialog:close=${this.closeSyncDialog}
       ></copio-sync-dialog>` : ''}
-      <copio-doc-ocr-dialog
-        @note:save=${this.handleOcrSaveNote}
-      ></copio-doc-ocr-dialog>
+      <copio-doc-ocr-dialog></copio-doc-ocr-dialog>
     `;
   }
 }

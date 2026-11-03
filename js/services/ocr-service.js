@@ -242,7 +242,7 @@ export async function recognizeImageText(image, options = {}) {
  */
 export async function recognizeDocumentPages(pages, options = {}) {
   const { lang = 'eng', onPageProgress = null, abortSignal = null } = options;
-  const imagePages = (pages || []).filter((p) => p.type !== 'markdown' && (p.blob || p.src));
+  const imagePages = (pages || []).filter((p) => p.blob || p.src);
 
   if (imagePages.length === 0) {
     return {

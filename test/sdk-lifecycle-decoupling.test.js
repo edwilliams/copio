@@ -80,7 +80,7 @@ describe('CPO-039: Lifecycle Hygiene - Cleanup on Disconnect', () => {
     };
 
     try {
-      el.images = [{ id: '1', type: 'markdown', name: 'Note.md', content: 'test content' }];
+      el.images = [{ id: '1', blob: new Blob(['fake image bytes'], { type: 'image/png' }) }];
       // Trigger download which creates and revokes an object URL
       el.downloadImage(0);
       expect(revokedUrls).to.have.lengthOf(1);

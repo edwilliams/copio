@@ -158,7 +158,6 @@ async function buildSdk() {
     'cropper.js',
     'exifr.js',
     'jszip.min.js',
-    'marked.min.js',
     'pdf.min.mjs',
     'pdf.worker.min.mjs',
     'pdfkit.js',
