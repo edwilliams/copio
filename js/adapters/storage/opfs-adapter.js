@@ -182,6 +182,7 @@ export class OpfsStorageAdapter extends StoragePort {
   #pageObjectUrls = new Map();
   #pageOrigObjectUrls = new Map();
   #activeDocCache = new Map();
+  #initPromise = null;
 
   /**
    * @param {Object} [options]
@@ -323,38 +324,44 @@ export class OpfsStorageAdapter extends StoragePort {
    * @returns {Promise<{ kind: string, persistent: boolean }>}
    */
   async init() {
-    if (this.#options.forceFallback) {
-      return this.#activateFallback();
+    if (this.#initPromise) {
+      return this.#initPromise;
     }
-
-    const supported = await probeOpfs();
-    if (!supported) {
-      return this.#activateFallback();
-    }
-
-    try {
-      await this.#ensureDirs();
-      await this.#persister.load();
-      this.#persister.startAutoSave();
-
-      // Clean up orphaned directories and files left behind
-      await this.sweepOrphans();
-
-      let persistent = false;
-      if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persisted) {
-        try {
-          persistent = await navigator.storage.persisted();
-        } catch {}
+    this.#initPromise = (async () => {
+      if (this.#options.forceFallback) {
+        return this.#activateFallback();
       }
 
-      return {
-        kind: 'opfs',
-        persistent,
-      };
-    } catch (err) {
-      console.warn('[OpfsAdapter] OPFS initialization failed, switching to IndexedDB fallback:', err);
-      return this.#activateFallback();
-    }
+      const supported = await probeOpfs();
+      if (!supported) {
+        return this.#activateFallback();
+      }
+
+      try {
+        await this.#ensureDirs();
+        await this.#persister.load();
+        this.#persister.startAutoSave();
+
+        // Clean up orphaned directories and files left behind
+        await this.sweepOrphans();
+
+        let persistent = false;
+        if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persisted) {
+          try {
+            persistent = await navigator.storage.persisted();
+          } catch {}
+        }
+
+        return {
+          kind: 'opfs',
+          persistent,
+        };
+      } catch (err) {
+        console.warn('[OpfsAdapter] OPFS initialization failed, switching to IndexedDB fallback:', err);
+        return this.#activateFallback();
+      }
+    })();
+    return this.#initPromise;
   }
 
   async #activateFallback() {

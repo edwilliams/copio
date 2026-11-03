@@ -57,6 +57,7 @@ export class IndexedDbStorageAdapter extends StoragePort {
   #pageObjectUrls = new Map();
   #pageOrigObjectUrls = new Map();
   #activeDocCache = new Map();
+  #initPromise = null;
 
   /**
    * @param {Object} [options]
@@ -166,28 +167,34 @@ export class IndexedDbStorageAdapter extends StoragePort {
    * @returns {Promise<{ kind: string, persistent: boolean }>}
    */
   async init() {
-    if (this.#isCustom) {
-      await this.#persister.load();
-      this.#persister.startAutoLoad();
-      this.#persister.startAutoSave();
-    } else {
-      await this.#persister.load();
+    if (this.#initPromise) {
+      return this.#initPromise;
     }
+    this.#initPromise = (async () => {
+      if (this.#isCustom) {
+        await this.#persister.load();
+        this.#persister.startAutoLoad();
+        this.#persister.startAutoSave();
+      } else {
+        await this.#persister.load();
+      }
 
-    // Run startup sweep to remove orphan blobs left behind
-    await this.sweepOrphans();
+      // Run startup sweep to remove orphan blobs left behind
+      await this.sweepOrphans();
 
-    let persistent = true;
-    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persisted) {
-      try {
-        persistent = await navigator.storage.persisted();
-      } catch {}
-    }
+      let persistent = true;
+      if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persisted) {
+        try {
+          persistent = await navigator.storage.persisted();
+        } catch {}
+      }
 
-    return {
-      kind: 'indexeddb',
-      persistent,
-    };
+      return {
+        kind: 'indexeddb',
+        persistent,
+      };
+    })();
+    return this.#initPromise;
   }
 
   /**

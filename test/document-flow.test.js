@@ -17,7 +17,10 @@ describe('Document Flow: create and view a document', () => {
     app = document.createElement('copio-app');
     document.body.appendChild(app);
     await app.updateComplete;
-    while (app.persister.getStatus() !== 0) {
+    if (app.ready) {
+      await app.ready;
+    }
+    while (app.persister?.getStatus() !== 0) {
       await new Promise((r) => setTimeout(r, 10));
     }
   });
@@ -27,6 +30,9 @@ describe('Document Flow: create and view a document', () => {
     app?.remove();
     store.delTable('docs');
     await persister.save();
+    if (app?.persister && app.persister !== persister) {
+      await app.persister.save();
+    }
     router.navigate('/');
   });
 
@@ -171,6 +177,9 @@ describe('Document Flow: create and view a document', () => {
 
     // Pause autoSave so memory wipe doesn't overwrite IndexedDB
     await app.persister.stopAutoSave();
+    if (persister !== app.persister) {
+      await persister.stopAutoSave();
+    }
 
     // Clear in-memory docs table
     store.delTable('docs');
@@ -188,6 +197,9 @@ describe('Document Flow: create and view a document', () => {
 
     // Resume autoSave
     app.persister.startAutoSave();
+    if (persister !== app.persister) {
+      persister.startAutoSave();
+    }
 
     // Verify store contains restored document
     expect(store.hasRow('docs', docId)).to.be.true;

@@ -100,6 +100,9 @@ describe('Constrained-Container Layout Pass (CPO-024)', () => {
       app = document.createElement('copio-app');
       hostFrame.appendChild(app);
       await app.updateComplete;
+      if (app.ready) {
+        await app.ready;
+      }
 
       const emptyState = app.querySelector('.empty-state');
       expect(emptyState).to.exist;
@@ -117,6 +120,9 @@ describe('Constrained-Container Layout Pass (CPO-024)', () => {
       app = document.createElement('copio-app');
       hostFrame.appendChild(app);
       await app.updateComplete;
+      if (app.ready) {
+        await app.ready;
+      }
 
       const fabWrap = app.querySelector('.copio-fab-wrap');
       expect(fabWrap).to.exist;
@@ -138,6 +144,9 @@ describe('Constrained-Container Layout Pass (CPO-024)', () => {
       app = document.createElement('copio-app');
       hostFrame.appendChild(app);
       await app.updateComplete;
+      if (app.ready) {
+        await app.ready;
+      }
 
       const addDialog = app.querySelector('copio-add-edit-dialog');
       expect(addDialog).to.exist;
@@ -306,6 +315,9 @@ describe('Constrained-Container Layout Pass (CPO-024)', () => {
       app = document.createElement('copio-app');
       hostFrame.appendChild(app);
       await app.updateComplete;
+      if (app.ready) {
+        await app.ready;
+      }
 
       // Seed a document and open carousel
       const docId = 'doc-carousel-1';
@@ -347,6 +359,9 @@ describe('Constrained-Container Layout Pass (CPO-024)', () => {
       app = document.createElement('copio-app');
       hostFrame.appendChild(app);
       await app.updateComplete;
+      if (app.ready) {
+        await app.ready;
+      }
 
       const fabBtn = app.querySelector('.dialog-add-edit-btn');
       expect(fabBtn).to.exist;

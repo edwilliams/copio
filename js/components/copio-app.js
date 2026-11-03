@@ -13,6 +13,10 @@ export class CopioApp extends LitElement {
   #syncManager = null;
   #unsubscribeRouter = null;
   #repoUnsubscribe = null;
+  #readyResolver = null;
+  ready = new Promise((resolve) => {
+    this.#readyResolver = resolve;
+  });
 
   static properties = {
     docsData: { type: Object, state: true },
@@ -104,6 +108,7 @@ export class CopioApp extends LitElement {
     } else {
       router.handleRoute();
     }
+    this.#readyResolver?.();
   }
 
   // Cleanup
