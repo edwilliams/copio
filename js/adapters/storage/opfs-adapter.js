@@ -10,6 +10,15 @@ import { IndexedDbStorageAdapter, dataUrlToBlob } from './indexeddb-adapter.js';
  */
 export async function probeOpfs() {
   if (
+    typeof location !== 'undefined' &&
+    location.search &&
+    (new URLSearchParams(location.search).has('no-opfs') ||
+     new URLSearchParams(location.search).get('storage') === 'indexeddb')
+  ) {
+    return false;
+  }
+
+  if (
     typeof navigator === 'undefined' ||
     !navigator.storage ||
     typeof navigator.storage.getDirectory !== 'function'
