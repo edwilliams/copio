@@ -41,6 +41,7 @@ import {
   ScanSession,
   normalizeEditStack,
   hasActiveEdits,
+  rotateCrop,
   cropRotatedToOriginal,
   cropOriginalToRotated,
 } from './models.js';
@@ -964,6 +965,7 @@ export {
   ScanSession,
   normalizeEditStack,
   hasActiveEdits,
+  rotateCrop,
   cropRotatedToOriginal,
   cropOriginalToRotated,
   randomId,

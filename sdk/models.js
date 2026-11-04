@@ -49,88 +49,68 @@ export function hasActiveEdits(edits) {
   );
 }
 
+const roundCoord = (n) => Math.round(n * 1e6) / 1e6;
+
 /**
- * Maps normalized crop coordinates on a rotated canvas back to original unrotated image coordinates.
+ * Transforms normalized crop coordinates through a clockwise rotation angle (0, 90, 180, 270).
  * @param {{ x: number, y: number, w: number, h: number } | null} crop
- * @param {number} [rotation]
+ * @param {number} [rotation=0] - Clockwise rotation angle in degrees
  * @returns {{ x: number, y: number, w: number, h: number } | null}
  */
-export function cropRotatedToOriginal(crop, rotation = 0) {
+export function rotateCrop(crop, rotation = 0) {
   if (!crop) return null;
   const rot = ((Math.round(Number(rotation) / 90) * 90) % 360 + 360) % 360;
   const { x, y, w, h } = crop;
   if (rot === 90) {
     return {
-      x: Math.max(0, Math.min(1, y)),
-      y: Math.max(0, Math.min(1, 1 - x - w)),
-      w: Math.max(0.01, Math.min(1, h)),
-      h: Math.max(0.01, Math.min(1, w)),
+      x: roundCoord(Math.max(0, Math.min(1, 1 - y - h))),
+      y: roundCoord(Math.max(0, Math.min(1, x))),
+      w: roundCoord(Math.max(0.01, Math.min(1, h))),
+      h: roundCoord(Math.max(0.01, Math.min(1, w))),
     };
   }
   if (rot === 180) {
     return {
-      x: Math.max(0, Math.min(1, 1 - x - w)),
-      y: Math.max(0, Math.min(1, 1 - y - h)),
-      w: Math.max(0.01, Math.min(1, w)),
-      h: Math.max(0.01, Math.min(1, h)),
+      x: roundCoord(Math.max(0, Math.min(1, 1 - x - w))),
+      y: roundCoord(Math.max(0, Math.min(1, 1 - y - h))),
+      w: roundCoord(Math.max(0.01, Math.min(1, w))),
+      h: roundCoord(Math.max(0.01, Math.min(1, h))),
     };
   }
   if (rot === 270) {
     return {
-      x: Math.max(0, Math.min(1, 1 - y - h)),
-      y: Math.max(0, Math.min(1, x)),
-      w: Math.max(0.01, Math.min(1, h)),
-      h: Math.max(0.01, Math.min(1, w)),
+      x: roundCoord(Math.max(0, Math.min(1, y))),
+      y: roundCoord(Math.max(0, Math.min(1, 1 - x - w))),
+      w: roundCoord(Math.max(0.01, Math.min(1, h))),
+      h: roundCoord(Math.max(0.01, Math.min(1, w))),
     };
   }
   return {
-    x: Math.max(0, Math.min(1, x)),
-    y: Math.max(0, Math.min(1, y)),
-    w: Math.max(0.01, Math.min(1, w)),
-    h: Math.max(0.01, Math.min(1, h)),
+    x: roundCoord(Math.max(0, Math.min(1, x))),
+    y: roundCoord(Math.max(0, Math.min(1, y))),
+    w: roundCoord(Math.max(0.01, Math.min(1, w))),
+    h: roundCoord(Math.max(0.01, Math.min(1, h))),
   };
 }
 
 /**
  * Maps normalized crop coordinates on an original unrotated image to a rotated canvas coordinate frame.
  * @param {{ x: number, y: number, w: number, h: number } | null} crop
- * @param {number} [rotation]
+ * @param {number} [rotation=0]
  * @returns {{ x: number, y: number, w: number, h: number } | null}
  */
 export function cropOriginalToRotated(crop, rotation = 0) {
-  if (!crop) return null;
-  const rot = ((Math.round(Number(rotation) / 90) * 90) % 360 + 360) % 360;
-  const { x, y, w, h } = crop;
-  if (rot === 90) {
-    return {
-      x: Math.max(0, Math.min(1, 1 - y - h)),
-      y: Math.max(0, Math.min(1, x)),
-      w: Math.max(0.01, Math.min(1, h)),
-      h: Math.max(0.01, Math.min(1, w)),
-    };
-  }
-  if (rot === 180) {
-    return {
-      x: Math.max(0, Math.min(1, 1 - x - w)),
-      y: Math.max(0, Math.min(1, 1 - y - h)),
-      w: Math.max(0.01, Math.min(1, w)),
-      h: Math.max(0.01, Math.min(1, h)),
-    };
-  }
-  if (rot === 270) {
-    return {
-      x: Math.max(0, Math.min(1, y)),
-      y: Math.max(0, Math.min(1, 1 - x - w)),
-      w: Math.max(0.01, Math.min(1, h)),
-      h: Math.max(0.01, Math.min(1, w)),
-    };
-  }
-  return {
-    x: Math.max(0, Math.min(1, x)),
-    y: Math.max(0, Math.min(1, y)),
-    w: Math.max(0.01, Math.min(1, w)),
-    h: Math.max(0.01, Math.min(1, h)),
-  };
+  return rotateCrop(crop, rotation);
+}
+
+/**
+ * Maps normalized crop coordinates on a rotated canvas back to original unrotated image coordinates.
+ * @param {{ x: number, y: number, w: number, h: number } | null} crop
+ * @param {number} [rotation=0]
+ * @returns {{ x: number, y: number, w: number, h: number } | null}
+ */
+export function cropRotatedToOriginal(crop, rotation = 0) {
+  return rotateCrop(crop, -rotation);
 }
 
 /**
