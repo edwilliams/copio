@@ -181,7 +181,9 @@ export class CopioCarousel extends LitElement {
     };
 
     if (value === 'pdf') {
-      this.dispatchEvent(new CustomEvent('doc:download-pdf', { bubbles: true, composed: false, detail }));
+      this.dispatchEvent(new CustomEvent('doc:download-pdf', { bubbles: true, composed: false, detail: { ...detail, searchable: false } }));
+    } else if (value === 'searchable-pdf') {
+      this.dispatchEvent(new CustomEvent('doc:download-pdf', { bubbles: true, composed: false, detail: { ...detail, searchable: true } }));
     } else if (value === 'images') {
       this.dispatchEvent(new CustomEvent('doc:download-images', { bubbles: true, composed: false, detail }));
     }
@@ -233,6 +235,14 @@ export class CopioCarousel extends LitElement {
                       <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
                       Download as PDF
                     </sl-menu-item>
+                    ${this.ocr !== false
+                      ? html`
+                          <sl-menu-item value="searchable-pdf" ?disabled=${this.pageCount === 0}>
+                            <sl-icon slot="prefix" name="file-earmark-text"></sl-icon>
+                            Download Searchable PDF
+                          </sl-menu-item>
+                        `
+                      : ''}
                   `
                 : ''}
               <sl-menu-item value="images" ?disabled=${this.pageCount === 0}>

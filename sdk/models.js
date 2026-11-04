@@ -128,6 +128,9 @@ export class Page {
    * @param {number} [data.orientation]
    * @param {string|null} [data.ocrText]
    * @param {number|null} [data.ocrConfidence]
+   * @param {Array<Object>|null} [data.ocrWords]
+   * @param {number|null} [data.ocrWidth]
+   * @param {number|null} [data.ocrHeight]
    */
   constructor(data) {
     this.id = data.id;
@@ -139,6 +142,9 @@ export class Page {
     this.orientation = data.orientation || 1;
     this.ocrText = data.ocrText || null;
     this.ocrConfidence = data.ocrConfidence ?? null;
+    this.ocrWords = Array.isArray(data.ocrWords) ? data.ocrWords : null;
+    this.ocrWidth = typeof data.ocrWidth === 'number' ? data.ocrWidth : null;
+    this.ocrHeight = typeof data.ocrHeight === 'number' ? data.ocrHeight : null;
   }
 
   get isModified() {
@@ -156,6 +162,9 @@ export class Page {
       orientation: this.orientation,
       ocrText: this.ocrText,
       ocrConfidence: this.ocrConfidence,
+      ocrWords: this.ocrWords,
+      ocrWidth: this.ocrWidth,
+      ocrHeight: this.ocrHeight,
     };
   }
 }
