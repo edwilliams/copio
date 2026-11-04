@@ -790,6 +790,7 @@ export const scannerCss = `
   overflow-x: auto;
   min-height: 80px;
   flex-shrink: 0;
+  scrollbar-width: thin;
 }
 
 .copio-filmstrip-scroll {
@@ -812,10 +813,13 @@ export const scannerCss = `
   height: 70px;
   border-radius: var(--copio-radius-sm);
   overflow: hidden;
-  background: #000;
+  background: var(--copio-color-surface-elevated, #1c2736);
   border: 2px solid var(--copio-color-border);
   cursor: pointer;
   transition: all var(--copio-transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .copio-filmstrip-item.is-active .copio-thumb-container {
@@ -863,9 +867,11 @@ export const scannerCss = `
 }
 
 .copio-thumb-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 /* Edit Action Toolbar & Primary Completion Dock */
@@ -1161,7 +1167,7 @@ export const scannerCss = `
   }
   .copio-thumb-container {
     width: 112px;
-    height: 84px;
+    height: 140px;
   }
   .copio-toolbar,
   .copio-controls-dock {

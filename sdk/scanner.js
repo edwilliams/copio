@@ -4,7 +4,7 @@
  * Embeddable, zero-config two-stage (viewfinder ↔ workbench) document scanner
  * acting as the primary Driving UI Adapter over the headless CopioEngine.
  */
-import { CopioEngine } from './core.js';
+import { CopioEngine, cropRotatedToOriginal, cropOriginalToRotated } from './core.js';
 import { COPIO_EVENTS, dispatchCopioEvent } from './events.js';
 import { CopioImages } from '../js/routes/doc/copio-images.js';
 import { CopioCarousel } from '../js/routes/doc/copio-carousel.js';
@@ -472,11 +472,13 @@ export class CopioScanner extends BaseElement {
 
     // Card switcher buttons
     shadow.getElementById('btn-card-front')?.addEventListener('click', () => {
+      this.#cropMode = false;
       this.#activePageIndex = 0;
       this.#syncView();
     });
 
     shadow.getElementById('btn-card-back')?.addEventListener('click', () => {
+      this.#cropMode = false;
       this.#activePageIndex = 1;
       this.#syncView();
     });
@@ -705,12 +707,30 @@ export class CopioScanner extends BaseElement {
         }
       }
 
-      // Image in viewport: in crop mode show originalSrc, otherwise show src
+      // Viewport container state
+      const viewport = shadow.getElementById('canvas-viewport');
+      if (viewport) {
+        viewport.classList.toggle('is-cropping', this.#cropMode);
+      }
+
+      // Image in viewport: in crop mode show uncropped original with active rotation and filter (WYSIWYG)
       const stageImg = /** @type {HTMLImageElement|null} */ (shadow.getElementById('stage-img'));
       if (stageImg) {
-        stageImg.src = this.#cropMode
-          ? activePage.originalSrc || activePage.src || ''
-          : activePage.src || activePage.originalSrc || '';
+        if (this.#cropMode) {
+          const rot = activePage.edits?.rotate || 0;
+          const filter = activePage.edits?.filter || 'none';
+          const originalSrc = activePage.originalSrc || activePage.src || '';
+          if (rot !== 0 || filter !== 'none') {
+            const preview = this.#engine
+              ? await this.#engine.renderEdits(originalSrc, { rotate: rot, filter })
+              : originalSrc;
+            stageImg.src = preview || originalSrc;
+          } else {
+            stageImg.src = originalSrc;
+          }
+        } else {
+          stageImg.src = activePage.src || activePage.originalSrc || '';
+        }
       }
 
       let cropLayer = shadow.getElementById('crop-layer');
@@ -737,7 +757,11 @@ export class CopioScanner extends BaseElement {
           this.#bindCropHandles();
         }
         cropLayer.style.display = 'block';
-        this.#draftCrop = activePage.edits?.crop || { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
+        const rot = activePage.edits?.rotate || 0;
+        const priorCrop = activePage.edits?.crop;
+        this.#draftCrop = priorCrop
+          ? cropOriginalToRotated(priorCrop, rot)
+          : { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
         this.#updateCropBoxUi();
       } else if (cropLayer) {
         cropLayer.remove();
@@ -909,6 +933,11 @@ export class CopioScanner extends BaseElement {
     const activePage = pages[this.#activePageIndex];
     if (!activePage) return;
 
+    if (this.#cropMode) {
+      this.#cropMode = false;
+      this.#draftCrop = null;
+    }
+
     const currentRotate = activePage.edits?.rotate || 0;
     const newRotate = (currentRotate + 90) % 360;
 
@@ -922,6 +951,11 @@ export class CopioScanner extends BaseElement {
     const pages = await this.getPages();
     const activePage = pages[this.#activePageIndex];
     if (!activePage) return;
+
+    if (this.#cropMode) {
+      this.#cropMode = false;
+      this.#draftCrop = null;
+    }
 
     const currentFilter = activePage.edits?.filter || 'none';
     const newFilter = currentFilter === 'bw' ? 'none' : 'bw';
@@ -942,8 +976,10 @@ export class CopioScanner extends BaseElement {
       const draft = this.#draftCrop;
       this.#draftCrop = null;
       if (draft) {
+        const rot = activePage.edits?.rotate || 0;
+        const originalCrop = cropRotatedToOriginal(draft, rot);
         await this.#engine.applyEdit(this.#targetDocId, activePage.id, {
-          crop: draft,
+          crop: originalCrop,
         });
       }
     } else {

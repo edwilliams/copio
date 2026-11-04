@@ -49,6 +49,70 @@ export function hasActiveEdits(edits) {
   );
 }
 
+const roundCoord = (n) => Math.round(n * 1e6) / 1e6;
+
+/**
+ * Transforms normalized crop coordinates through a clockwise rotation angle (0, 90, 180, 270).
+ * @param {{ x: number, y: number, w: number, h: number } | null} crop
+ * @param {number} [rotation=0] - Clockwise rotation angle in degrees
+ * @returns {{ x: number, y: number, w: number, h: number } | null}
+ */
+export function rotateCrop(crop, rotation = 0) {
+  if (!crop) return null;
+  const rot = ((Math.round(Number(rotation) / 90) * 90) % 360 + 360) % 360;
+  const { x, y, w, h } = crop;
+  if (rot === 90) {
+    return {
+      x: roundCoord(Math.max(0, Math.min(1, 1 - y - h))),
+      y: roundCoord(Math.max(0, Math.min(1, x))),
+      w: roundCoord(Math.max(0.01, Math.min(1, h))),
+      h: roundCoord(Math.max(0.01, Math.min(1, w))),
+    };
+  }
+  if (rot === 180) {
+    return {
+      x: roundCoord(Math.max(0, Math.min(1, 1 - x - w))),
+      y: roundCoord(Math.max(0, Math.min(1, 1 - y - h))),
+      w: roundCoord(Math.max(0.01, Math.min(1, w))),
+      h: roundCoord(Math.max(0.01, Math.min(1, h))),
+    };
+  }
+  if (rot === 270) {
+    return {
+      x: roundCoord(Math.max(0, Math.min(1, y))),
+      y: roundCoord(Math.max(0, Math.min(1, 1 - x - w))),
+      w: roundCoord(Math.max(0.01, Math.min(1, h))),
+      h: roundCoord(Math.max(0.01, Math.min(1, w))),
+    };
+  }
+  return {
+    x: roundCoord(Math.max(0, Math.min(1, x))),
+    y: roundCoord(Math.max(0, Math.min(1, y))),
+    w: roundCoord(Math.max(0.01, Math.min(1, w))),
+    h: roundCoord(Math.max(0.01, Math.min(1, h))),
+  };
+}
+
+/**
+ * Maps normalized crop coordinates on an original unrotated image to a rotated canvas coordinate frame.
+ * @param {{ x: number, y: number, w: number, h: number } | null} crop
+ * @param {number} [rotation=0]
+ * @returns {{ x: number, y: number, w: number, h: number } | null}
+ */
+export function cropOriginalToRotated(crop, rotation = 0) {
+  return rotateCrop(crop, rotation);
+}
+
+/**
+ * Maps normalized crop coordinates on a rotated canvas back to original unrotated image coordinates.
+ * @param {{ x: number, y: number, w: number, h: number } | null} crop
+ * @param {number} [rotation=0]
+ * @returns {{ x: number, y: number, w: number, h: number } | null}
+ */
+export function cropRotatedToOriginal(crop, rotation = 0) {
+  return rotateCrop(crop, -rotation);
+}
+
 /**
  * Page domain entity.
  */
