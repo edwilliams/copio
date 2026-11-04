@@ -50,6 +50,90 @@ export function hasActiveEdits(edits) {
 }
 
 /**
+ * Maps normalized crop coordinates on a rotated canvas back to original unrotated image coordinates.
+ * @param {{ x: number, y: number, w: number, h: number } | null} crop
+ * @param {number} [rotation]
+ * @returns {{ x: number, y: number, w: number, h: number } | null}
+ */
+export function cropRotatedToOriginal(crop, rotation = 0) {
+  if (!crop) return null;
+  const rot = ((Math.round(Number(rotation) / 90) * 90) % 360 + 360) % 360;
+  const { x, y, w, h } = crop;
+  if (rot === 90) {
+    return {
+      x: Math.max(0, Math.min(1, y)),
+      y: Math.max(0, Math.min(1, 1 - x - w)),
+      w: Math.max(0.01, Math.min(1, h)),
+      h: Math.max(0.01, Math.min(1, w)),
+    };
+  }
+  if (rot === 180) {
+    return {
+      x: Math.max(0, Math.min(1, 1 - x - w)),
+      y: Math.max(0, Math.min(1, 1 - y - h)),
+      w: Math.max(0.01, Math.min(1, w)),
+      h: Math.max(0.01, Math.min(1, h)),
+    };
+  }
+  if (rot === 270) {
+    return {
+      x: Math.max(0, Math.min(1, 1 - y - h)),
+      y: Math.max(0, Math.min(1, x)),
+      w: Math.max(0.01, Math.min(1, h)),
+      h: Math.max(0.01, Math.min(1, w)),
+    };
+  }
+  return {
+    x: Math.max(0, Math.min(1, x)),
+    y: Math.max(0, Math.min(1, y)),
+    w: Math.max(0.01, Math.min(1, w)),
+    h: Math.max(0.01, Math.min(1, h)),
+  };
+}
+
+/**
+ * Maps normalized crop coordinates on an original unrotated image to a rotated canvas coordinate frame.
+ * @param {{ x: number, y: number, w: number, h: number } | null} crop
+ * @param {number} [rotation]
+ * @returns {{ x: number, y: number, w: number, h: number } | null}
+ */
+export function cropOriginalToRotated(crop, rotation = 0) {
+  if (!crop) return null;
+  const rot = ((Math.round(Number(rotation) / 90) * 90) % 360 + 360) % 360;
+  const { x, y, w, h } = crop;
+  if (rot === 90) {
+    return {
+      x: Math.max(0, Math.min(1, 1 - y - h)),
+      y: Math.max(0, Math.min(1, x)),
+      w: Math.max(0.01, Math.min(1, h)),
+      h: Math.max(0.01, Math.min(1, w)),
+    };
+  }
+  if (rot === 180) {
+    return {
+      x: Math.max(0, Math.min(1, 1 - x - w)),
+      y: Math.max(0, Math.min(1, 1 - y - h)),
+      w: Math.max(0.01, Math.min(1, w)),
+      h: Math.max(0.01, Math.min(1, h)),
+    };
+  }
+  if (rot === 270) {
+    return {
+      x: Math.max(0, Math.min(1, y)),
+      y: Math.max(0, Math.min(1, 1 - x - w)),
+      w: Math.max(0.01, Math.min(1, h)),
+      h: Math.max(0.01, Math.min(1, w)),
+    };
+  }
+  return {
+    x: Math.max(0, Math.min(1, x)),
+    y: Math.max(0, Math.min(1, y)),
+    w: Math.max(0.01, Math.min(1, w)),
+    h: Math.max(0.01, Math.min(1, h)),
+  };
+}
+
+/**
  * Page domain entity.
  */
 export class Page {

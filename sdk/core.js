@@ -41,6 +41,8 @@ import {
   ScanSession,
   normalizeEditStack,
   hasActiveEdits,
+  cropRotatedToOriginal,
+  cropOriginalToRotated,
 } from './models.js';
 
 export const DEFAULT_FEATURES = ['crop', 'rotate', 'filter', 'ocr', 'export', 'sync'];
@@ -469,6 +471,21 @@ export class CopioEngine {
   }
 
   /**
+   * Renders edits against an image source using the configured ImageProcessorPort.
+   * @param {string} src
+   * @param {Object} edits
+   * @returns {Promise<string>}
+   */
+  async renderEdits(src, edits) {
+    if (!src) return '';
+    const norm = normalizeEditStack(edits);
+    if (this.#imageProcessor) {
+      return this.#imageProcessor.renderEdits(src, norm);
+    }
+    return applyEdits(src, norm);
+  }
+
+  /**
    * Underlying document repository.
    * @returns {DocRepository}
    */
@@ -708,6 +725,8 @@ export class CopioEngine {
 
     if (newPages.length === 0) return [];
 
+    await this.init();
+
     let targetDocId = docId;
     if (!targetDocId) {
       const docs = await this.listDocuments();
@@ -945,6 +964,8 @@ export {
   ScanSession,
   normalizeEditStack,
   hasActiveEdits,
+  cropRotatedToOriginal,
+  cropOriginalToRotated,
   randomId,
   fileToBase64,
   thresholdSrc,

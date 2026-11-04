@@ -584,5 +584,43 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
       expect(stageImg.src).to.not.equal(initialSrc);
       expect(pages[0].originalSrc).to.equal(origUrl);
     });
+
+    it('preserves rotation and B&W filter in crop mode (WYSIWYG) without reverting to raw original', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('mode', 'single');
+      fixtureContainer.appendChild(scanner);
+
+      const file = await createTestImageFile('crop-wysiwyg.png', 120, 160, '#ef4444');
+      await scanner.addFiles([file]);
+
+      // 1. Rotate active page
+      await scanner.rotateActivePage();
+      // 2. Apply B&W filter
+      await scanner.toggleActivePageBw();
+
+      let pages = await scanner.getPages();
+      expect(pages[0].edits.rotate).to.equal(90);
+      expect(pages[0].edits.filter).to.equal('bw');
+      const rawOriginal = pages[0].originalSrc;
+
+      // 3. Enter crop mode
+      const btnCrop = scanner.shadowRoot.querySelector('#btn-crop');
+      btnCrop.click();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const stageImg = scanner.shadowRoot.querySelector('#stage-img');
+      // In WYSIWYG crop mode, stage image must NOT revert back to raw unrotated color originalSrc
+      expect(stageImg.src).to.not.equal(rawOriginal);
+
+      // 4. Apply crop
+      btnCrop.click();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      pages = await scanner.getPages();
+      expect(pages[0].edits.crop).to.exist;
+      expect(pages[0].edits.rotate).to.equal(90);
+      expect(pages[0].edits.filter).to.equal('bw');
+      expect(pages[0].originalSrc).to.equal(rawOriginal);
+    });
   });
 });
