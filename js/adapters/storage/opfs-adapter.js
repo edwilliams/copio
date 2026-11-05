@@ -584,6 +584,11 @@ export class OpfsStorageAdapter extends StoragePort {
         edits: page.edits,
         exif: page.exif,
         content: page.content,
+        ocrText: page.ocrText ?? null,
+        ocrConfidence: page.ocrConfidence ?? null,
+        ocrWords: Array.isArray(page.ocrWords) ? page.ocrWords : null,
+        ocrWidth: page.ocrWidth ?? null,
+        ocrHeight: page.ocrHeight ?? null,
       };
       cleanPages.push(cleanPage);
 

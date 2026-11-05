@@ -498,7 +498,11 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
       expect(btnRotate).to.exist;
 
       btnRotate.click();
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      for (let i = 0; i < 20; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const p = await scanner.getPages();
+        if (p[0]?.edits?.rotate === 90 && stageImg.src !== initialSrc) break;
+      }
 
       const pages = await scanner.getPages();
       expect(pages[0].edits.rotate).to.equal(90);

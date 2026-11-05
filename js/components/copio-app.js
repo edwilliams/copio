@@ -276,10 +276,16 @@ export class CopioApp extends LitElement {
 
   async handleRowDownload(e) {
     const id = e.detail?.id;
+    const searchable = !!e.detail?.searchable;
     if (!id) return;
     const doc = await this.docRepo.getDoc(id);
     if (!doc) return;
-    await exportDocumentAsPdf(doc.name, doc.pages);
+    await exportDocumentAsPdf(doc.name, doc.pages, {
+      searchable,
+      onOcrComplete: async () => {
+        await this.docRepo.saveDoc(id, doc);
+      },
+    });
   }
 
   async handleRowDownloadImages(e) {
@@ -291,8 +297,19 @@ export class CopioApp extends LitElement {
   }
 
   async handleCarouselDownloadPdf(e) {
-    const { docName, pages } = e.detail || {};
-    await exportDocumentAsPdf(docName, pages);
+    const { docId, docName, pages, searchable } = e.detail || {};
+    await exportDocumentAsPdf(docName, pages, {
+      searchable: !!searchable,
+      onOcrComplete: async () => {
+        if (docId) {
+          const doc = await this.docRepo.getDoc(docId);
+          if (doc) {
+            doc.pages = pages;
+            await this.docRepo.saveDoc(docId, doc);
+          }
+        }
+      },
+    });
   }
 
   async handleCarouselDownloadImages(e) {

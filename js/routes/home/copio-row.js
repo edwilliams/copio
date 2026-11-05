@@ -108,6 +108,7 @@ export class CopioRow extends LitElement {
     if (selected === 'edit') this.handleEdit();
     if (selected === 'extract-ocr') this.handleExtractOcr();
     if (selected === 'download') this.handleDownload();
+    if (selected === 'download-searchable-pdf') this.handleDownloadSearchablePdf();
     if (selected === 'download-images') this.handleDownloadImages();
   }
 
@@ -192,6 +193,11 @@ export class CopioRow extends LitElement {
     this.dispatchEvent(new CustomEvent('doc:download', { bubbles: true, composed: false, detail }));
   }
 
+  handleDownloadSearchablePdf() {
+    const detail = { id: this.getAttribute('id'), searchable: true };
+    this.dispatchEvent(new CustomEvent('doc:download', { bubbles: true, composed: false, detail }));
+  }
+
   handleDownloadImages() {
     const detail = { id: this.getAttribute('id') };
     this.dispatchEvent(new CustomEvent('doc:download-images', { bubbles: true, composed: false, detail }));
@@ -273,6 +279,18 @@ export class CopioRow extends LitElement {
                     <sl-icon slot="prefix" name="file-earmark-pdf"></sl-icon>
                     Download as PDF
                   </sl-menu-item>
+                  ${this.ocr !== false
+                    ? html`
+                        <sl-menu-item
+                          value="download-searchable-pdf"
+                          ?disabled=${this.pageCount === 0 || !this.hasImages}
+                          title=${this.pageCount === 0 ? 'Document is empty' : 'Download as Searchable PDF (with OCR text layer)'}
+                        >
+                          <sl-icon slot="prefix" name="file-earmark-text"></sl-icon>
+                          Download Searchable PDF
+                        </sl-menu-item>
+                      `
+                    : ''}
                 `
               : ''}
             <sl-menu-item

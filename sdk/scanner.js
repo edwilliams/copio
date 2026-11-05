@@ -1531,6 +1531,7 @@ export class CopioScanner extends BaseElement {
         type: 'pdf',
         format: 'pdf',
         blob,
+        searchable: !!opts.searchable,
         docId: this.docId,
       });
       return blob;

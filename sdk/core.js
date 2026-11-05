@@ -827,6 +827,7 @@ export class CopioEngine {
    * @param {string|Array<Object>} [docIdOrPages]
    * @param {Object} [options]
    * @param {boolean} [options.download=false] - Whether to trigger browser download
+   * @param {boolean} [options.searchable=false] - Whether to generate searchable PDF with invisible OCR text layer
    * @param {Function} [options.onProgress] - Progress callback (done, total)
    * @returns {Promise<Blob>}
    */
@@ -851,6 +852,15 @@ export class CopioEngine {
     return exportService.exportDocumentAsPdf(docName, pages, {
       download: false,
       showProgress: false,
+      onOcrComplete: async () => {
+        if (typeof docIdOrPages === 'string') {
+          const doc = await this.#storage.getDoc(docIdOrPages);
+          if (doc) {
+            doc.pages = pages;
+            await this.#storage.saveDoc(docIdOrPages, doc);
+          }
+        }
+      },
       ...options,
     });
   }
@@ -862,6 +872,7 @@ export class CopioEngine {
    * @param {string|Array<Object>} [docIdOrPages]
    * @param {Object} [options]
    * @param {boolean} [options.download=false] - Whether to trigger browser download
+   * @param {boolean} [options.searchable=false] - Whether to generate searchable PDF with invisible OCR text layer
    * @param {Function} [options.onProgress] - Progress callback (done, total)
    * @returns {Promise<Blob>}
    */
@@ -918,6 +929,31 @@ export class CopioEngine {
       lang,
       ...options,
     });
+
+    if (Array.isArray(result.pagesResults)) {
+      for (const res of result.pagesResults) {
+        const page = targetPages.find((p) => p.id === res.pageId) || targetPages[res.pageIndex];
+        if (page) {
+          page.ocrText = res.text;
+          page.ocrConfidence = res.confidence;
+          page.ocrWords = res.words;
+        }
+      }
+      if (typeof docIdOrPages === 'string') {
+        const doc = await this.#storage.getDoc(docIdOrPages);
+        if (doc && Array.isArray(doc.pages)) {
+          for (const res of result.pagesResults) {
+            const page = doc.pages.find((p) => p.id === res.pageId) || doc.pages[res.pageIndex];
+            if (page) {
+              page.ocrText = res.text;
+              page.ocrConfidence = res.confidence;
+              page.ocrWords = res.words;
+            }
+          }
+          await this.#storage.saveDoc(docIdOrPages, doc);
+        }
+      }
+    }
 
     return {
       text: result.combinedText,

@@ -2599,7 +2599,7 @@ module.exports = {
     this.addContent("BT");
     this.addContent("1 0 0 1 " + x + " " + y + " Tm");
     this.addContent("/" + this._font.id + " " + this._fontSize + " Tf");
-    mode = options.fill && options.stroke ? 2 : options.stroke ? 1 : 0;
+    mode = options.renderingMode != null ? options.renderingMode : (options.fill && options.stroke ? 2 : options.stroke ? 1 : 0);
     if (mode) {
       this.addContent("" + mode + " Tr");
     }

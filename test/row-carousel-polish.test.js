@@ -45,12 +45,29 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
 
       const menu = row.shadowRoot.querySelector('sl-menu');
       const pdfItem = menu.querySelector('sl-menu-item[value="download"]');
+      const searchablePdfItem = menu.querySelector('sl-menu-item[value="download-searchable-pdf"]');
       const imagesItem = menu.querySelector('sl-menu-item[value="download-images"]');
       const ocrItem = menu.querySelector('sl-menu-item[value="extract-ocr"]');
 
       expect(pdfItem.hasAttribute('disabled')).to.be.false;
+      expect(searchablePdfItem.hasAttribute('disabled')).to.be.false;
       expect(imagesItem.hasAttribute('disabled')).to.be.false;
       expect(ocrItem.hasAttribute('disabled')).to.be.false;
+    });
+
+    it('dispatches doc:download with searchable: true when download-searchable-pdf is triggered', async () => {
+      row = document.createElement('copio-row');
+      row.setAttribute('id', 'doc-row-searchable');
+      row.name = 'Invoice Doc';
+      row.pages = [{ id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' }];
+      document.body.appendChild(row);
+      await row.updateComplete;
+
+      let downloadDetail = null;
+      row.addEventListener('doc:download', (e) => (downloadDetail = e.detail));
+
+      row.handleDownloadSearchablePdf();
+      expect(downloadDetail).to.deep.equal({ id: 'doc-row-searchable', searchable: true });
     });
   });
 
@@ -171,9 +188,12 @@ describe('CPO-028: Action guards, in-place rename, and quick export in document 
       carousel.addEventListener('doc:download-images', (e) => (imagesDetail = e.detail));
 
       carousel.handleExportSelect({ detail: { item: { value: 'pdf' } } });
-      carousel.handleExportSelect({ detail: { item: { value: 'images' } } });
+      expect(pdfDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal', searchable: false });
 
-      expect(pdfDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal' });
+      carousel.handleExportSelect({ detail: { item: { value: 'searchable-pdf' } } });
+      expect(pdfDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal', searchable: true });
+
+      carousel.handleExportSelect({ detail: { item: { value: 'images' } } });
       expect(imagesDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal' });
     });
   });

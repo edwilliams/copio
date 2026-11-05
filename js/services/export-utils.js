@@ -9,10 +9,21 @@ import { loadPdfKit, loadJsZip } from '../utils/module-loader.js';
  * @param {Function} [options.onProgress] - Callback invoked per page: (done, total) => void
  * @param {boolean} [options.showProgress=true] - Whether to show progress toast in UI
  * @param {boolean} [options.download=true] - Whether to trigger browser download
+ * @param {boolean} [options.searchable=false] - Whether to overlay invisible OCR text layer
+ * @param {string} [options.lang='eng'] - OCR language
+ * @param {Function} [options.recognizeImageText] - Custom OCR recognition function for tests or dependency injection
+ * @param {Function} [options.onOcrComplete] - Callback invoked when on-demand OCR finishes with updated pages
  * @returns {Promise<Blob|undefined>}
  */
 export async function exportDocumentAsPdf(docName, pages, options = {}) {
-  const { onProgress, showProgress = true, download = true } = options;
+  const {
+    onProgress,
+    showProgress = true,
+    download = true,
+    searchable = false,
+    lang = 'eng',
+    onOcrComplete = null,
+  } = options;
   if (!pages || pages.length === 0) {
     notify.warning('No images to export');
     return;
@@ -84,6 +95,7 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
                   format: 'pdf',
                   blob,
                   docName: docName || 'document',
+                  searchable: !!searchable,
                 },
               }),
             );
@@ -158,6 +170,77 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
               height: scaledHeight,
             });
           }
+
+          if (searchable) {
+            let words = Array.isArray(page.ocrWords) && page.ocrWords.length > 0 ? page.ocrWords : null;
+
+            // OCR runs on demand during export if a page has no stored result
+            if (!words && (page.src || page.blob)) {
+              if (typeof onProgress === 'function') {
+                onProgress(done, total, `Recognizing text for page ${done} of ${total}...`);
+              }
+              if (progress) {
+                progress.update({
+                  done,
+                  total,
+                  message: `Recognizing text for page ${done} of ${total}...`,
+                });
+              }
+              try {
+                const recognizeFn = options.recognizeImageText || (await import('./ocr-service.js')).recognizeImageText;
+                const ocrResult = await recognizeFn(page.blob || page.src, { lang });
+                words = ocrResult?.words || [];
+                page.ocrText = ocrResult?.text || '';
+                page.ocrConfidence = ocrResult?.confidence ?? 0;
+                page.ocrWords = words;
+                page.ocrWidth = img.width;
+                page.ocrHeight = img.height;
+              } catch (err) {
+                console.warn(`On-demand OCR failed for page ${done}:`, err);
+              }
+            }
+
+            if (words && words.length > 0) {
+              doc.save();
+              doc.font('Helvetica');
+              const sourceW = page.ocrWidth || img.width;
+              const sourceH = page.ocrHeight || img.height;
+              const wordScaleX = scaledWidth / sourceW;
+              const wordScaleY = scaledHeight / sourceH;
+
+              for (const word of words) {
+                const text = (word.text || '').trim();
+                if (!text) continue;
+
+                const bbox = word.bbox || {};
+                const boxX = bbox.x0 ?? 0;
+                const boxY = bbox.y0 ?? 0;
+                const boxW = Math.max(1, (bbox.x1 ?? 0) - boxX);
+                const boxH = Math.max(1, (bbox.y1 ?? 0) - boxY);
+
+                const targetX = x + (boxX * wordScaleX);
+                const targetY = y + (boxY * wordScaleY);
+                const targetW = boxW * wordScaleX;
+                const targetH = boxH * wordScaleY;
+
+                const fontSize = Math.max(1, targetH);
+                doc.fontSize(fontSize);
+
+                const naturalW = doc.widthOfString(text);
+                let charSpace = 0;
+                if (naturalW > 0 && text.length > 1) {
+                  charSpace = (targetW - naturalW) / (text.length - 1);
+                }
+
+                doc.text(text, targetX, targetY, {
+                  renderingMode: 3,
+                  lineBreak: false,
+                  characterSpacing: charSpace,
+                });
+              }
+              doc.restore();
+            }
+          }
         }
 
         if (objectUrlToRevoke) {
@@ -189,6 +272,14 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
 
       // Yield to browser to keep UI responsive and allow progress re-renders
       await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    if (searchable && typeof onOcrComplete === 'function') {
+      try {
+        await onOcrComplete(pages);
+      } catch (err) {
+        console.warn('onOcrComplete error:', err);
+      }
     }
 
     doc.end();

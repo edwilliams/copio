@@ -216,10 +216,27 @@ export async function recognizeImageText(image, options = {}) {
       });
     }
 
+    const words = (data.words || []).map((w) => ({
+      text: (w.text || '').trim(),
+      confidence: Math.round(w.confidence || 0),
+      bbox: {
+        x0: w.bbox?.x0 ?? 0,
+        y0: w.bbox?.y0 ?? 0,
+        x1: w.bbox?.x1 ?? 0,
+        y1: w.bbox?.y1 ?? 0,
+      },
+      baseline: w.baseline ? {
+        x0: w.baseline.x0 ?? 0,
+        y0: w.baseline.y0 ?? 0,
+        x1: w.baseline.x1 ?? 0,
+        y1: w.baseline.y1 ?? 0,
+      } : null,
+    })).filter((w) => w.text.length > 0);
+
     return {
       text: cleanText,
       confidence,
-      words: data.words || [],
+      words,
       lines: data.lines || [],
       paragraphs: data.paragraphs || [],
       hocr: data.hocr || '',

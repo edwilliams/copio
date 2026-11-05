@@ -2,6 +2,7 @@
 import { LitElement, html } from '../../lib/lit-core.min.js';
 import { recognizeDocumentPages, SUPPORTED_LANGUAGES, terminateOcrWorker } from '../../services/ocr-service.js';
 import { notify } from '../../services/notify.js';
+import { docRepository } from '../../services/doc-repository.js';
 
 export class CopioDocOcrDialog extends LitElement {
   #abortController = null;
@@ -152,6 +153,25 @@ export class CopioDocOcrDialog extends LitElement {
         this.resultText = result.combinedText || '';
         this.confidence = result.averageConfidence || 0;
         notify.success('Text recognition complete');
+
+        if (this.docId && Array.isArray(result.pagesResults)) {
+          try {
+            const doc = await docRepository.getDoc(this.docId);
+            if (doc && Array.isArray(doc.pages)) {
+              for (const pageRes of result.pagesResults) {
+                const targetPage = doc.pages.find((p) => p.id === pageRes.pageId) || doc.pages[pageRes.pageIndex];
+                if (targetPage) {
+                  targetPage.ocrText = pageRes.text;
+                  targetPage.ocrConfidence = pageRes.confidence;
+                  targetPage.ocrWords = pageRes.words;
+                }
+              }
+              await docRepository.saveDoc(this.docId, doc);
+            }
+          } catch (err) {
+            console.warn('Could not persist OCR results to document:', err);
+          }
+        }
       }
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
