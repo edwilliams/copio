@@ -902,10 +902,17 @@
       eventCounter += 1;
       eventCountBadge.textContent = String(eventCounter);
 
-      // Summarize large base64 strings for readable inspection
+      // Summarize large base64 strings and format Blob objects for readable inspection
       const sanitized = JSON.parse(JSON.stringify(detail, (key, value) => {
         if ((key === 'src' || key === 'originalSrc') && typeof value === 'string' && value.length > 48) {
           return `${value.slice(0, 32)}... (${value.length} chars)`;
+        }
+        if (value && typeof value === 'object' && (value instanceof Blob || (typeof value.size === 'number' && typeof value.type === 'string' && typeof value.slice === 'function'))) {
+          return {
+            type: value.type || 'application/octet-stream',
+            sizeBytes: value.size,
+            sizeKb: Number((value.size / 1024).toFixed(1)),
+          };
         }
         return value;
       }));
