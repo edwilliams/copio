@@ -448,9 +448,6 @@
             <button type="button" class="seg-btn" id="btn-load-sample" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-border);" title="Load a generated sample document into the scanner">
               ✨ Sample
             </button>
-            <button type="button" class="seg-btn" id="btn-mount-export-searchable" style="font-size:11px; padding:3px 10px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.12); color:#38bdf8; font-weight:600; display:flex; align-items:center; gap:5px;" title="Export Searchable PDF with invisible OCR text layer (PDF mode 3)">
-              <span>📄 Searchable PDF</span>
-            </button>
           </div>
         </div>
 
@@ -503,11 +500,10 @@
           </div>
         </div>
 
-        <!-- Commercial Enterprise Feature: Searchable PDF Export (CPO-070) -->
+        <!-- Commercial Enterprise Feature: Searchable PDF Export -->
         <div class="inspector-section" id="export-inspector-section">
-          <div class="control-label" style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="control-label">
             <span>Enterprise PDF Export</span>
-            <span class="sandbox-brand-tag" style="background:rgba(56,189,248,0.15); color:var(--sandbox-accent); border-color:rgba(56,189,248,0.3);">CPO-070</span>
           </div>
           <div style="font-size:11px; color:var(--sandbox-text-muted); line-height:1.4;">
             Generates high-fidelity searchable PDFs with an invisible OCR text layer (PDF mode 3). Printed words are selectable, searchable (<kbd>Ctrl+F</kbd>), and copy-pasteable in Chrome, Preview &amp; Acrobat.
@@ -527,7 +523,8 @@
             </div>
           </div>
           <div id="export-status-pill" style="display:none; font-size:11px; padding:6px 8px; border-radius:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-family:var(--sandbox-mono);">
-            <span id="export-status-text">Processing...</span>
+            <div id="export-status-text">Processing...</div>
+            <pre id="export-ocr-preview" style="display:none; margin:6px 0 0 0; padding:6px; background:rgba(0,0,0,0.3); border-radius:4px; max-height:100px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; color:#f1f5f9; font-size:10px;"></pre>
           </div>
         </div>
 
@@ -1053,8 +1050,10 @@
       }
       const statusPill = document.getElementById('export-status-pill');
       const statusText = document.getElementById('export-status-text');
+      const ocrPreview = document.getElementById('export-ocr-preview');
       if (statusPill && statusText) {
         statusPill.style.display = 'block';
+        if (ocrPreview) ocrPreview.style.display = 'none';
         statusText.textContent = searchable
           ? '⏳ Running OCR and building Searchable PDF...'
           : '⏳ Building standard PDF...';
@@ -1084,7 +1083,6 @@
       }
     }
 
-    document.getElementById('btn-mount-export-searchable')?.addEventListener('click', () => triggerExport(true));
     document.getElementById('drawer-btn-searchable-pdf')?.addEventListener('click', () => triggerExport(true));
     document.getElementById('drawer-btn-standard-pdf')?.addEventListener('click', () => triggerExport(false));
 
@@ -1096,18 +1094,35 @@
       }
       const statusPill = document.getElementById('export-status-pill');
       const statusText = document.getElementById('export-status-text');
+      const ocrPreview = document.getElementById('export-ocr-preview');
       if (statusPill && statusText) {
         statusPill.style.display = 'block';
         statusText.textContent = '⏳ Running client-side OCR extraction...';
+        if (ocrPreview) {
+          ocrPreview.style.display = 'none';
+          ocrPreview.textContent = '';
+        }
       }
       try {
-        const result = await scanner.engine.runOcr(scanner.docId);
+        const result = await scanner.ocr();
         if (statusText) {
-          const wordCount = Array.isArray(result.words) ? result.words.length : 0;
-          statusText.textContent = `✅ OCR complete: ${wordCount} words recognized (${result.confidence || 0}% confidence)`;
+          const words = (result.pages || result.pagesResults || []).flatMap((p) => p.words || []);
+          const wordCount = words.length || (result.text ? result.text.trim().split(/\s+/).filter(Boolean).length : 0);
+          const confPct = Math.round(result.averageConfidence || 0);
+
+          if (result.text && result.text.trim()) {
+            statusText.textContent = `✅ OCR Complete: ${wordCount} words recognized (${confPct}% confidence)`;
+            if (ocrPreview) {
+              ocrPreview.style.display = 'block';
+              ocrPreview.textContent = result.text.trim();
+            }
+          } else {
+            statusText.textContent = `⚠️ No text detected (${confPct}% confidence)`;
+          }
+
           setTimeout(() => {
-            if (statusPill) statusPill.style.display = 'none';
-          }, 6000);
+            if (statusPill && !ocrPreview?.textContent) statusPill.style.display = 'none';
+          }, 8000);
         }
       } catch (err) {
         if (statusText) statusText.textContent = `❌ OCR error: ${err.message}`;
