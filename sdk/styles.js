@@ -383,6 +383,22 @@ export const scannerCss = `
   background: radial-gradient(circle at 50% 45%, #1e293b 0%, #090d14 75%);
 }
 
+.copio-camera-feed.is-shutter-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 5;
+  animation: copio-shutter-flash 150ms ease-out forwards;
+}
+
+@keyframes copio-shutter-flash {
+  0% { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+
 /* Framing Guide Overlay (receipt | card | a4 | auto) */
 .copio-framing-guide {
   position: relative;
@@ -982,6 +998,23 @@ export const scannerCss = `
   font-weight: 500;
   position: relative;
   overflow: hidden;
+  transition: opacity 200ms ease-out;
+}
+
+.copio-toast-warning {
+  border-color: #f59e0b;
+  background: #1c1917;
+  color: #fef3c7;
+}
+
+.copio-toast-info {
+  border-color: var(--copio-color-primary);
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.copio-toast-fade-out {
+  opacity: 0;
 }
 
 .copio-toast-progress {
