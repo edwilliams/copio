@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio SDK Public Events Catalogue (CPO-036)
  * 

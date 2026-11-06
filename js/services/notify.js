@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Unified toast & notification service (CPO-022)
  * Wraps Shoelace sl-alert.toast() with success, error, warning, info, and undo variants.

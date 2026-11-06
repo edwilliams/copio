@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 import { notify } from './notify.js';
 import { getIceServers } from './ice-servers.js';
 import { loadPeerJs, loadQrCode } from '../utils/module-loader.js';

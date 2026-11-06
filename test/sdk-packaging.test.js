@@ -112,4 +112,29 @@ describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
     expect(content).to.not.include("from './chunk-");
     expect(content).to.include('copio-scanner');
   });
+
+  it('validates CPO-050 license consistency across package.json and license manifests', async () => {
+    const pkg = await fetch('/package.json').then((r) => r.json());
+    expect(pkg.license).to.equal('AGPL-3.0');
+    expect(pkg.files).to.include('LICENSE*');
+    expect(pkg.files).to.include('THIRD_PARTY_NOTICES.md');
+
+    const licenseRes = await fetch('/LICENSE');
+    expect(licenseRes.status).to.equal(200);
+    const licenseText = await licenseRes.text();
+    expect(licenseText).to.include('GNU AFFERO GENERAL PUBLIC LICENSE');
+
+    const commRes = await fetch('/LICENSE-COMMERCIAL.md');
+    expect(commRes.status).to.equal(200);
+    const commText = await commRes.text();
+    expect(commText).to.include('Copio Commercial License Summary');
+
+    const noticesRes = await fetch('/THIRD_PARTY_NOTICES.md');
+    expect(noticesRes.status).to.equal(200);
+    const noticesText = await noticesRes.text();
+    expect(noticesText).to.include('Third-Party Software Notices and Licences');
+    expect(noticesText).to.include('Cropper.js');
+    expect(noticesText).to.include('Tesseract.js');
+    expect(noticesText).to.include('TinyBase');
+  });
 });

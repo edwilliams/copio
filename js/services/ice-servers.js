@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Fetches ICE (STUN/TURN) server config for WebRTC.
  *

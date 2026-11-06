@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Hexagonal Driven Outbound Ports and Service Adapters (CPO-045)
  */

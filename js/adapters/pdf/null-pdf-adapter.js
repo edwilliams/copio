@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * NullPdfAdapter — No-Op Driven Adapter for PDF (CPO-042).
  * 

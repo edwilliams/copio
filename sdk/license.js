@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * License Manager (CPO-053 / CPO-061)
  * Client-side verification and key handling for Copio SDK tiers.

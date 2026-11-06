@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Canvas2DAdapter (CPO-045 ImageProcessorPort implementation)
  * 

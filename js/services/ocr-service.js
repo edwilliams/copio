@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio Client-Side OCR (Optical Character Recognition) Service
  * Powered by Tesseract.js WASM & Web Workers

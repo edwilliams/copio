@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio SDK
  * Embeddable Web Components and Headless Services for Document Scanning,

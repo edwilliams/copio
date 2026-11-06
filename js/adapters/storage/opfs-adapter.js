@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 import { StoragePort } from './storage-port.js';
 import { store as defaultStore } from '../../core/store.js';
 import { createStore } from '../../lib/tinybase.6.5.2.js';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 import exifr from '../lib/exifr.js';
 
 export async function extractExif(file) {

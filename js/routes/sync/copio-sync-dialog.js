@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 // @ts-nocheck
 import { LitElement, html } from '../../lib/lit-core.min.js';
 

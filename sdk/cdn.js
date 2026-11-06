@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio Standalone CDN Bundle (CPO-060, CPO-062)
  * Registers custom elements and attaches Copio namespace to window.

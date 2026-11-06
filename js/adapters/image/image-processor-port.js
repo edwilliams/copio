@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * ImageProcessorPort (Hexagonal Architecture Driven Outbound Port CPO-045)
  *

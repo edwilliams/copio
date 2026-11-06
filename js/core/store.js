@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 import { createStore } from '../lib/tinybase.6.5.2.js';
 import { createIndexedDbPersister } from '../lib/tinybase-persister-indexed-db.js';
 

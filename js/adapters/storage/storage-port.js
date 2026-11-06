@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * StoragePort — Outbound/Driven Port for Data Persistence (Hexagonal Architecture / CPO-033).
  *

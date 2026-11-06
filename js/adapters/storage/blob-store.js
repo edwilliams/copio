@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * IndexedDbBlobStore — Native Blob persistence helper for IndexedDbStorageAdapter (CPO-012).
  *
