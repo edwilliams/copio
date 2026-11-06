@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
 import { StoragePort } from './storage-port.js';
-import { store as defaultStore } from '../../core/store.js';
 import { createStore } from '../../lib/tinybase.6.5.2.js';
 import { IndexedDbStorageAdapter, dataUrlToBlob } from './indexeddb-adapter.js';
 
@@ -200,11 +199,9 @@ export class OpfsStorageAdapter extends StoragePort {
 
     if (options.store) {
       this.#store = options.store;
-    } else if (options.dirName && options.dirName !== 'copio') {
+    } else {
       this.#store = createStore();
       this.#store.setTable('docs', {});
-    } else {
-      this.#store = defaultStore;
     }
 
     this.#persister = options.persister || createOpfsPersister(this.#store, () => this.#copioDir, 'store.json');

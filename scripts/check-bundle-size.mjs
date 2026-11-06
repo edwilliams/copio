@@ -23,7 +23,7 @@ const BUDGETS = {
   },
   scanner: {
     entry: path.join(distDir, 'scanner.js'),
-    maxGzipKb: 175,
+    maxGzipKb: 65,
     label: 'Scanner (UI elements)',
   },
   sync: {

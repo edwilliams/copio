@@ -2,8 +2,6 @@ import { expect } from '@esm-bundle/chai';
 import { createStore } from '../js/lib/tinybase.6.5.2.js';
 import { SyncManager } from '../js/services/sync-service.js';
 import '../js/routes/sync/copio-sync-dialog.js';
-import '../js/components/copio-app.js';
-import { router } from '../js/core/router.js';
 
 describe('SyncManager P2P', function () {
   this.timeout(20000);
@@ -131,28 +129,5 @@ describe('CopioSyncDialog UI & App Integration', () => {
     expect(closed).to.be.true;
 
     dialog.remove();
-  });
-
-  it('CopioApp handles sync-dialog:close, resets router hash and destroys sync session', async () => {
-    const app = document.createElement('copio-app');
-    document.body.appendChild(app);
-    await app.updateComplete;
-
-    // Navigate to /sync
-    router.navigate('/sync');
-    await new Promise((r) => setTimeout(r, 100));
-    await app.updateComplete;
-    expect(router.getHashPath()).to.equal('/sync');
-    expect(app.syncState).to.exist;
-
-    // Trigger closeSyncDialog on app
-    app.closeSyncDialog();
-    await app.updateComplete;
-
-    // Router must navigate back to '/' and syncState cleared
-    expect(router.getHashPath()).to.equal('/');
-    expect(app.syncState).to.be.null;
-
-    app.remove();
   });
 });

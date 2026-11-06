@@ -2,8 +2,9 @@ import { expect } from '@esm-bundle/chai';
 import {
   getScannerStyleSheet,
   adoptScannerStyles,
+  scannerCss,
 } from '../sdk/index.js';
-import '../js/routes/doc/copio-images.js';
+import '../sdk/scanner.js';
 
 describe('CPO-032: Style Encapsulation & Host Isolation', () => {
   let fixtureContainer;
@@ -278,23 +279,19 @@ describe('CPO-032: Style Encapsulation & Host Isolation', () => {
   });
 
   describe('Crop Overlay Encapsulation', () => {
-    it('encapsulates cropper styles inside copio-images shadowRoot without external <link>', () => {
-      const imagesEl = document.createElement('copio-images');
-      fixtureContainer.appendChild(imagesEl);
+    it('encapsulates cropper styles inside copio-scanner shadowRoot without external <link>', () => {
+      const scanner = document.createElement('copio-scanner');
+      fixtureContainer.appendChild(scanner);
 
-      expect(imagesEl.shadowRoot).to.exist;
+      expect(scanner.shadowRoot).to.exist;
 
-      // Verify no relative <link rel="stylesheet" href="css/cropper.css"> is present
-      const externalLink = imagesEl.shadowRoot.querySelector('link[rel="stylesheet"][href*="cropper"]');
+      // Verify no relative <link rel="stylesheet"> is present
+      const externalLink = scanner.shadowRoot.querySelector('link[rel="stylesheet"]');
       expect(externalLink).to.be.null;
 
-      // Verify cropper rules exist inside shadowRoot style tags
-      const shadowStyles = Array.from(imagesEl.shadowRoot.querySelectorAll('style'))
-        .map((s) => s.textContent)
-        .join('\n');
-      expect(shadowStyles).to.include('.cropper-container');
-      expect(shadowStyles).to.include('.cropper-view-box');
-      expect(shadowStyles).to.include('.cropper-point');
+      // Verify crop box rules exist inside scanner styles
+      expect(scannerCss).to.include('.copio-crop-box');
+      expect(scannerCss).to.include('.copio-crop-handle');
     });
   });
 });

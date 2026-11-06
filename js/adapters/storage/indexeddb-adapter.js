@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
 import { StoragePort } from './storage-port.js';
-import { store as defaultStore, persister as defaultPersister } from '../../core/store.js';
 import { createStore } from '../../lib/tinybase.6.5.2.js';
 import { createIndexedDbPersister } from '../../lib/tinybase-persister-indexed-db.js';
 import { IndexedDbBlobStore } from './blob-store.js';
@@ -69,17 +68,16 @@ export class IndexedDbStorageAdapter extends StoragePort {
   constructor(options = {}) {
     super();
 
+    this.#dbName = options.dbName || 'copio-db';
     if (options.dbName && options.dbName !== 'copio-db') {
-      this.#dbName = options.dbName;
-      this.#store = options.store || createStore();
-      this.#store.setTable('docs', {});
-      this.#persister = options.persister || createIndexedDbPersister(this.#store, this.#dbName);
       this.#isCustom = true;
-    } else {
-      this.#store = options.store || defaultStore;
-      this.#persister = options.persister || defaultPersister;
-      this.#dbName = 'copio-db';
     }
+
+    this.#store = options.store || createStore();
+    if (!this.#store.hasTable('docs')) {
+      this.#store.setTable('docs', {});
+    }
+    this.#persister = options.persister || createIndexedDbPersister(this.#store, this.#dbName);
 
     this.#blobStore = new IndexedDbBlobStore(`${this.#dbName}-blobs`);
   }

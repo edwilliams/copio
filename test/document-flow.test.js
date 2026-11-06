@@ -1,216 +1,79 @@
 import { expect } from '@esm-bundle/chai';
-import '../js/lib/shoelace.js';
-import '../js/core/register-components.js';
-import { store, persister } from '../js/core/store.js';
-import { router } from '../js/core/router.js';
+import { CopioEngine, MemoryStorageAdapter } from '../sdk/index.js';
 
-describe('Document Flow: create and view a document', () => {
-  let app;
+describe('Document Flow: create, view, edit, and delete documents via CopioEngine', () => {
+  let engine;
 
   beforeEach(async () => {
-    // Start with a clean docs table and home route, persisted to IndexedDB
-    store.delTable('docs');
-    await persister.save();
-    router.navigate('/');
-
-    // Mount copio-app into the test page
-    app = document.createElement('copio-app');
-    document.body.appendChild(app);
-    await app.updateComplete;
-    if (app.ready) {
-      await app.ready;
-    }
-    while (app.persister?.getStatus() !== 0) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
+    engine = new CopioEngine({
+      storage: new MemoryStorageAdapter(),
+    });
+    await engine.init();
   });
 
   afterEach(async () => {
-    // Keep DOM and store clean between runs
-    app?.remove();
-    store.delTable('docs');
-    await persister.save();
-    if (app?.persister && app.persister !== persister) {
-      await app.persister.save();
-    }
-    router.navigate('/');
+    await engine.clear();
   });
 
-  it('displays empty state initially, creates a document, and views it in carousel', async () => {
-    // 1. Verify empty state is displayed when there are no documents
-    const emptyState = app.querySelector('.empty-state-card');
-    expect(emptyState).to.exist;
-    expect(emptyState.textContent).to.include('No documents yet');
-
-    // 2. Create a new document with 1 sample page
-    const docId = 'doc-' + Date.now();
+  it('creates a document, retrieves it, and verifies page content', async () => {
     const docName = 'Invoice October 2026';
     const samplePage = {
       id: 'p1',
       src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      originalSrc: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      name: 'Page 1',
+      edits: { crop: null, rotate: 0, filter: 'none' },
     };
 
-    // Save the document via TinyBase store (simulates save)
-    store.setRow('docs', docId, {
-      name: docName,
-      pages: JSON.stringify([samplePage]),
-    });
+    const doc = await engine.createDocument(docName, [samplePage]);
+    expect(doc).to.exist;
+    expect(doc.id).to.be.a('string');
+    expect(doc.name).to.equal(docName);
+    expect(doc.pages).to.have.lengthOf(1);
 
-    // Await Lit reactive update
-    await app.updateComplete;
+    const retrieved = await engine.getDocument(doc.id);
+    expect(retrieved).to.exist;
+    expect(retrieved.name).to.equal(docName);
+    expect(retrieved.pages[0].id).to.equal('p1');
 
-    // 3. Verify the document row is rendered in the list
-    const docRow = app.querySelector(`copio-row[id="${docId}"]`);
-    expect(docRow).to.exist;
-    expect(docRow.getAttribute('name')).to.equal(docName);
-
-    // Empty state should no longer exist
-    expect(app.querySelector('.empty-state-card')).to.be.null;
-
-    // 4. View the document (triggers route transition to /doc/{id})
-    app.handleRowView({ detail: { id: docId } });
-    await app.updateComplete;
-
-    // 5. Verify the carousel view is activated with the document's pages
-    expect(app.showCarousel).to.be.true;
-    expect(router.getHashPath()).to.equal(`/doc/${docId}`);
-
-    const carousel = app.querySelector('copio-carousel');
-    expect(carousel).to.exist;
-    expect(carousel.style.display).to.equal('block');
-    expect(carousel.images).to.deep.equal([samplePage]);
-
-    // Verify main item list is hidden while viewing carousel
-    const itemsArticle = app.querySelector('.copio-items');
-    expect(itemsArticle.style.display).to.equal('none');
+    const docs = await engine.listDocuments();
+    expect(docs.some((d) => d.id === doc.id)).to.be.true;
   });
 
-  it('renames a document and updates both UI and persisted store', async () => {
-    const docId = 'doc-rename-test';
-    const samplePage = {
-      id: 'p1',
-      src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-    };
+  it('renames a document and updates storage', async () => {
+    const doc = await engine.createDocument('Draft Document', [
+      { id: 'p1', src: 'data:image/png;base64,sample' },
+    ]);
 
-    store.setRow('docs', docId, {
-      name: 'Draft Document',
-      pages: JSON.stringify([samplePage]),
-    });
-    await app.updateComplete;
-
-    // Navigate to edit route
-    app.handleRowEdit({ detail: { id: docId } });
-    await app.updateComplete;
-
-    const dialog = app.querySelector('copio-add-edit-dialog');
-    expect(dialog).to.exist;
-
-    const nameInput = dialog.querySelector('.dialog-add-edit-input-name');
-    expect(nameInput.value).to.equal('Draft Document');
-
-    // Change title
-    nameInput.value = 'Finalized Document';
-
-    // Click Save
-    const saveBtn = dialog.querySelector('.dialog-add-edit-savebtn');
-    saveBtn.click();
-    await app.updateComplete;
-
-    // Verify persisted store
-    const updatedRow = store.getRow('docs', docId);
-    expect(updatedRow.name).to.equal('Finalized Document');
-
-    // Verify UI row has updated title
-    const rowEl = app.querySelector(`copio-row[id="${docId}"]`);
-    expect(rowEl).to.exist;
-    expect(rowEl.getAttribute('name')).to.equal('Finalized Document');
+    await engine.renameDocument(doc.id, 'Finalized Document');
+    const updated = await engine.getDocument(doc.id);
+    expect(updated.name).to.equal('Finalized Document');
   });
 
-  it('deletes a document, removing it from store and restoring empty state', async () => {
-    const docId = 'doc-delete-test';
-    store.setRow('docs', docId, {
-      name: 'Disposable Note',
-      pages: JSON.stringify([]),
-    });
-    await app.updateComplete;
+  it('adds pages and updates document in storage', async () => {
+    const doc = await engine.createDocument('Multi-page Doc', [
+      { id: 'p1', src: 'data:image/png;base64,sample1' },
+    ]);
 
-    expect(app.querySelector(`copio-row[id="${docId}"]`)).to.exist;
-    expect(app.querySelector('.empty-state-card')).to.be.null;
+    await engine.addPages(doc.id, [
+      { id: 'p2', src: 'data:image/png;base64,sample2' },
+    ]);
 
-    // Trigger row deletion
-    app.handleRowDelete({ detail: { id: docId } });
-    await app.updateComplete;
-
-    // Verify store has removed the row
-    expect(store.hasRow('docs', docId)).to.be.false;
-
-    // Verify UI has removed the row and shows empty state
-    expect(app.querySelector(`copio-row[id="${docId}"]`)).to.be.null;
-    const emptyState = app.querySelector('.empty-state-card');
-    expect(emptyState).to.exist;
-    expect(emptyState.textContent).to.include('No documents yet');
+    const updated = await engine.getDocument(doc.id);
+    expect(updated.pages).to.have.lengthOf(2);
+    expect(updated.pages[1].id).to.equal('p2');
   });
 
-  it('persistence round-trip retains all edits and documents across simulated reload (persister.load())', async () => {
-    const docId = 'doc-persist-test';
-    const samplePage = {
-      id: 'p1',
-      src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-    };
+  it('deletes a document', async () => {
+    const doc = await engine.createDocument('To Be Deleted', [
+      { id: 'p1', src: 'data:image/png;base64,sample' },
+    ]);
 
-    store.setRow('docs', docId, {
-      name: 'Quarterly Report',
-      pages: JSON.stringify([samplePage]),
-    });
-    await app.updateComplete;
+    await engine.deleteDocument(doc.id);
+    const deleted = await engine.getDocument(doc.id);
+    expect(deleted).to.be.null;
 
-    // Wait for any background persister activity to settle
-    while (app.persister.getStatus() !== 0) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
-
-    // Explicitly persist to IndexedDB
-    await app.persister.save();
-    while (app.persister.getStatus() !== 0) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
-
-    // Pause autoSave so memory wipe doesn't overwrite IndexedDB
-    await app.persister.stopAutoSave();
-    if (persister !== app.persister) {
-      await persister.stopAutoSave();
-    }
-
-    // Clear in-memory docs table
-    store.delTable('docs');
-    await app.updateComplete;
-
-    expect(store.hasRow('docs', docId)).to.be.false;
-    expect(app.querySelector(`copio-row[id="${docId}"]`)).to.be.null;
-
-    // Simulate page reload via persister.load()
-    await app.persister.load();
-    while (app.persister.getStatus() !== 0) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
-    await app.updateComplete;
-
-    // Resume autoSave
-    app.persister.startAutoSave();
-    if (persister !== app.persister) {
-      persister.startAutoSave();
-    }
-
-    // Verify store contains restored document
-    expect(store.hasRow('docs', docId)).to.be.true;
-    const restored = store.getRow('docs', docId);
-    expect(restored.name).to.equal('Quarterly Report');
-    expect(JSON.parse(restored.pages)).to.deep.equal([samplePage]);
-
-    // Verify UI reflects restored document
-    const rowEl = app.querySelector(`copio-row[id="${docId}"]`);
-    expect(rowEl).to.exist;
-    expect(rowEl.getAttribute('name')).to.equal('Quarterly Report');
+    const list = await engine.listDocuments();
+    expect(list.some((d) => d.id === doc.id)).to.be.false;
   });
 });
-

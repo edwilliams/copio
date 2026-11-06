@@ -154,44 +154,4 @@ describe('OCR Service & Dialog (CPO-021)', () => {
       expect(dialog.isOpen).to.be.false;
     });
   });
-
-  describe('copio-carousel: single-page OCR entry point', () => {
-    let carousel;
-
-    beforeEach(async () => {
-      carousel = document.createElement('copio-carousel');
-      carousel.images = [
-        { id: 'p1', src: 'data:image/png;base64,page1' },
-        { id: 'p2' },
-      ];
-      document.body.appendChild(carousel);
-      await carousel.updateComplete;
-    });
-
-    afterEach(() => {
-      carousel?.remove();
-    });
-
-    it('displays Extract Text button on image slide and dispatches copio:ocr-page', (done) => {
-      const ocrBtn = carousel.shadowRoot.querySelector('.ocr-btn');
-      expect(ocrBtn).to.exist;
-      expect(ocrBtn.textContent).to.include('Extract Text');
-
-      carousel.addEventListener('copio:ocr-page', (e) => {
-        expect(e.detail.page.id).to.equal('p1');
-        expect(e.detail.pageIndex).to.equal(0);
-        done();
-      });
-
-      ocrBtn.click();
-    });
-
-    it('hides Extract Text button when active slide has no image src', async () => {
-      carousel.activeSlideIndex = 1;
-      await carousel.updateComplete;
-
-      const ocrBtn = carousel.shadowRoot.querySelector('.ocr-btn');
-      expect(ocrBtn).to.not.exist;
-    });
-  });
 });

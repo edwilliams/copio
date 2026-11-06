@@ -14,14 +14,8 @@ export {
   getScannerStyleSheet,
   adoptScannerStyles,
 } from './scanner.js';
-export { CopioImages } from '../js/routes/doc/copio-images.js';
-export { CopioCarousel } from '../js/routes/doc/copio-carousel.js';
 export { CopioDocOcrDialog } from '../js/routes/ocr/copio-doc-ocr-dialog.js';
 export { CopioSyncDialog } from '../js/routes/sync/copio-sync-dialog.js';
-export { CopioAddEditDialog } from '../js/routes/add-edit/copio-add-edit-dialog.js';
-export { CopioRow } from '../js/routes/home/copio-row.js';
-export { CopioHeader } from '../js/components/copio-header.js';
-export { CopioLoader } from '../js/components/copio-loader.js';
 
 // Hexagonal Core & Licensing (CPO-045, CPO-053, CPO-061)
 export { CopioEngine } from './core.js';

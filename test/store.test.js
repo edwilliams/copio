@@ -1,26 +1,28 @@
 import { expect } from '@esm-bundle/chai';
-import { store } from '../js/core/store.js';
+import { IndexedDbStorageAdapter } from '../js/adapters/storage/indexeddb-adapter.js';
 
-describe('store.js', () => {
+describe('IndexedDbStorageAdapter TinyBase Store', () => {
   it('should initialize with docs table', () => {
-    expect(store).to.exist;
-    const docs = store.getTable('docs');
+    const adapter = new IndexedDbStorageAdapter({ dbName: 'test-store-db' });
+    expect(adapter.store).to.exist;
+    const docs = adapter.store.getTable('docs');
     expect(docs).to.be.an('object');
   });
 
   it('should allow setting, reading and deleting doc rows in TinyBase', () => {
+    const adapter = new IndexedDbStorageAdapter({ dbName: 'test-store-db' });
     const testDocId = 'test-doc-123';
-    store.setRow('docs', testDocId, {
+    adapter.store.setRow('docs', testDocId, {
       name: 'Sample Test Doc',
       pages: JSON.stringify([{ id: 'p1', src: 'data:image/png;base64,sample' }]),
     });
 
-    const row = store.getRow('docs', testDocId);
+    const row = adapter.store.getRow('docs', testDocId);
     expect(row).to.exist;
     expect(row.name).to.equal('Sample Test Doc');
 
     // Clean up
-    store.delRow('docs', testDocId);
-    expect(store.hasRow('docs', testDocId)).to.be.false;
+    adapter.store.delRow('docs', testDocId);
+    expect(adapter.store.hasRow('docs', testDocId)).to.be.false;
   });
 });
