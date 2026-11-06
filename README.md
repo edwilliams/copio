@@ -197,7 +197,7 @@ The output file `app-release-signed.apk` is ready for direct Android installatio
 
 ## 🤝 Contributing
 
-Contributions, feature suggestions, and bug reports are warmly welcomed! Feel free to open an issue or submit a pull request on GitHub.
+Contributions, feature suggestions, and bug reports are warmly welcomed! Please review our [Contribution Guidelines](CONTRIBUTING.md) and [Contributor License Agreement (CLA)](CLA.md) before submitting a pull request. Feel free to open an issue or submit a pull request on GitHub.
 
 ---
 
