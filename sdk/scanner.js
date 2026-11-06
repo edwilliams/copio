@@ -8,7 +8,7 @@
 import { CopioEngine, cropRotatedToOriginal, cropOriginalToRotated } from './core.js';
 import { COPIO_EVENTS, dispatchCopioEvent } from './events.js';
 import { setAssetBase } from '../js/utils/module-loader.js';
-import { setContainer, getContainer } from '../js/services/notify.js';
+import { notify, setContainer, getContainer } from '../js/services/notify.js';
 import { scannerCss, getScannerStyleSheet, adoptScannerStyles } from './styles.js';
 
 /** @type {typeof HTMLElement} */
@@ -30,6 +30,8 @@ export class CopioScanner extends BaseElement {
   #renderPromise = null;
   #sessionDocId = null;
   #cameraStream = null;
+  #wasStreamingBeforeHide = false;
+  #grabCanvas = null;
   onShutter = null;
 
   get #targetDocId() {
@@ -93,6 +95,13 @@ export class CopioScanner extends BaseElement {
       setContainer(this.shadowRoot?.querySelector('.copio-scanner-container') || this);
     }
 
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.#onVisibilityChange);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', this.#onPageHide);
+    }
+
     // Subscribe to engine repository changes
     if (this.#engine) {
       this.#unsubscribeRepo = this.#engine.subscribe(async () => {
@@ -114,7 +123,18 @@ export class CopioScanner extends BaseElement {
   }
 
   disconnectedCallback() {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.#onVisibilityChange);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('pagehide', this.#onPageHide);
+    }
     this.#stopCameraStream();
+    if (this.#grabCanvas) {
+      this.#grabCanvas.width = 0;
+      this.#grabCanvas.height = 0;
+      this.#grabCanvas = null;
+    }
     if (typeof this.#unsubscribeRepo === 'function') {
       this.#unsubscribeRepo();
       this.#unsubscribeRepo = null;
@@ -130,6 +150,24 @@ export class CopioScanner extends BaseElement {
       }
     }
   }
+
+  #onVisibilityChange = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      if (this.#cameraStream) {
+        this.#wasStreamingBeforeHide = true;
+        this.#stopCameraStream();
+      }
+    } else if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      if (this.#wasStreamingBeforeHide && this.#stage === 'viewfinder') {
+        this.#wasStreamingBeforeHide = false;
+        this.startCamera().catch(() => {});
+      }
+    }
+  };
+
+  #onPageHide = () => {
+    this.#stopCameraStream();
+  };
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue || !this.#engine) return;
@@ -163,6 +201,9 @@ export class CopioScanner extends BaseElement {
       case 'stage':
         if (newValue === 'viewfinder' || newValue === 'workbench') {
           this.#stage = newValue;
+          if (newValue === 'workbench') {
+            this.#stopCameraStream();
+          }
           const shadow = this.shadowRoot;
           if (shadow) {
             const vf = shadow.getElementById('viewfinder-section');
@@ -244,7 +285,7 @@ export class CopioScanner extends BaseElement {
           </div>
 
           <div class="copio-camera-feed" id="camera-feed">
-            <video id="camera-video" autoplay playsinline muted style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;"></video>
+            <video id="camera-video" autoplay playsinline webkit-playsinline muted style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;"></video>
             <slot name="viewfinder">
               <div class="copio-framing-guide" id="framing-guide" data-aspect="${this.aspect}">
                 <span class="copio-corner tl"></span>
@@ -640,7 +681,9 @@ export class CopioScanner extends BaseElement {
       const stepPillText = shadow.getElementById('step-pill-text');
       if (stepPillText) {
         if (this.#cameraStream) {
-          stepPillText.textContent = 'Camera Active · Tap Shutter to Snap';
+          stepPillText.textContent = this.mode === 'batch'
+            ? `Batch Capture · Page ${pages.length + 1}`
+            : 'Camera Active · Tap Shutter to Snap';
         } else if (this.aspect === 'card' && this.maxPages === 2) {
           stepPillText.textContent = pages.length === 0
             ? 'Step 1 of 2: Capture Front of ID Card'
@@ -848,14 +891,75 @@ export class CopioScanner extends BaseElement {
     this.#syncView();
   }
 
+  #showToast(message, variant = 'warning', duration = 4000) {
+    try {
+      if (typeof notify !== 'undefined') {
+        const container = this.shadowRoot?.querySelector('.copio-scanner-container') || this;
+        if (variant === 'warning' && typeof notify.warning === 'function') {
+          notify.warning(message, { container });
+        } else if (typeof notify.info === 'function') {
+          notify.info(message, { container });
+        }
+      }
+    } catch {}
+
+    const shadow = this.shadowRoot;
+    const toastRegion = shadow?.getElementById('toast-region');
+    if (!toastRegion) return;
+
+    const toastEl = document.createElement('div');
+    toastEl.className = `copio-toast copio-toast-${variant}`;
+    toastEl.setAttribute('role', 'alert');
+    toastEl.innerHTML = `<span class="copio-toast-msg">${message}</span>`;
+    toastRegion.appendChild(toastEl);
+
+    setTimeout(() => {
+      toastEl.classList.add('copio-toast-fade-out');
+      setTimeout(() => {
+        toastEl.remove();
+      }, 250);
+    }, duration);
+  }
+
+  #handleCameraFailure(error, message) {
+    const isDenied = error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError';
+    const code = isDenied ? 'CAMERA_PERMISSION_DENIED' : 'CAMERA_UNAVAILABLE';
+
+    this.#showToast(message, 'warning');
+
+    const stepPillText = this.shadowRoot?.getElementById('step-pill-text');
+    if (stepPillText) {
+      stepPillText.textContent = 'Camera Unavailable · Select File';
+    }
+
+    this.dispatch(COPIO_EVENTS.ERROR, {
+      code,
+      message,
+      error,
+    });
+
+    const fileInput = this.shadowRoot?.getElementById('internal-file-input');
+    if (fileInput && typeof fileInput.click === 'function') {
+      fileInput.click();
+    }
+  }
+
   #stopCameraStream() {
     if (this.#cameraStream) {
-      this.#cameraStream.getTracks().forEach((track) => track.stop());
+      try {
+        const tracks = this.#cameraStream.getTracks();
+        for (const track of tracks) {
+          track.stop();
+        }
+      } catch {}
       this.#cameraStream = null;
     }
     const shadow = this.shadowRoot;
     const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
     if (videoEl) {
+      try {
+        videoEl.pause();
+      } catch {}
       videoEl.srcObject = null;
       videoEl.style.display = 'none';
     }
@@ -863,6 +967,142 @@ export class CopioScanner extends BaseElement {
     if (placeholder) {
       /** @type {HTMLElement} */ (placeholder).style.display = '';
     }
+    const stepPillText = shadow?.getElementById('step-pill-text');
+    if (stepPillText && this.#stage === 'viewfinder') {
+      stepPillText.textContent = this.mode === 'batch'
+        ? `Batch Capture · Page ${this.#pageCount + 1}`
+        : 'Align Document Inside Frame';
+    }
+  }
+
+  async startCamera(options = {}) {
+    const shadow = this.shadowRoot;
+    const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
+    if (!videoEl) return null;
+
+    if (this.#cameraStream) {
+      return this.#cameraStream;
+    }
+
+    const isAutomatedTest = typeof navigator !== 'undefined' && navigator.webdriver === true && !options.force;
+    if (isAutomatedTest) {
+      return null;
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      this.#handleCameraFailure(new Error('NO_CAMERA_SUPPORT'), 'No camera found. Choose a photo from your files instead.');
+      return null;
+    }
+
+    const constraintTiers = [
+      {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      },
+      {
+        video: {
+          facingMode: { ideal: 'environment' },
+        },
+        audio: false,
+      },
+      {
+        video: true,
+        audio: false,
+      },
+    ];
+
+    let stream = null;
+    let lastError = null;
+
+    for (const constraints of constraintTiers) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (stream) break;
+      } catch (err) {
+        lastError = err;
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          break;
+        }
+      }
+    }
+
+    if (!stream) {
+      const isDenied = lastError?.name === 'NotAllowedError' || lastError?.name === 'PermissionDeniedError';
+      const msg = isDenied
+        ? 'Camera permission denied. Choose a photo from your files instead.'
+        : 'Camera unavailable. Choose a photo from your files instead.';
+      this.#handleCameraFailure(lastError || new Error('CAMERA_UNAVAILABLE'), msg);
+      return null;
+    }
+
+    this.setCameraStream(stream);
+    return stream;
+  }
+
+  stopCamera() {
+    this.#stopCameraStream();
+  }
+
+  /**
+   * Internal hook for auto edge detection (CPO-074 / CPO-076).
+   * Grabs the current frame from the active camera video element as an ImageData or Canvas.
+   * Not exposed in the stable public API docs.
+   *
+   * @param {Object} [options]
+   * @param {number} [options.maxWidth=640] - Downscale max width for lightweight processing
+   * @param {number} [options.maxHeight=480] - Downscale max height for lightweight processing
+   * @param {'imageData'|'canvas'} [options.format='imageData']
+   * @returns {ImageData|HTMLCanvasElement|null}
+   */
+  _grabFrame(options = {}) {
+    const shadow = this.shadowRoot;
+    const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
+    if (!this.#cameraStream || !videoEl) {
+      return null;
+    }
+
+    const srcW = videoEl.videoWidth || 640;
+    const srcH = videoEl.videoHeight || 480;
+    if (srcW === 0 || srcH === 0) return null;
+
+    const maxWidth = options.maxWidth || 640;
+    const maxHeight = options.maxHeight || 480;
+    const scale = Math.min(1, maxWidth / srcW, maxHeight / srcH);
+    const targetW = Math.max(1, Math.round(srcW * scale));
+    const targetH = Math.max(1, Math.round(srcH * scale));
+
+    if (!this.#grabCanvas && typeof document !== 'undefined') {
+      this.#grabCanvas = document.createElement('canvas');
+    }
+    if (!this.#grabCanvas) return null;
+
+    this.#grabCanvas.width = targetW;
+    this.#grabCanvas.height = targetH;
+    const ctx = this.#grabCanvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+
+    try {
+      ctx.drawImage(videoEl, 0, 0, targetW, targetH);
+    } catch {
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(0, 0, targetW, targetH);
+    }
+    if (options.format === 'canvas') {
+      return this.#grabCanvas;
+    }
+    return ctx.getImageData(0, 0, targetW, targetH);
+  }
+
+  /**
+   * Internal inspection helper for test suites and adapter readiness.
+   * @returns {boolean}
+   */
+  _isCameraActive() {
+    return Boolean(this.#cameraStream);
   }
 
   async #handleShutterClick() {
@@ -875,46 +1115,51 @@ export class CopioScanner extends BaseElement {
     const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
 
     // If camera stream is already active, capture a frame from the video element
-    if (this.#cameraStream && videoEl && videoEl.readyState >= 2) {
+    if (this.#cameraStream && videoEl) {
+      const cameraFeed = shadow?.getElementById('camera-feed');
+      if (cameraFeed) {
+        cameraFeed.classList.remove('is-shutter-flash');
+        void cameraFeed.offsetWidth;
+        cameraFeed.classList.add('is-shutter-flash');
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = videoEl.videoWidth || 1280;
       canvas.height = videoEl.videoHeight || 720;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+        try {
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+        } catch {
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        canvas.width = 0;
+        canvas.height = 0;
+
         if (blob) {
-          this.#stopCameraStream();
+          const isBatch = this.mode === 'batch';
+          if (!isBatch) {
+            this.#stopCameraStream();
+          }
+
           const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
           await this.addFiles([file]);
+
+          if (isBatch && this.maxPages > 0 && this.#pageCount >= this.maxPages) {
+            this.#stopCameraStream();
+            this.stage = 'workbench';
+          }
           return;
         }
       }
     }
 
-    // Try opening live MediaDevices camera stream if supported in real browsers
-    const isAutomatedTest = typeof navigator !== 'undefined' && navigator.webdriver === true;
-    if (!isAutomatedTest && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia && videoEl) {
-      try {
-        this.#cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        });
-        videoEl.srcObject = this.#cameraStream;
-        videoEl.style.display = 'block';
-        await videoEl.play();
-        const placeholder = shadow?.querySelector('.copio-camera-placeholder');
-        if (placeholder) {
-          /** @type {HTMLElement} */ (placeholder).style.display = 'none';
-        }
-        const stepPillText = shadow?.getElementById('step-pill-text');
-        if (stepPillText) {
-          stepPillText.textContent = 'Camera Active · Tap Shutter to Snap';
-        }
-        return;
-      } catch {
-        // Fallback to file input if camera permission denied or unavailable
-      }
+    // Try opening live MediaDevices camera stream
+    const stream = await this.startCamera();
+    if (stream) {
+      return;
     }
 
     const fileInput = shadow?.getElementById('internal-file-input');
@@ -1177,6 +1422,9 @@ export class CopioScanner extends BaseElement {
   set stage(val) {
     if (val === 'viewfinder' || val === 'workbench') {
       this.#stage = val;
+      if (val === 'workbench') {
+        this.#stopCameraStream();
+      }
       if (typeof this.setAttribute === 'function' && this.getAttribute('stage') !== val) {
         this.setAttribute('stage', val);
       }
@@ -1225,6 +1473,27 @@ export class CopioScanner extends BaseElement {
   setCameraStream(stream) {
     this.#stopCameraStream();
     this.#cameraStream = stream;
+    const shadow = this.shadowRoot;
+    const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
+    if (videoEl) {
+      try {
+        videoEl.srcObject = (typeof MediaStream !== 'undefined' && stream instanceof MediaStream) ? stream : null;
+      } catch {}
+      videoEl.style.display = stream ? 'block' : 'none';
+      if (stream && videoEl.srcObject) {
+        videoEl.play().catch(() => {});
+      }
+    }
+    const placeholder = shadow?.querySelector('.copio-camera-placeholder');
+    if (placeholder) {
+      /** @type {HTMLElement} */ (placeholder).style.display = stream ? 'none' : '';
+    }
+    const stepPillText = shadow?.getElementById('step-pill-text');
+    if (stepPillText && stream) {
+      stepPillText.textContent = this.mode === 'batch'
+        ? `Batch Capture · Page ${this.#pageCount + 1}`
+        : 'Camera Active · Tap Shutter to Snap';
+    }
   }
 
   get features() {
