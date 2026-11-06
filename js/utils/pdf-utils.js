@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 import * as pdfjsLib from '../lib/pdf.min.mjs';
 import { resolveAssetUrl } from './module-loader.js';
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * SyncPort (Hexagonal Architecture Driven Outbound Port CPO-045)
  *

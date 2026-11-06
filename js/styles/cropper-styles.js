@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Cropper.js Styles Encapsulated Module (CPO-032)
  * Embeds Cropper.js v1.3.2 stylesheet for Shadow DOM usage, eliminating external CSS links.

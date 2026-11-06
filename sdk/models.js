@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Core Domain Models & Entities (CPO-045 Hexagonal Architecture)
  *

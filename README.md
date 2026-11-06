@@ -8,6 +8,7 @@
   <p><i>Capture, enhance, organise, and export multi-page documents — 100% in your browser with zero cloud dependencies.</i></p>
 
   <div>
+    <img src="https://img.shields.io/badge/License-AGPL--3.0%20%2F%20Commercial-blue?style=for-the-badge" alt="AGPL-3.0 / Commercial License" />
     <img src="https://img.shields.io/badge/Privacy-100%25%20Local-brightgreen?style=for-the-badge&logo=shield" alt="100% Local Privacy" />
     <img src="https://img.shields.io/badge/Offline-First-blue?style=for-the-badge&logo=pwa" alt="Offline First" />
     <img src="https://img.shields.io/badge/Sync-Peer--to--Peer%20WebRTC-purple?style=for-the-badge&logo=webrtc" alt="P2P Sync" />
@@ -202,4 +203,8 @@ Contributions, feature suggestions, and bug reports are warmly welcomed! Feel fr
 
 ## 📄 License
 
-Copio is open-source software released under the [MIT License](LICENSE).
+Copio (`@copio/sdk`) is dual-licensed under the **GNU Affero General Public License v3.0** and a **Commercial License**:
+
+- **Community / Open Source:** Available under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE) for open-source projects and evaluation. Any work embedding or linking to `@copio/sdk` must provide full source code under the AGPL-3.0.
+- **Commercial License:** For proprietary applications, closed-source SaaS products, or removing the "Powered by Copio" watermark. See [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md) or contact `license@copio.dev`.
+- **Third-Party Notices:** Vendored third-party components and their respective permissive licences (MIT, BSD-3-Clause, Apache-2.0) are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio Scanner Encapsulated Styles & Design Tokens (CPO-032 / CPO-038)
  * 

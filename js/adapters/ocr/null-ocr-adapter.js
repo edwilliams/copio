@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * NullOcrAdapter — No-Op Driven Adapter for OCR (CPO-042).
  * 

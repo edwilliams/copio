@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 import { createDefaultAdapter } from '../adapters/storage/index.js';
 import { blobToDataUrl } from '../adapters/storage/indexeddb-adapter.js';
 import { randomId } from '../utils/utils.js';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * TesseractWasmAdapter — Default Driven Adapter for OCR via Tesseract.js WASM (CPO-042, CPO-045).
  */

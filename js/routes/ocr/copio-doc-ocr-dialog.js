@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 // @ts-nocheck
 import { LitElement, html } from '../../lib/lit-core.min.js';
 import { recognizeDocumentPages, SUPPORTED_LANGUAGES, terminateOcrWorker } from '../../services/ocr-service.js';

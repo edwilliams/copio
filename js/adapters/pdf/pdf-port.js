@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * PdfPort — Outbound/Driven Port for PDF Export & Import (Hexagonal Architecture / CPO-042, CPO-045).
  * 

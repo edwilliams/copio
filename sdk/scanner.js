@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio Scanner Web Component (CPO-034, CPO-035, CPO-036, CPO-037, CPO-038, CPO-045)
  * 

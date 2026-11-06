@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * PdfKitAdapter — Default Driven Adapter for PDF assembly via PDFKit (CPO-042, CPO-045).
  */

@@ -531,16 +531,25 @@ describe('CPO-034: <copio-scanner> Embeddable Custom Element', () => {
 
       // Turn B&W on
       btnBw.click();
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      let pages;
+      for (let i = 0; i < 20; i++) {
+        pages = await scanner.getPages();
+        if (pages[0]?.edits?.filter === 'bw') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
 
-      let pages = await scanner.getPages();
+      pages = await scanner.getPages();
       expect(pages[0].edits.filter).to.equal('bw');
       expect(stageImg.src).to.not.equal(initialSrc);
       expect(pages[0].originalSrc).to.equal(origUrl);
 
       // Turn B&W off (restore color)
       btnBw.click();
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      for (let i = 0; i < 20; i++) {
+        pages = await scanner.getPages();
+        if (pages[0]?.edits?.filter === 'none') break;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
 
       pages = await scanner.getPages();
       expect(pages[0].edits.filter).to.equal('none');

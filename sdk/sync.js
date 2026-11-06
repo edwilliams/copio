@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio P2P Sync Module (CPO-061)
  */

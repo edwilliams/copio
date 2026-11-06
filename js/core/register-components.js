@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 import '../components/copio-app.js';
 import '../components/copio-loader.js';
 import '../components/copio-header.js';

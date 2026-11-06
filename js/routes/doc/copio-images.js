@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 // @ts-nocheck
 /*
 this doesn't convert nicely to lit-html

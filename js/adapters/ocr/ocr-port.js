@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * OcrPort — Outbound/Driven Port for Optical Character Recognition (Hexagonal Architecture / CPO-042, CPO-045).
  * 

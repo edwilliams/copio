@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0
 /**
  * Copio Headless Core Domain & Storage (CPO-035, CPO-037, CPO-045, CPO-061)
  * 
