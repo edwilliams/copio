@@ -7,12 +7,6 @@
  */
 import { CopioEngine, cropRotatedToOriginal, cropOriginalToRotated } from './core.js';
 import { COPIO_EVENTS, dispatchCopioEvent } from './events.js';
-import { CopioImages } from '../js/routes/doc/copio-images.js';
-import { CopioCarousel } from '../js/routes/doc/copio-carousel.js';
-import { CopioAddEditDialog } from '../js/routes/add-edit/copio-add-edit-dialog.js';
-import { CopioRow } from '../js/routes/home/copio-row.js';
-import { CopioHeader } from '../js/components/copio-header.js';
-import { CopioLoader } from '../js/components/copio-loader.js';
 import { setAssetBase } from '../js/utils/module-loader.js';
 import { setContainer, getContainer } from '../js/services/notify.js';
 import { scannerCss, getScannerStyleSheet, adoptScannerStyles } from './styles.js';
@@ -1228,6 +1222,11 @@ export class CopioScanner extends BaseElement {
     return this.#deleteActivePageWithUndo();
   }
 
+  setCameraStream(stream) {
+    this.#stopCameraStream();
+    this.#cameraStream = stream;
+  }
+
   get features() {
     return this.#engine ? this.#engine.features : [];
   }
@@ -1621,12 +1620,6 @@ if (typeof customElements !== 'undefined' && !customElements.get('copio-scanner'
 }
 
 export {
-  CopioImages,
-  CopioCarousel,
-  CopioAddEditDialog,
-  CopioRow,
-  CopioHeader,
-  CopioLoader,
   COPIO_EVENTS,
   dispatchCopioEvent,
   scannerCss,

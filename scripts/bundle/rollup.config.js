@@ -7,12 +7,9 @@ import css from 'rollup-plugin-css-only';
 import { terser } from 'rollup-plugin-terser';
 
 const _COPIO_COMPONENTS = [
-  'copio-app',
-  'copio-loader',
-  'copio-header',
-  'copio-row',
-  'copio-images',
-  'copio-carousel',
+  'copio-scanner',
+  'copio-doc-ocr-dialog',
+  'copio-sync-dialog',
 ];
 
 const rootDir = path.resolve(__dirname, '../..');

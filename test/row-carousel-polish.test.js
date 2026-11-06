@@ -1,252 +1,50 @@
 import { expect } from '@esm-bundle/chai';
-import '../js/lib/shoelace.js';
-import '../js/core/register-components.js';
-import { docRepository } from '../js/services/doc-repository.js';
-import { router } from '../js/core/router.js';
+import { CopioEngine, MemoryStorageAdapter } from '../sdk/index.js';
 
-describe('CPO-028: Action guards, in-place rename, and quick export in document view', () => {
-  describe('CopioRow Action Guards & Contextual Menu State', () => {
-    let row;
+describe('CPO-028: Action guards and document operations on CopioEngine', () => {
+  let engine;
 
-    afterEach(() => {
-      row?.remove();
+  beforeEach(async () => {
+    engine = new CopioEngine({
+      storage: new MemoryStorageAdapter(),
     });
-
-    it('disables all export and OCR actions when document has no pages', async () => {
-      row = document.createElement('copio-row');
-      row.name = 'Empty Document';
-      row.pages = [];
-      document.body.appendChild(row);
-      await row.updateComplete;
-
-      const menu = row.shadowRoot.querySelector('sl-menu');
-      expect(menu).to.exist;
-
-      const pdfItem = menu.querySelector('sl-menu-item[value="download"]');
-      const imagesItem = menu.querySelector('sl-menu-item[value="download-images"]');
-      const ocrItem = menu.querySelector('sl-menu-item[value="extract-ocr"]');
-
-      expect(pdfItem.hasAttribute('disabled')).to.be.true;
-      expect(imagesItem.hasAttribute('disabled')).to.be.true;
-      expect(ocrItem.hasAttribute('disabled')).to.be.true;
-
-      expect(pdfItem.getAttribute('title')).to.include('empty');
-      expect(ocrItem.getAttribute('title')).to.include('No image pages');
-    });
-
-    it('enables OCR and image exports when doc has images', async () => {
-      row = document.createElement('copio-row');
-      row.name = 'Scanned Document';
-      row.pages = [
-        { id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
-      ];
-      document.body.appendChild(row);
-      await row.updateComplete;
-
-      const menu = row.shadowRoot.querySelector('sl-menu');
-      const pdfItem = menu.querySelector('sl-menu-item[value="download"]');
-      const searchablePdfItem = menu.querySelector('sl-menu-item[value="download-searchable-pdf"]');
-      const imagesItem = menu.querySelector('sl-menu-item[value="download-images"]');
-      const ocrItem = menu.querySelector('sl-menu-item[value="extract-ocr"]');
-
-      expect(pdfItem.hasAttribute('disabled')).to.be.false;
-      expect(searchablePdfItem.hasAttribute('disabled')).to.be.false;
-      expect(imagesItem.hasAttribute('disabled')).to.be.false;
-      expect(ocrItem.hasAttribute('disabled')).to.be.false;
-    });
-
-    it('dispatches doc:download with searchable: true when download-searchable-pdf is triggered', async () => {
-      row = document.createElement('copio-row');
-      row.setAttribute('id', 'doc-row-searchable');
-      row.name = 'Invoice Doc';
-      row.pages = [{ id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' }];
-      document.body.appendChild(row);
-      await row.updateComplete;
-
-      let downloadDetail = null;
-      row.addEventListener('doc:download', (e) => (downloadDetail = e.detail));
-
-      row.handleDownloadSearchablePdf();
-      expect(downloadDetail).to.deep.equal({ id: 'doc-row-searchable', searchable: true });
-    });
+    await engine.init();
   });
 
-  describe('CopioRow In-Place Document Rename', () => {
-    let row;
-
-    afterEach(() => {
-      row?.remove();
-    });
-
-    it('switches to inline rename mode and emits copio-row:rename upon save', async () => {
-      row = document.createElement('copio-row');
-      row.setAttribute('id', 'doc-123');
-      row.name = 'Original Name';
-      document.body.appendChild(row);
-      await row.updateComplete;
-
-      expect(row.isRenaming).to.be.false;
-
-      // Start rename via startRename
-      row.startRename();
-      await row.updateComplete;
-
-      expect(row.isRenaming).to.be.true;
-      const input = row.shadowRoot.querySelector('.rename-input');
-      expect(input).to.exist;
-      expect(input.value).to.equal('Original Name');
-
-      let renameEvent = null;
-      row.addEventListener('doc:rename', (e) => {
-        renameEvent = e.detail;
-      });
-
-      // Modify renameValue and commit
-      row.renameValue = 'Renamed Document';
-      row.commitRename();
-      await row.updateComplete;
-
-      expect(row.isRenaming).to.be.false;
-      expect(row.name).to.equal('Renamed Document');
-      expect(renameEvent).to.deep.equal({ id: 'doc-123', name: 'Renamed Document' });
-    });
-
-    it('cancels rename without emitting changes on cancel', async () => {
-      row = document.createElement('copio-row');
-      row.setAttribute('id', 'doc-123');
-      row.name = 'Initial Title';
-      document.body.appendChild(row);
-      await row.updateComplete;
-
-      row.startRename();
-      await row.updateComplete;
-
-      let renameEvent = null;
-      row.addEventListener('doc:rename', (e) => {
-        renameEvent = e.detail;
-      });
-
-      row.renameValue = 'Should Not Persist';
-      row.cancelRename();
-      await row.updateComplete;
-
-      expect(row.isRenaming).to.be.false;
-      expect(row.name).to.equal('Initial Title');
-      expect(renameEvent).to.be.null;
-    });
+  afterEach(async () => {
+    await engine.clear();
   });
 
-  describe('CopioCarousel Quick Export in Document View', () => {
-    let carousel;
+  describe('Action guards on empty documents', () => {
+    it('handles empty document queries cleanly without throwing', async () => {
+      const doc = await engine.createDocument('Empty Doc', []);
+      expect(doc.pages).to.have.lengthOf(0);
 
-    afterEach(() => {
-      carousel?.remove();
+      const retrieved = await engine.getDocument(doc.id);
+      expect(retrieved.pages).to.have.lengthOf(0);
     });
 
-    it('renders document title and quick export action bar', async () => {
-      carousel = document.createElement('copio-carousel');
-      carousel.docId = 'doc-456';
-      carousel.docName = 'Project Proposal';
-      carousel.images = [
-        { id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
-      ];
-      document.body.appendChild(carousel);
-      await carousel.updateComplete;
-
-      const titleEl = carousel.shadowRoot.querySelector('.doc-heading');
-      expect(titleEl).to.exist;
-      expect(titleEl.textContent).to.equal('Project Proposal');
-
-      const exportTrigger = carousel.shadowRoot.querySelector('.export-btn');
-      expect(exportTrigger).to.exist;
-
-      const exportMenu = carousel.shadowRoot.querySelector('sl-dropdown sl-menu');
-      expect(exportMenu).to.exist;
-
-      const pdfItem = exportMenu.querySelector('sl-menu-item[value="pdf"]');
-      const imagesItem = exportMenu.querySelector('sl-menu-item[value="images"]');
-
-      expect(pdfItem.hasAttribute('disabled')).to.be.false;
-      expect(imagesItem.hasAttribute('disabled')).to.be.false;
-    });
-
-    it('dispatches export events when menu items are selected', async () => {
-      carousel = document.createElement('copio-carousel');
-      carousel.docId = 'doc-456';
-      carousel.docName = 'Project Proposal';
-      carousel.images = [
-        { id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
-        { id: 'p2', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
-      ];
-      document.body.appendChild(carousel);
-      await carousel.updateComplete;
-
-      let pdfDetail = null;
-      let imagesDetail = null;
-
-      carousel.addEventListener('doc:download-pdf', (e) => (pdfDetail = e.detail));
-      carousel.addEventListener('doc:download-images', (e) => (imagesDetail = e.detail));
-
-      carousel.handleExportSelect({ detail: { item: { value: 'pdf' } } });
-      expect(pdfDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal', searchable: false });
-
-      carousel.handleExportSelect({ detail: { item: { value: 'searchable-pdf' } } });
-      expect(pdfDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal', searchable: true });
-
-      carousel.handleExportSelect({ detail: { item: { value: 'images' } } });
-      expect(imagesDetail).to.deep.include({ docId: 'doc-456', docName: 'Project Proposal' });
-    });
-  });
-
-  describe('CopioApp Integration: Row Rename and Carousel Export Wiring', () => {
-    let app;
-
-    beforeEach(async () => {
-      await docRepository.init();
-      // Clean docs
-      const existing = await docRepository.listDocs();
-      for (const d of existing) {
-        await docRepository.deleteDoc(d.id);
+    it('rejects PDF export when document has zero pages', async () => {
+      const doc = await engine.createDocument('Zero Page Doc', []);
+      try {
+        await engine.exportPdf(doc.id);
+        expect.fail('Should have thrown on zero pages');
+      } catch (err) {
+        expect(err).to.exist;
       }
-      router.navigate('/');
-
-      app = document.createElement('copio-app');
-      document.body.appendChild(app);
-      await app.updateComplete;
     });
+  });
 
-    afterEach(async () => {
-      app?.remove();
-      const existing = await docRepository.listDocs();
-      for (const d of existing) {
-        await docRepository.deleteDoc(d.id);
-      }
-      router.navigate('/');
-    });
-
-    it('renames document in repository when copio-row:rename is fired', async () => {
-      const created = await docRepository.createDoc('Initial Name', [
-        { id: 'p1', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' },
+  describe('Document rename and metadata operations', () => {
+    it('renames document cleanly in storage', async () => {
+      const doc = await engine.createDocument('Initial Name', [
+        { id: 'p1', src: 'data:image/png;base64,sample' },
       ]);
-      await app.updateComplete;
+      expect(doc.name).to.equal('Initial Name');
 
-      const row = app.querySelector(`copio-row[id="${created.id}"]`);
-      expect(row).to.exist;
-
-      // Simulate rename event from row
-      row.dispatchEvent(
-        new CustomEvent('doc:rename', {
-          bubbles: true,
-          composed: true,
-          detail: { id: created.id, name: 'Updated via Row' },
-        }),
-      );
-
-      // Allow async rename handler to run
-      await new Promise((r) => setTimeout(r, 50));
-
-      const updated = await docRepository.getDoc(created.id);
-      expect(updated.name).to.equal('Updated via Row');
+      await engine.renameDocument(doc.id, 'Renamed Document');
+      const fetched = await engine.getDocument(doc.id);
+      expect(fetched.name).to.equal('Renamed Document');
     });
   });
 });

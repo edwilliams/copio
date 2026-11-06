@@ -6,11 +6,8 @@ import {
   dispatchCopioEvent,
   MemoryStorageAdapter,
 } from '../sdk/index.js';
-import '../js/routes/home/copio-row.js';
-import '../js/routes/add-edit/copio-add-edit-dialog.js';
-import '../js/routes/doc/copio-carousel.js';
+import '../sdk/scanner.js';
 import '../js/routes/sync/copio-sync-dialog.js';
-import '../js/components/copio-header.js';
 import '../js/routes/ocr/copio-doc-ocr-dialog.js';
 import { getAssetBase, setAssetBase } from '../js/utils/module-loader.js';
 
@@ -177,60 +174,16 @@ describe('SDK Public API Surface (Group D: CPO-035, CPO-036, CPO-037)', () => {
       const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
       container.appendChild(shadowHost);
 
-      const row = document.createElement('copio-row');
-      row.setAttribute('id', 'doc-123');
-      row.name = 'Old Name';
-      shadowRoot.appendChild(row);
+      const innerBtn = document.createElement('button');
+      shadowRoot.appendChild(innerBtn);
 
-      let hostReceivedDocDelete = false;
-      container.addEventListener('doc:delete', () => {
-        hostReceivedDocDelete = true;
+      let hostReceivedInternalEvent = false;
+      container.addEventListener('internal-click', () => {
+        hostReceivedInternalEvent = true;
       });
 
-      row.handleDelete();
-
-      expect(hostReceivedDocDelete).to.be.false; // Did not leak through shadow boundary
-    });
-
-    it('internal components dispatch clean domain events', async () => {
-      const row = document.createElement('copio-row');
-      row.setAttribute('id', 'doc-test');
-      container.appendChild(row);
-      await row.updateComplete;
-
-      let receivedEvent = null;
-      row.addEventListener('doc:view', (e) => {
-        receivedEvent = e.detail;
-      });
-
-      row.handleView();
-      expect(receivedEvent).to.deep.equal({ id: 'doc-test' });
-
-      let renameEvent = null;
-      row.addEventListener('doc:rename', (e) => {
-        renameEvent = e.detail;
-      });
-      row.name = 'Initial';
-      row.renameValue = 'Updated';
-      row.commitRename();
-      expect(renameEvent).to.deep.equal({ id: 'doc-test', name: 'Updated' });
-    });
-
-    it('add-edit dialog dispatches clean dialog:close and dialog:save events', async () => {
-      const dialog = document.createElement('copio-add-edit-dialog');
-      container.appendChild(dialog);
-      await dialog.updateComplete;
-
-      let closeReceived = false;
-      dialog.addEventListener('dialog:close', () => {
-        closeReceived = true;
-      });
-
-      const slDialog = dialog.querySelector('sl-dialog');
-      if (slDialog) {
-        slDialog.dispatchEvent(new CustomEvent('sl-after-hide', { bubbles: false }));
-      }
-      expect(closeReceived).to.be.true;
+      innerBtn.dispatchEvent(new CustomEvent('internal-click', { bubbles: true, composed: false }));
+      expect(hostReceivedInternalEvent).to.be.false; // Did not leak through shadow boundary
     });
 
     it('sync dialog dispatches clean dialog:close event', () => {
@@ -245,34 +198,6 @@ describe('SDK Public API Surface (Group D: CPO-035, CPO-036, CPO-037)', () => {
 
       syncDialog.closeSyncDialog();
       expect(closeFired).to.be.true;
-    });
-
-    it('header dispatches clean header:link-device and header:clear-cache events', async () => {
-      const header = document.createElement('copio-header');
-      container.appendChild(header);
-      await header.updateComplete;
-
-      let linkFired = false;
-      let clearFired = false;
-      header.addEventListener('header:link-device', () => (linkFired = true));
-      header.addEventListener('header:clear-cache', () => (clearFired = true));
-
-      const root = header.shadowRoot || header;
-      const menu = root.querySelector('sl-menu');
-      expect(menu).to.exist;
-      menu.dispatchEvent(new CustomEvent('sl-select', {
-        detail: { item: { value: 'link-device' } },
-        bubbles: true,
-        composed: true,
-      }));
-      menu.dispatchEvent(new CustomEvent('sl-select', {
-        detail: { item: { value: 'clear-cache' } },
-        bubbles: true,
-        composed: true,
-      }));
-
-      expect(linkFired).to.be.true;
-      expect(clearFired).to.be.true;
     });
   });
 

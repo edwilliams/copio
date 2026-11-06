@@ -6,9 +6,6 @@ import {
   NullOcrAdapter,
   NullPdfAdapter,
 } from '../sdk/index.js';
-import '../js/routes/doc/copio-carousel.js';
-import '../js/routes/home/copio-row.js';
-import '../js/routes/doc/copio-images.js';
 import '../js/routes/ocr/copio-doc-ocr-dialog.js';
 import { notify } from '../js/services/notify.js';
 import { getOcrWorker } from '../js/services/ocr-service.js';
@@ -151,78 +148,6 @@ describe('Heavy Module Opt-In & Lazy UI (CPO-042 & CPO-043)', () => {
       } catch (err) {
         expect(err.code).to.equal('FEATURE_DISABLED');
       }
-    });
-
-    it('CopioCarousel hides "Extract Text" and "Download as PDF" when opted out', async () => {
-      const carousel = document.createElement('copio-carousel');
-      carousel.images = [{ id: '1', src: 'data:image/png;base64,sample' }];
-      carousel.ocr = false;
-      carousel.pdf = false;
-      container.appendChild(carousel);
-      await carousel.updateComplete;
-
-      // Extract Text button should not exist
-      const ocrBtn = carousel.shadowRoot.querySelector('.ocr-btn');
-      expect(ocrBtn).to.be.null;
-
-      // PDF menu item should not exist
-      const pdfMenuItem = carousel.shadowRoot.querySelector('sl-menu-item[value="pdf"]');
-      expect(pdfMenuItem).to.be.null;
-
-      // ZIP export should still be available
-      const zipMenuItem = carousel.shadowRoot.querySelector('sl-menu-item[value="images"]');
-      expect(zipMenuItem).to.exist;
-
-      // When re-enabled, buttons appear
-      carousel.ocr = true;
-      carousel.pdf = true;
-      await carousel.updateComplete;
-
-      expect(carousel.shadowRoot.querySelector('.ocr-btn')).to.exist;
-      expect(carousel.shadowRoot.querySelector('sl-menu-item[value="pdf"]')).to.exist;
-    });
-
-    it('CopioRow hides "Extract All Text (OCR)" and "Download as PDF" when opted out', async () => {
-      const row = document.createElement('copio-row');
-      row.name = 'Invoice';
-      row.pages = [{ id: '1', src: 'data:image/png;base64,sample' }];
-      row.ocr = false;
-      row.pdf = false;
-      container.appendChild(row);
-      await row.updateComplete;
-
-      const ocrItem = row.shadowRoot.querySelector('sl-menu-item[value="extract-ocr"]');
-      expect(ocrItem).to.be.null;
-
-      const pdfItem = row.shadowRoot.querySelector('sl-menu-item[value="download"]');
-      expect(pdfItem).to.be.null;
-
-      // Images export should still exist
-      const imgItem = row.shadowRoot.querySelector('sl-menu-item[value="download-images"]');
-      expect(imgItem).to.exist;
-
-      // When re-enabled, items appear
-      row.ocr = true;
-      row.pdf = true;
-      await row.updateComplete;
-
-      expect(row.shadowRoot.querySelector('sl-menu-item[value="extract-ocr"]')).to.exist;
-      expect(row.shadowRoot.querySelector('sl-menu-item[value="download"]')).to.exist;
-    });
-
-    it('CopioImages hides "Extract Text" menu item when ocr is false', () => {
-      const imagesView = document.createElement('copio-images');
-      imagesView.ocr = false;
-      container.appendChild(imagesView);
-      imagesView.images = [
-        { id: '1', src: 'data:image/png;base64,sample' },
-      ];
-
-      const ocrMenuItem = imagesView.shadowRoot.querySelector('sl-menu-item[value="ocr"]');
-      expect(ocrMenuItem).to.be.null;
-
-      imagesView.ocr = true;
-      expect(imagesView.shadowRoot.querySelector('sl-menu-item[value="ocr"]')).to.exist;
     });
   });
 

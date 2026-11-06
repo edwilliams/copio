@@ -500,34 +500,6 @@
           </div>
         </div>
 
-        <!-- Commercial Enterprise Feature: Searchable PDF Export -->
-        <div class="inspector-section" id="export-inspector-section">
-          <div class="control-label">
-            <span>Enterprise PDF Export</span>
-          </div>
-          <div style="font-size:11px; color:var(--sandbox-text-muted); line-height:1.4;">
-            Generates high-fidelity searchable PDFs with an invisible OCR text layer (PDF mode 3). Printed words are selectable, searchable (<kbd>Ctrl+F</kbd>), and copy-pasteable in Chrome, Preview &amp; Acrobat.
-          </div>
-          <div style="display:flex; flex-direction:column; gap:6px; margin-top:2px;">
-            <button type="button" class="seg-btn" id="drawer-btn-searchable-pdf" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; border:1px solid #38bdf8; font-weight:600; padding:6px 10px; display:flex; align-items:center; justify-content:center; gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              <span>Download Searchable PDF</span>
-            </button>
-            <div style="display:flex; gap:6px;">
-              <button type="button" class="seg-btn" id="drawer-btn-standard-pdf" style="flex:1; font-size:11px; padding:4px 6px;">
-                Standard PDF (Pixels)
-              </button>
-              <button type="button" class="seg-btn" id="drawer-btn-run-ocr" style="flex:1; font-size:11px; padding:4px 6px;">
-                Run OCR Only
-              </button>
-            </div>
-          </div>
-          <div id="export-status-pill" style="display:none; font-size:11px; padding:6px 8px; border-radius:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-family:var(--sandbox-mono);">
-            <div id="export-status-text">Processing...</div>
-            <pre id="export-ocr-preview" style="display:none; margin:6px 0 0 0; padding:6px; background:rgba(0,0,0,0.3); border-radius:4px; max-height:100px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; color:#f1f5f9; font-size:10px;"></pre>
-          </div>
-        </div>
-
         <div class="inspector-header" style="border-top:none;">
           <div class="inspector-title">Dispatched CustomEvents</div>
         </div>
@@ -1046,94 +1018,6 @@
       eventCounter = 0;
       eventCountBadge.textContent = '0';
       eventLogList.innerHTML = `<div style="color:var(--sandbox-text-muted); font-size:11px;">Event log cleared.</div>`;
-    });
-
-    // Commercial Export Handlers (CPO-070: Searchable PDF with invisible OCR text layer)
-    async function triggerExport(searchable = false) {
-      const pages = await scanner.getPages();
-      if (!pages || pages.length === 0) {
-        alert('Please add or scan a page first (or click ✨ Sample)');
-        return;
-      }
-      const statusPill = document.getElementById('export-status-pill');
-      const statusText = document.getElementById('export-status-text');
-      const ocrPreview = document.getElementById('export-ocr-preview');
-      if (statusPill && statusText) {
-        statusPill.style.display = 'block';
-        if (ocrPreview) ocrPreview.style.display = 'none';
-        statusText.textContent = searchable
-          ? '⏳ Running OCR and building Searchable PDF...'
-          : '⏳ Building standard PDF...';
-      }
-      try {
-        const docName = `copio-${currentScenario || 'document'}-${searchable ? 'searchable' : 'standard'}`;
-        const blob = await scanner.exportPdf({
-          docName,
-          searchable,
-          download: true,
-          onProgress: (done, total, msg) => {
-            if (statusText) statusText.textContent = msg || `Processing page ${done}/${total}...`;
-          },
-        });
-        if (statusText && blob) {
-          const sizeKb = (blob.size / 1024).toFixed(1);
-          statusText.textContent = `✅ ${searchable ? 'Searchable' : 'Standard'} PDF downloaded (${sizeKb} KB)`;
-          setTimeout(() => {
-            if (statusPill) statusPill.style.display = 'none';
-          }, 6000);
-        }
-      } catch (err) {
-        console.error('Export failed:', err);
-        if (statusText) {
-          statusText.textContent = `❌ Export error: ${err.message}`;
-        }
-      }
-    }
-
-    document.getElementById('drawer-btn-searchable-pdf')?.addEventListener('click', () => triggerExport(true));
-    document.getElementById('drawer-btn-standard-pdf')?.addEventListener('click', () => triggerExport(false));
-
-    document.getElementById('drawer-btn-run-ocr')?.addEventListener('click', async () => {
-      const pages = await scanner.getPages();
-      if (!pages || pages.length === 0) {
-        alert('Please add or scan a page first (or click ✨ Sample)');
-        return;
-      }
-      const statusPill = document.getElementById('export-status-pill');
-      const statusText = document.getElementById('export-status-text');
-      const ocrPreview = document.getElementById('export-ocr-preview');
-      if (statusPill && statusText) {
-        statusPill.style.display = 'block';
-        statusText.textContent = '⏳ Running client-side OCR extraction...';
-        if (ocrPreview) {
-          ocrPreview.style.display = 'none';
-          ocrPreview.textContent = '';
-        }
-      }
-      try {
-        const result = await scanner.ocr();
-        if (statusText) {
-          const words = (result.pages || result.pagesResults || []).flatMap((p) => p.words || []);
-          const wordCount = words.length || (result.text ? result.text.trim().split(/\s+/).filter(Boolean).length : 0);
-          const confPct = Math.round(result.averageConfidence || 0);
-
-          if (result.text && result.text.trim()) {
-            statusText.textContent = `✅ OCR Complete: ${wordCount} words recognized (${confPct}% confidence)`;
-            if (ocrPreview) {
-              ocrPreview.style.display = 'block';
-              ocrPreview.textContent = result.text.trim();
-            }
-          } else {
-            statusText.textContent = `⚠️ No text detected (${confPct}% confidence)`;
-          }
-
-          setTimeout(() => {
-            if (statusPill && !ocrPreview?.textContent) statusPill.style.display = 'none';
-          }, 8000);
-        }
-      } catch (err) {
-        if (statusText) statusText.textContent = `❌ OCR error: ${err.message}`;
-      }
     });
 
     // Expose scanner and SDK to window for interactive DevTools exploration
