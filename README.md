@@ -1,210 +1,213 @@
-# Copio
+# `@copio/sdk`
 
-<div align="center">
-  <img style="margin: 0 auto; max-width: 512px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);" src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4eb7cf55-5d05-497a-8745-9002f292c32a_512x512.png" alt="Copio Logo" />
+**Embeddable document scanner Web Component (`<copio-scanner>`) and headless JavaScript engine (`CopioEngine`) for web applications.**
 
-  <h3>The Private, Offline-First Document Scanner & Manager</h3>
+Capture, crop, binarize, OCR, and compile multi-page Searchable PDFs 100% client-side in the browser — zero cloud uploads, zero per-scan API fees, and zero framework lock-in.
 
-  <p><i>Capture, enhance, organise, and export multi-page documents — 100% in your browser with zero cloud dependencies.</i></p>
+[![License: AGPL-3.0 / Commercial](https://img.shields.io/badge/License-AGPL--3.0%20%2F%20Commercial-0284c7)](LICENSE)
+[![Scanner Bundle](https://img.shields.io/badge/scanner%20bundle-54%20KB%20gzip-16a34a)](#entry-points--bundle-sizes)
+[![Zero Cloud Uploads](https://img.shields.io/badge/privacy-100%25%20on--device-10b981)](#use-cases)
 
-  <div>
-    <img src="https://img.shields.io/badge/License-AGPL--3.0%20%2F%20Commercial-blue?style=for-the-badge" alt="AGPL-3.0 / Commercial License" />
-    <img src="https://img.shields.io/badge/Privacy-100%25%20Local-brightgreen?style=for-the-badge&logo=shield" alt="100% Local Privacy" />
-    <img src="https://img.shields.io/badge/Offline-First-blue?style=for-the-badge&logo=pwa" alt="Offline First" />
-    <img src="https://img.shields.io/badge/Sync-Peer--to--Peer%20WebRTC-purple?style=for-the-badge&logo=webrtc" alt="P2P Sync" />
-    <img src="https://img.shields.io/badge/Platform-PWA%20%7C%20Android%20TWA-3ddc84?style=for-the-badge&logo=android" alt="PWA and Android TWA" />
-    <img src="https://img.shields.io/badge/Built%20with-Lit%20%2B%20TinyBase-orange?style=for-the-badge&logo=lit" alt="Built with Lit & TinyBase" />
-  </div>
-</div>
-
-<br/>
+👉 **[Live Interactive SDK Sandbox & Event Inspector →](https://copio.netlify.app)**
 
 ---
 
-## 🌟 Overview
+## Built For
 
-**Copio** is a modern, lightweight, privacy-focused document scanning and document management application that runs entirely on your device.
-
-Whether you're digitising paper receipts, creating multi-page document archives, importing existing PDFs, or taking Markdown notes alongside your scans — Copio gives you the full power of a desktop document management suite with **zero cloud servers, zero user accounts, and zero data tracking**.
-
-> 📖 **Read the Story:** Learn about the vision and evolution of Copio in [Ed Williams' Substack post](https://edwilliams.substack.com/p/copio). Originally built in React in 2019, Copio was completely rebuilt in 2026 using Web Components (Lit) and TinyBase for ultimate performance and zero framework overhead.
-
----
-
-## 🔥 Key Highlights
-
-- 🔒 **100% Private & Serverless**: Your documents never leave your browser. Data is saved locally in IndexedDB using reactive storage.
-- ⚡ **Works Everywhere Offline**: Service Worker pre-caches all assets. Load it once and use it forever without an internet connection.
-- 🔤 **Client-Side OCR (Text Recognition)**: Extract text from scanned documents and images using WebAssembly (Tesseract.js WASM) with zero server uploads and multi-language support.
-- 🔄 **Serverless Peer-to-Peer Sync**: Transfer documents directly between your phone, tablet, and laptop via WebRTC and instant QR code pairing — no cloud middleman.
-- 📷 **Smart Camera & Ingestion**: Capture directly from your mobile or desktop camera with automatic EXIF orientation detection. Import existing images, multi-page PDFs, or Markdown files.
-- 🎨 **Pro-Grade Page Enhancements**: Interactive precision cropping, 360° rotation, and a high-contrast **Black & White Threshold filter** for turning shadow-heavy photos into crisp scanned paper.
-- 📑 **Hybrid Document Engine**: Combine camera scans, imported images, multi-page PDF pages, and Markdown notes seamlessly within a single document container.
-- 📤 **Client-Side PDF & ZIP Export**: Convert your multi-page documents into clean A4 PDFs or download all pages as a ZIP bundle directly in the browser using WebAssembly and client-side PDFKit.
-- 📱 **Native App Experience**: Install as a PWA on iOS, Desktop, and Android, or sideload the native-feeling Android Trusted Web Activity (TWA) APK.
+- **Expense & AP Automation SaaS** — Single-shot receipt capture (`aspect="receipt"`) and multi-page vendor invoice scanning (`mode="batch" aspect="a4"`).
+- **Fintech Onboarding & KYC** — Guided front-and-back ID / card capture (`aspect="card" max-pages="2"`).
+- **Healthcare, Legal & Insurance Portals** — 100% on-device Sauvola B&W document cleanup, Tesseract WASM OCR, and Searchable PDF generation before uploading to your own storage (HIPAA / GDPR friendly).
+- **Local-First & Offline PWAs** — Pluggable persistence across Origin Private File System (OPFS), IndexedDB, or ephemeral in-memory sessions.
 
 ---
 
-## 🛠️ Features Breakdown
-
-### 📷 1. Ingestion & Capture
-- **Live Camera Capture**: Snap photos of documents directly within the web app.
-- **EXIF Auto-Correction**: Automatic rotation detection based on image EXIF metadata.
-- **Multi-Format Ingestion**: Upload images (`.jpg`, `.png`), multi-page PDF documents (`.pdf`), or Markdown files (`.md`, `.markdown`, `.txt`).
-- **PDF Page Extraction**: Automatically renders uploaded PDF pages as editable document pages.
-
-### 🔤 2. Client-Side OCR & Text Extraction
-- **On-Device Text Recognition**: Powered by Tesseract.js WebAssembly running inside background Web Workers for smooth UI performance.
-- **Per-Page & Full-Document OCR**: Extract text from single pages or batch-process entire multi-page documents with live progress indicators.
-- **Convert to Markdown Note**: Turn any scanned page into an editable Markdown note with a single tap.
-- **Multi-Language Support**: English pre-cached offline, with on-demand support for Spanish, French, German, Italian, Portuguese, Chinese, Japanese, and more.
-- **One-Click Copy & Export**: Copy recognized text with confidence metrics or download as `.txt` / `.md`.
-
-### ✂️ 3. Editing & Page Enhancement
-- **Interactive Cropping**: Adjust boundaries easily using Cropper.js.
-- **Rotation**: Rotate individual pages to correct orientation.
-- **Black & White Filter**: Convert shaded photos into high-contrast document scans.
-- **Drag-to-Reorder**: Reorder pages effortlessly using drag-and-drop.
-- **Metadata Inspector**: View EXIF data and file properties on demand.
-
-### 📝 4. Hybrid Markdown & Note Taking
-- **Embedded Markdown Notes**: Mix text notes and document scans in the same document.
-- **Live Markdown Previewer**: View rich rendered Markdown notes in a full-screen carousel viewer.
-- **Markdown Text Editor**: Create and edit Markdown pages directly inside your document.
-
-### 🔄 5. Serverless Peer-to-Peer Sync
-- **WebRTC Data Channels**: Pair devices directly using PeerJS.
-- **Instant QR Pairing**: Scan a QR code on your host device with your phone to link instantly.
-- **Zero Cloud Storage**: Direct browser-to-browser transmission keeping your documents strictly private.
-
-### 📤 6. Flexible Exporting
-- **Client-Side PDF Generation**: Generate formatted multi-page A4 PDFs with proper margins and image scaling.
-- **Bulk Image Download**: Download individual pages or package entire documents into a compressed ZIP file.
-- **Markdown File Export**: Download Markdown components as `.md` files.
-
----
-
-## 🏗️ Tech Stack & Architecture
-
-Copio is designed with a lightweight, zero-framework-overhead philosophy for maximum speed, longevity, and offline reliability.
-
-| Library / Tech | Purpose |
-|---|---|
-| 🧱 **[Lit](https://lit.dev)** | Ultra-fast Web Components base class & templating engine |
-| 🗃️ **[TinyBase](https://tinybase.org)** | Reactive browser store with auto-persisted IndexedDB storage |
-| 🔤 **[Tesseract.js](https://tesseract.projectnaptha.com/)** | Client-side WebAssembly Optical Character Recognition (OCR) |
-| 🎨 **[Shoelace](https://shoelace.style)** | Accessible UI component library (dialogs, icons, buttons) |
-| ✂️ **[Cropper.js](https://fengyuanchen.github.io/cropperjs/)** | Touch-friendly interactive image crop and rotation tool |
-| 📄 **[PDFKit](https://pdfkit.org)** | In-browser client-side PDF document compiler |
-| 📡 **[PeerJS](https://peerjs.com)** | WebRTC peer-to-peer data transport layer |
-| 📷 **[Exifr](https://mutiny.cz/exifr/)** | High-performance EXIF image metadata parser |
-| 🔀 **[Sortable.js](https://sortablejs.github.io/Sortable/)** | Touch & mouse drag-and-drop reordering |
-| 📱 **[Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)** | Full offline asset caching & progressive web app shell |
-
-
----
-
-## 🚀 Quick Start
-
-### 📖 User Guide
-1. **Create a Document**: Click the **+** button and enter a title for your document.
-2. **Add Content**: Tap the upload button to capture photos, upload image files, import PDFs, or create Markdown notes.
-3. **Enhance & Reorder**: Tap any page thumbnail to crop, rotate, apply black & white threshold filters, or edit text. Drag thumbnails to reorder pages.
-4. **Export & Share**: Tap the document dropdown menu to download as a multi-page PDF, a ZIP image bundle, or a Markdown file.
-5. **Sync Across Devices**: Click **Link Device** in the header to generate a QR code for instant peer-to-peer sync with another browser or phone.
-
----
-
-### 💻 Developer Setup
-
-#### Prerequisites
-- **Node.js** (v18+ recommended — required for bundler scripts only; the web app has zero runtime server dependencies).
-- A static HTTP/HTTPS server or `localhost` (HTTPS is required for Service Worker activation on non-localhost domains).
-
-#### Installation
+## Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/edwilliams/copio.git
-cd copio
-
-# Install build dependencies
-npm install
+npm install @copio/sdk
 ```
 
-#### Build Bundles
-
-```bash
-# Bundle client libraries into js/
-npm run build
-```
-
-#### Run Locally
-
-Serve the project root using any static web server:
-
-```bash
-# Using npx serve
-npx serve .
-
-# Or using Python
-python3 -m http.server 3000
-```
-
-Open `http://localhost:3000` in your web browser.
+Works in **Vanilla JS, React, Vue, Svelte, and Angular** via native Shadow DOM custom elements (`<copio-scanner>`) with full TypeScript declarations (`.d.ts`) and Custom Elements Manifest (`custom-elements.json`).
 
 ---
 
-## 📱 Mobile Installation & Android APK (TWA)
+## 30-Second Quickstart
 
-### 📲 Progressive Web App (PWA)
-Open Copio in your mobile browser (Safari on iOS, Chrome on Android/Desktop) and select **Add to Home Screen** or **Install App**. Copio installs as a standalone application that works 100% offline.
+Import `@copio/sdk/scanner` (self-contained, ~54 KB gzipped) and drop `<copio-scanner>` into any modal, drawer, or page container:
 
-### 🤖 Android Trusted Web Activity (TWA)
-Copio can be compiled into a lightweight native Android APK shell using [Bubblewrap](https://developer.chrome.com/docs/android/trusted-web-activity/).
+```html
+<copio-scanner
+  id="scanner"
+  mode="batch"
+  aspect="a4"
+  theme="dark"
+></copio-scanner>
 
-#### Install Pre-Built APK
-Download `app-release-signed.apk` from the [`copio-twa/`](../copio-twa/) directory, transfer it to your device, and tap to install (enable "Install from unknown sources" if prompted).
+<script type="module">
+  import { COPIO_EVENTS } from '@copio/sdk/scanner';
 
-#### Build Custom APK
-```bash
-# Install Bubblewrap CLI globally
-npm install -g @bubblewrap/cli
+  const scanner = document.getElementById('scanner');
 
-# Navigate to TWA directory
-mkdir copio-twa && cd copio-twa
-
-# Generate Android project from PWA manifest
-bubblewrap update --skipVersionUpgrade
-
-# Build signed APK and App Bundle
-BUBBLEWRAP_KEYSTORE_PASSWORD=<your-password> \
-BUBBLEWRAP_KEY_PASSWORD=<your-password> \
-bubblewrap build
+  scanner.addEventListener(COPIO_EVENTS.SCAN_COMPLETE, (e) => {
+    const { pages, pageCount } = e.detail;
+    console.log(`Captured ${pageCount} page(s):`, pages);
+  });
+</script>
 ```
 
-The output file `app-release-signed.apk` is ready for direct Android installation.
+---
+
+## Common Integration Recipes
+
+### 1. Searchable PDF Export & Client-Side OCR
+
+Heavy WASM/PDF engines (`pdfkit` and `tesseract.js`) are **excluded** from `@copio/sdk/scanner` by default so your initial bundle stays small. Import `@copio/sdk` (or register `PdfKitAdapter` and `TesseractWasmAdapter`) when you need PDF compilation or OCR:
+
+```js
+import { COPIO_EVENTS } from '@copio/sdk'; // Registers default PDF + OCR adapters
+
+const scanner = document.querySelector('copio-scanner');
+
+// 1. Export a multi-page Searchable PDF (embeds an invisible, selectable OCR text layer)
+const pdfBlob = await scanner.exportPdf({
+  docName: 'vendor-invoice-1042',
+  searchable: true,      // Set false for standard image-only PDF
+  download: true,        // Trigger browser download (or false to upload pdfBlob to S3)
+  onProgress: (done, total, msg) => console.log(msg || `${done}/${total}`),
+});
+
+// 2. Or run standalone OCR text & bounding-box extraction
+const { text, pagesResults, averageConfidence } = await scanner.ocr();
+console.log(`Recognized (${Math.round(averageConfidence)}% confidence):`, text);
+```
+
+### 2. Scenario Presets (Receipts, ID Cards, Multi-Page Invoices)
+
+```html
+<!-- 1. Expense Receipt (Single Page, Tall Aspect Guide) -->
+<copio-scanner mode="single" aspect="receipt" max-pages="1"></copio-scanner>
+
+<!-- 2. KYC ID Card (Front & Back Guided Capture) -->
+<copio-scanner mode="single" aspect="card" max-pages="2"></copio-scanner>
+
+<!-- 3. Multi-Page Document Batch -->
+<copio-scanner mode="batch" aspect="a4"></copio-scanner>
+```
+
+### 3. Headless Engine (`@copio/sdk/core`)
+
+Building your own UI in Tailwind/React or processing files in a background pipeline? Use `CopioEngine` with zero DOM or UI dependencies:
+
+```js
+import { CopioEngine, MemoryStorageAdapter } from '@copio/sdk/core';
+import { PdfKitAdapter, TesseractWasmAdapter } from '@copio/sdk';
+
+const engine = new CopioEngine({
+  storage: new MemoryStorageAdapter(),
+  services: {
+    pdf: new PdfKitAdapter(),
+    ocr: new TesseractWasmAdapter(),
+  },
+});
+
+// Ingest File/Blob objects (auto-extracts EXIF orientation)
+const pages = await engine.addFiles(fileInput.files);
+
+// Apply non-destructive edits (original image is always preserved)
+await engine.applyEdit(null, pages[0].id, {
+  rotation: 90,
+  filter: 'bw', // Adaptive Sauvola B&W document thresholding
+  crop: { x: 20, y: 20, width: 600, height: 800 },
+});
+
+// Compile Searchable PDF Blob for upload
+const pdfBlob = await engine.exportPdf(null, { searchable: true });
+```
+
+### 4. Styling & Host Theme Tokens
+
+`<copio-scanner>` uses encapsulated Shadow DOM so host CSS resets (e.g. Tailwind preflight) never break the scanner layout. Customize colors, radii, and typography with `--copio-*` CSS custom properties:
+
+```css
+copio-scanner {
+  width: 100%;
+  height: 640px;
+  --copio-bg: #0b0f17;
+  --copio-surface: #131b26;
+  --copio-primary: #38bdf8;
+  --copio-success: #22c55e;
+  --copio-text: #f8fafc;
+  --copio-border-radius: 12px;
+}
+```
 
 ---
 
-## 🔒 Privacy & Security Guarantee
+## Entry Points & Bundle Sizes
 
-- **Zero Remote Storage**: All documents, images, and notes are stored strictly inside your browser's local `IndexedDB`.
-- **No Analytics / Telemetry**: No third-party trackers or external analytics scripts.
-- **Direct P2P Connections**: WebRTC sync connects your devices directly end-to-end without uploading data to server storage.
-
----
-
-## 🤝 Contributing
-
-Contributions, feature suggestions, and bug reports are warmly welcomed! Please review our [Contribution Guidelines](CONTRIBUTING.md) and [Contributor License Agreement (CLA)](CLA.md) before submitting a pull request. Feel free to open an issue or submit a pull request on GitHub.
+| Import Path | Gzip Size | What It Includes |
+|---|---:|---|
+| `@copio/sdk/scanner` | **~54 KB** | Self-contained `<copio-scanner>` Web Component (camera, framing guides, crop, rotate, B&W filter, undo/redo). Zero external chunks. |
+| `@copio/sdk/core` | **~17 KB** | Headless `CopioEngine`, domain models (`Document`, `Page`, `EditStack`), and `StoragePort` adapters (`Memory`, `IndexedDB`). Zero DOM. |
+| `@copio/sdk` | **~29 KB** | Full SDK entry point — exports `<copio-scanner>`, `CopioEngine`, and pre-registers lazy-loaded `PdfKitAdapter`, `TesseractWasmAdapter`, and `SyncManager`. |
+| `@copio/sdk/sync` | **~5 KB** | WebRTC peer-to-peer sync (`SyncManager`, `CopioSyncDialog`). |
 
 ---
 
-## 📄 License
+## `<copio-scanner>` API Reference
 
-Copio (`@copio/sdk`) is dual-licensed under the **GNU Affero General Public License v3.0** and a **Commercial License**:
+### Attributes / Properties
 
-- **Community / Open Source:** Available under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE) for open-source projects and evaluation. Any work embedding or linking to `@copio/sdk` must provide full source code under the AGPL-3.0.
-- **Commercial License:** For proprietary applications, closed-source SaaS products, or removing the "Powered by Copio" watermark. See [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md) or contact `license@copio.dev`.
-- **Third-Party Notices:** Vendored third-party components and their respective permissive licences (MIT, BSD-3-Clause, Apache-2.0) are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+| Attribute | Property | Default | Description |
+|---|---|---|---|
+| `mode` | `scanner.mode` | `'single'` | `'single'` (auto-advances to workbench) or `'batch'` (continuous multi-page capture). |
+| `aspect` | `scanner.aspect` | `'a4'` | Framing guide aspect ratio: `'a4'`, `'receipt'`, `'card'`, or `'free'`. |
+| `max-pages` | `scanner.maxPages` | `0` | Maximum allowed pages (`0` = unlimited, `1` = single receipt, `2` = front/back ID). |
+| `theme` | `scanner.theme` | `'dark'` | Built-in theme preset: `'dark'`, `'light'`, or `'brand'`. |
+| `stage` | `scanner.stage` | `'viewfinder'` | Active view stage: `'viewfinder'` (camera/import) or `'workbench'` (crop/filter/reorder). |
+| `features` | `scanner.features` | `'crop rotate filter ocr export sync'` | Space- or comma-separated list of enabled capabilities. |
+| `ocr-languages` | `scanner.ocrLanguages` | `'eng'` | Language codes passed to Tesseract WASM (`'eng'`, `'fra'`, `'deu'`, `'spa'`, etc.). |
+| `asset-base` | `scanner.assetBase` | `''` | Custom base URL for self-hosting lazy worker/WASM assets. |
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `addFiles(files)` | `Promise<Page[]>` | Ingest `FileList`, `File[]`, or `Blob[]` (images or existing PDFs) into the active scan session. |
+| `getPages()` | `Promise<Page[]>` | Return current pages with `src` (edited), `originalSrc` (untouched), `edits`, and `ocrText`. |
+| `clear()` | `Promise<void>` | Clear all pages in the current session and reset the scanner. |
+| `exportPdf(opts?)` | `Promise<Blob>` | Compile pages into a PDF `Blob`. Pass `{ searchable: true, download: true, docName, onProgress }`. |
+| `exportZip(opts?)` | `Promise<Blob>` | Package pages into a ZIP archive `Blob`. |
+| `ocr(pageId?, opts?)` | `Promise<OcrResult>` | Run client-side OCR on all pages (or a single `pageId`) and attach `ocrText` / `ocrWords`. |
+
+### Custom Events (`COPIO_EVENTS`)
+
+All events bubble and cross the Shadow DOM boundary (`composed: true`) with typed payload details on `event.detail`:
+
+| Constant | Event Name | Payload (`event.detail`) |
+|---|---|---|
+| `COPIO_EVENTS.SCAN_COMPLETE` | `copio:scan-complete` | `{ pages, pageCount, docId, mode, aspect }` |
+| `COPIO_EVENTS.PAGE_ADDED` | `copio:page-added` | `{ page, pageNumber, docId, source }` |
+| `COPIO_EVENTS.PAGE_REMOVED` | `copio:page-removed` | `{ pageId, docId }` |
+| `COPIO_EVENTS.PAGES_CHANGED` | `copio:pages-changed` | `{ pages, docId }` |
+| `COPIO_EVENTS.OCR_COMPLETE` | `copio:ocr-complete` | `{ text, pages, averageConfidence, docId, pageId }` |
+| `COPIO_EVENTS.EXPORT_COMPLETE` | `copio:export-complete` | `{ type, format, blob, searchable, docId }` |
+| `COPIO_EVENTS.ERROR` | `copio:error` | `{ code, message, error }` |
+
+---
+
+## Ecosystem
+
+`@copio/sdk` powers two open-source reference applications:
+- **[`copio-documents`](https://github.com/edwilliams/copio-documents)** — Standalone offline-first document & Markdown notes workspace PWA with full-database WebRTC sync.
+- **[`copio-cards`](https://github.com/edwilliams/copio-cards)** — Offline loyalty & ID card wallet PWA built on `<copio-scanner aspect="card">`.
+
+---
+
+## License
+
+`@copio/sdk` is dual-licensed under **AGPL-3.0** and a **Commercial License**:
+
+- **Community / Open Source ([AGPL-3.0](LICENSE)):** Free for open-source projects, internal evaluation, and applications licensed under AGPL-3.0.
+- **Commercial License ([LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md)):** One-time perpetual license for proprietary web applications and closed-source SaaS products (removes AGPL copyleft obligations and the Community watermark). Contact `license@copio.dev`.
+- **Third-Party Notices:** Permissive licenses for vendored libraries are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
