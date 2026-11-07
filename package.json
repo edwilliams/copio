@@ -28,6 +28,11 @@
       "import": "./dist/sync.js",
       "default": "./dist/sync.js"
     },
+    "./handoff": {
+      "types": "./dist/types/sdk/handoff-session.d.ts",
+      "import": "./dist/handoff.js",
+      "default": "./dist/handoff.js"
+    },
     "./adapters/*": {
       "import": "./dist/adapters/*.js",
       "default": "./dist/adapters/*.js"
@@ -84,7 +89,7 @@
     "check:size": "node scripts/check-bundle-size.mjs",
     "check:consumer": "tsc -p test/fixtures/ts-consumer/tsconfig.json",
     "check:ci": "npm run lint && npm run typecheck && npm run build:sdk && npm run check:size && npm run check:consumer && npm test",
-    "test": "node --test test/engine-node.test.js && web-test-runner --node-resolve"
+    "test": "node --test test/engine-node.test.js test/handoff-node.test.js && web-test-runner --node-resolve"
   },
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",
