@@ -14,6 +14,12 @@ export {
   getScannerStyleSheet,
   adoptScannerStyles,
 } from './scanner.js';
+export {
+  CopioHandoff,
+  handoffCss,
+  getHandoffStyleSheet,
+  adoptHandoffStyles,
+} from './handoff.js';
 export { CopioDocOcrDialog } from '../js/routes/ocr/copio-doc-ocr-dialog.js';
 export { CopioSyncDialog } from '../js/routes/sync/copio-sync-dialog.js';
 

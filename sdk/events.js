@@ -21,6 +21,7 @@ export const COPIO_EVENTS = {
   EXPORT_COMPLETE: 'copio:export-complete',
   OCR_COMPLETE: 'copio:ocr-complete',
   SYNC_CONNECTED: 'copio:sync-connected',
+  HANDOFF_CONNECTED: 'copio:handoff-connected',
   MIGRATION: 'copio:migration',
   ERROR: 'copio:error',
 };

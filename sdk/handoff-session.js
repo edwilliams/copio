@@ -4,6 +4,10 @@
  */
 
 export {
+  CopioHandoff,
+  handoffCss,
+  getHandoffStyleSheet,
+  adoptHandoffStyles,
   HandoffSession,
   LoopbackTransport,
   randomHandoffId,
@@ -13,13 +17,10 @@ export {
   parseHandoffUrl,
   HANDOFF_DEFAULT_CHUNK_SIZE,
   HANDOFF_DEFAULT_TTL_MS,
-} from '../js/services/handoff-session.js';
-
-export {
   generateEcdhKeyPair,
   exportPublicKey,
   importPublicKey,
   deriveSharedKey,
   encryptPayload,
   decryptPayload,
-} from '../js/services/handoff-crypto.js';
+} from './handoff.js';
