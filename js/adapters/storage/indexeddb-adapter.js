@@ -51,7 +51,6 @@ export class IndexedDbStorageAdapter extends StoragePort {
   #persister = null;
   #blobStore = null;
   #dbName = 'copio-db';
-  #isCustom = false;
   #objectUrls = new Set();
   #docObjectUrls = new Map();
   #pageObjectUrls = new Map();
@@ -69,9 +68,6 @@ export class IndexedDbStorageAdapter extends StoragePort {
     super();
 
     this.#dbName = options.dbName || 'copio-db';
-    if (options.dbName && options.dbName !== 'copio-db') {
-      this.#isCustom = true;
-    }
 
     this.#store = options.store || createStore();
     if (!this.#store.hasTable('docs')) {
@@ -170,12 +166,12 @@ export class IndexedDbStorageAdapter extends StoragePort {
       return this.#initPromise;
     }
     this.#initPromise = (async () => {
-      if (this.#isCustom) {
-        await this.#persister.load();
+      await this.#persister.load();
+      if (typeof this.#persister.startAutoLoad === 'function') {
         this.#persister.startAutoLoad();
+      }
+      if (typeof this.#persister.startAutoSave === 'function') {
         this.#persister.startAutoSave();
-      } else {
-        await this.#persister.load();
       }
 
       // Run startup sweep to remove orphan blobs left behind
@@ -588,6 +584,32 @@ export class IndexedDbStorageAdapter extends StoragePort {
     }
 
     this.#activeDocCache.delete(docId);
+  }
+
+  /**
+   * Retrieves the current schema version from TinyBase values (CPO-013).
+   * @returns {Promise<number|null>}
+   */
+  async getSchemaVersion() {
+    if (this.#store && this.#store.hasValue('schemaVersion')) {
+      const val = this.#store.getValue('schemaVersion');
+      return typeof val === 'number' ? val : null;
+    }
+    return null;
+  }
+
+  /**
+   * Persists the schema version into TinyBase values and flushes to IndexedDB (CPO-013).
+   * @param {number} version
+   * @returns {Promise<void>}
+   */
+  async setSchemaVersion(version) {
+    if (this.#store) {
+      this.#store.setValue('schemaVersion', typeof version === 'number' ? version : null);
+      if (this.#persister && typeof this.#persister.save === 'function') {
+        await this.#persister.save();
+      }
+    }
   }
 
   /**

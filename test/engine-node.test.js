@@ -200,6 +200,23 @@ test('domain models instantiate cleanly', async () => {
   assert.strictEqual(session.redo().action, 'snap');
 });
 
+test('runs data migration framework and manages schema versions in Node.js (CPO-013)', async () => {
+  const storage = new MemoryStorageAdapter();
+  const engine = new CopioEngine({ storage });
+
+  let migrationEvent = null;
+  engine.addEventListener('copio:migration', (e) => {
+    migrationEvent = e.detail;
+  });
+
+  const initResult = await engine.init();
+  assert.strictEqual(initResult.migration.fresh, true);
+  assert.strictEqual(initResult.migration.toVersion, 2);
+  assert.strictEqual(await engine.getSchemaVersion(), 2);
+  assert.ok(migrationEvent);
+  assert.strictEqual(migrationEvent.stage, 'complete');
+});
+
 test.after(() => {
   process.exit(0);
 });

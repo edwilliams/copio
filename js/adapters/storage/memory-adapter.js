@@ -17,6 +17,9 @@ export class MemoryStorageAdapter extends StoragePort {
   /** @type {Set<() => void>} */
   #subscribers = new Set();
 
+  /** @type {number|null} */
+  #schemaVersion = null;
+
   constructor() {
     super();
   }
@@ -37,6 +40,7 @@ export class MemoryStorageAdapter extends StoragePort {
    */
   listDocsSync() {
     return Array.from(this.#docs.values()).map((doc) => ({
+      ...doc,
       id: doc.id,
       name: doc.name,
       pages: Array.isArray(doc.pages) ? [...doc.pages] : [],
@@ -60,6 +64,7 @@ export class MemoryStorageAdapter extends StoragePort {
     const doc = this.#docs.get(id);
     if (!doc) return null;
     return {
+      ...doc,
       id: doc.id,
       name: doc.name,
       pages: Array.isArray(doc.pages) ? [...doc.pages] : [],
@@ -96,6 +101,7 @@ export class MemoryStorageAdapter extends StoragePort {
     }
 
     this.#docs.set(id, {
+      ...doc,
       id,
       name: doc.name || '',
       pages,
@@ -218,11 +224,29 @@ export class MemoryStorageAdapter extends StoragePort {
   }
 
   /**
+   * Retrieves the current schema version from memory.
+   * @returns {Promise<number|null>}
+   */
+  async getSchemaVersion() {
+    return this.#schemaVersion;
+  }
+
+  /**
+   * Persists the schema version in memory.
+   * @param {number} version
+   * @returns {Promise<void>}
+   */
+  async setSchemaVersion(version) {
+    this.#schemaVersion = typeof version === 'number' ? version : null;
+  }
+
+  /**
    * Clears all in-memory data (useful for test isolation).
    */
   clear() {
     this.#docs.clear();
     this.#pages.clear();
+    this.#schemaVersion = null;
     this.#notify();
   }
 

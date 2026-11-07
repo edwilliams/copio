@@ -3,6 +3,9 @@ import {
   CopioEngine,
   COPIO_EVENTS,
   dispatchCopioEvent,
+  MigrationRunner,
+  CURRENT_SCHEMA_VERSION,
+  DEFAULT_MIGRATIONS,
   MemoryStorageAdapter,
   IndexedDbStorageAdapter,
   NullOcrAdapter,
@@ -84,6 +87,18 @@ async function testEngine() {
   const docs = await engine.listDocuments();
   const fetched = await engine.getDocument(doc.id);
   await engine.deleteDocument(doc.id);
+}
+
+// 6. Test Data Migration Framework (CPO-013)
+const schemaVer: number = CURRENT_SCHEMA_VERSION;
+const defaultMigrations = DEFAULT_MIGRATIONS;
+const migrationEventName: string = COPIO_EVENTS.MIGRATION;
+async function testMigrationRunner() {
+  const migStorage = new MemoryStorageAdapter();
+  await migStorage.init();
+  const res = await MigrationRunner.run({ storage: migStorage });
+  const isFresh: boolean = res.fresh;
+  const toVer: number = res.toVersion;
 }
 
 // 6. Test Hexagonal Ports & Domain Models

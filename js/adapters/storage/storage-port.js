@@ -114,6 +114,38 @@ export class StoragePort {
   }
 
   /**
+   * Retrieves the current schema version stored in persistence (CPO-013).
+   *
+   * Migration Contract for Custom Adapters:
+   * - Must return an integer representing the current stored schema version, or `null`
+   *   if unversioned (e.g. fresh installation or pre-versioned database).
+   * - Default implementation stores the version in-memory on the adapter instance (`_schemaVersion`).
+   * - Persistent custom adapters (IndexedDB, OPFS, SQLite, REST/Cloud) SHOULD override this
+   *   method to read from their persistent metadata store.
+   *
+   * @returns {Promise<number|null>} Stored schema version or null if unversioned.
+   */
+  async getSchemaVersion() {
+    return this._schemaVersion ?? null;
+  }
+
+  /**
+   * Persists the schema version in storage (CPO-013).
+   *
+   * Migration Contract for Custom Adapters:
+   * - Called automatically by the MigrationRunner when initializing a fresh database
+   *   or upon the successful, verified completion of each migration step.
+   * - Persistent custom adapters SHOULD override this method to atomically write the
+   *   integer version to their persistent metadata store.
+   *
+   * @param {number} version
+   * @returns {Promise<void>}
+   */
+  async setSchemaVersion(version) {
+    this._schemaVersion = typeof version === 'number' ? version : null;
+  }
+
+  /**
    * Subscribes to storage changes (document modifications, additions, deletions).
    * @param {() => void} _cb
    * @returns {() => void} Unsubscribe function
