@@ -921,6 +921,38 @@ export class OpfsStorageAdapter extends StoragePort {
   }
 
   /**
+   * Retrieves the current schema version from storage (CPO-013).
+   * @returns {Promise<number|null>}
+   */
+  async getSchemaVersion() {
+    if (this.#isFallback && this.#fallbackAdapter) {
+      return this.#fallbackAdapter.getSchemaVersion();
+    }
+    if (this.#store && this.#store.hasValue('schemaVersion')) {
+      const val = this.#store.getValue('schemaVersion');
+      return typeof val === 'number' ? val : null;
+    }
+    return null;
+  }
+
+  /**
+   * Persists the schema version into TinyBase values and flushes to OPFS (CPO-013).
+   * @param {number} version
+   * @returns {Promise<void>}
+   */
+  async setSchemaVersion(version) {
+    if (this.#isFallback && this.#fallbackAdapter) {
+      return this.#fallbackAdapter.setSchemaVersion(version);
+    }
+    if (this.#store) {
+      this.#store.setValue('schemaVersion', typeof version === 'number' ? version : null);
+      if (this.#persister && typeof this.#persister.save === 'function') {
+        await this.#persister.save();
+      }
+    }
+  }
+
+  /**
    * Subscribes to document changes via TinyBase table listener.
    * @param {() => void} cb
    * @returns {() => void} Unsubscribe function

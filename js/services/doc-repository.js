@@ -2,6 +2,7 @@
 import { createDefaultAdapter } from '../adapters/storage/index.js';
 import { blobToDataUrl } from '../adapters/storage/indexeddb-adapter.js';
 import { randomId } from '../utils/utils.js';
+import { MigrationRunner } from './migration-runner.js';
 
 /**
  * @typedef {Object} DocMetadata
@@ -52,11 +53,21 @@ export class DocRepository {
   }
 
   /**
-   * Initializes the repository and underlying storage adapter.
+   * Initializes the repository, underlying storage adapter, and runs pending migrations.
    * @returns {Promise<{ kind: string, persistent: boolean }>}
    */
   async init() {
-    return this.#adapter.init();
+    const res = await this.#adapter.init();
+    await MigrationRunner.run({ storage: this.#adapter });
+    return res;
+  }
+
+  /**
+   * Retrieves the current schema version from the underlying storage adapter (CPO-013).
+   * @returns {Promise<number|null>}
+   */
+  async getSchemaVersion() {
+    return this.#adapter.getSchemaVersion();
   }
 
   /**

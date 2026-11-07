@@ -83,6 +83,9 @@ export class CopioScanner extends BaseElement {
       if (this.hasAttribute('pdf')) opts.pdf = this.getAttribute('pdf') !== 'false';
     }
     this.#engine = new CopioEngine(opts);
+    this.#engine.addEventListener(COPIO_EVENTS.MIGRATION, (e) => {
+      this.dispatch(COPIO_EVENTS.MIGRATION, e.detail);
+    });
   }
 
   connectedCallback() {
@@ -102,8 +105,11 @@ export class CopioScanner extends BaseElement {
       window.addEventListener('pagehide', this.#onPageHide);
     }
 
-    // Subscribe to engine repository changes
+    // Initialize engine & run migrations
     if (this.#engine) {
+      this.#engine.init().catch((err) => {
+        console.error('[CopioScanner] Engine initialization failed:', err);
+      });
       this.#unsubscribeRepo = this.#engine.subscribe(async () => {
         const pages = await this.getPages();
         this.dispatch(COPIO_EVENTS.PAGES_CHANGED, {
@@ -1629,6 +1635,9 @@ export class CopioScanner extends BaseElement {
   set engine(customEngine) {
     if (customEngine instanceof CopioEngine) {
       this.#engine = customEngine;
+      this.#engine.addEventListener(COPIO_EVENTS.MIGRATION, (e) => {
+        this.dispatch(COPIO_EVENTS.MIGRATION, e.detail);
+      });
     }
   }
 

@@ -196,6 +196,8 @@ interface StoragePort {
   savePage(docId: string, pageId: string, blobOrData: any): Promise<void>;
   getPage(docId: string, pageId: string): Promise<any>;
   deletePage(docId: string, pageId: string): Promise<void>;
+  getSchemaVersion?(): Promise<number | null>;
+  setSchemaVersion?(version: number): Promise<void>;
   subscribe?(cb: () => void): () => void;
 }
 ```
@@ -245,8 +247,37 @@ export class CustomCloudStorageAdapter extends StoragePort {
   async deletePage(docId, pageId) {
     // Custom binary delete
   }
+
+  async getSchemaVersion() {
+    const res = await fetch('/api/schema-version');
+    if (res.status === 404) return null;
+    const { version } = await res.json();
+    return version ?? null;
+  }
+
+  async setSchemaVersion(version) {
+    await fetch('/api/schema-version', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version }),
+    });
+  }
 }
 ```
+
+#### Data Migration Framework & Schema Versioning (CPO-013)
+
+Copio incorporates an automated, idempotent migration framework (`MigrationRunner`) executed by `CopioEngine` and `DocRepository` upon initialization before reads/writes are served.
+
+##### Migration Contract for Custom Storage Adapters
+- **`getSchemaVersion(): Promise<number|null>`**: Must return the integer version persisted in the adapter's backend, or `null` if the storage is unversioned (fresh install or legacy pre-versioned database).
+- **`setSchemaVersion(version: number): Promise<void>`**: Must persist the integer schema version. Called automatically on fresh installs (stamping current version) and upon successful completion of each individual migration step.
+
+##### Safety, Idempotency & Resumability
+- **Fresh Installs**: When `getSchemaVersion()` is `null` and no documents exist, storage is stamped with `CURRENT_SCHEMA_VERSION` directly without running historical migrations.
+- **Pre-versioned Upgrades**: When `getSchemaVersion()` is `null` but documents already exist, storage is detected as legacy `v1` and upgraded sequentially.
+- **Atomic & Resumable Steps**: Versions advance only *after* each migration function succeeds. For destructive modifications, previous records are retained until new records are safely committed. If a crash or abort occurs mid-migration, the database remains at the previously succeeded version and resumes cleanly on the next start without data corruption.
+- **Events**: Dispatches `copio:migration` CustomEvents (`start`, `progress`, `complete`, `error`) across `CopioEngine`, `<copio-scanner>`, and `window`.
 
 ---
 

@@ -29,6 +29,12 @@ import {
 } from '../js/utils/utils.js';
 import { setAssetBase, getAssetBase } from '../js/utils/module-loader.js';
 import { BUILD_DATE, VERSION } from './version.js';
+import { COPIO_EVENTS } from './events.js';
+import {
+  MigrationRunner,
+  CURRENT_SCHEMA_VERSION,
+  DEFAULT_MIGRATIONS,
+} from '../js/services/migration-runner.js';
 import { NullOcrAdapter } from '../js/adapters/ocr/null-ocr-adapter.js';
 import { NullPdfAdapter } from '../js/adapters/pdf/null-pdf-adapter.js';
 import {
@@ -123,7 +129,7 @@ function normalizeList(val, defaultVal) {
 /**
  * Headless Copio Engine driving port.
  */
-export class CopioEngine {
+export class CopioEngine extends EventTarget {
   #features = new Set(DEFAULT_FEATURES);
   #exportFormats = [...DEFAULT_EXPORT_FORMATS];
   #ocrLanguages = [...DEFAULT_OCR_LANGUAGES];
@@ -137,6 +143,9 @@ export class CopioEngine {
   #imageProcessor = null;
   #undoStack = new Map();
   #redoStack = new Map();
+  #migrations = [...DEFAULT_MIGRATIONS];
+  #targetSchemaVersion = CURRENT_SCHEMA_VERSION;
+  #initPromise = null;
 
   /**
    * @param {Object} [options]
@@ -152,10 +161,20 @@ export class CopioEngine {
    * @param {string} [options.licenseKey] - SDK commercial license key
    * @param {boolean} [options.ocr=true] - Whether OCR module is enabled (developer opt-in CPO-042)
    * @param {boolean} [options.pdf=true] - Whether PDF module is enabled (developer opt-in CPO-042)
+   * @param {import('../js/services/migration-runner.js').MigrationDefinition[]} [options.migrations] - Custom or additional migrations (CPO-013)
+   * @param {number} [options.schemaVersion] - Target schema version (CPO-013)
    */
   constructor(options = {}) {
+    super();
     this.#storage = options.storage || createDefaultAdapter(/** @type {any} */ (options));
     this.#repository = options.repository || new DocRepository(this.#storage);
+
+    if (options.migrations) {
+      this.#migrations = [...options.migrations];
+    }
+    if (options.schemaVersion !== undefined) {
+      this.#targetSchemaVersion = options.schemaVersion;
+    }
 
     if (options.services) {
       this.#services = { ...options.services };
@@ -201,11 +220,63 @@ export class CopioEngine {
   }
 
   /**
-   * Initializes the underlying storage adapter.
-   * @returns {Promise<{ kind: string, persistent: boolean }>}
+   * Initializes the underlying storage adapter and executes any pending schema migrations (CPO-013).
+   * @returns {Promise<{ kind: string, persistent: boolean, migration: any }>}
    */
   async init() {
-    return this.#storage.init();
+    if (this.#initPromise) {
+      return this.#initPromise;
+    }
+    this.#initPromise = (async () => {
+      try {
+        const storageResult = await this.#storage.init();
+        const migrationResult = await this.#runMigrations();
+        return {
+          ...storageResult,
+          migration: migrationResult,
+        };
+      } catch (err) {
+        this.#initPromise = null;
+        throw err;
+      }
+    })();
+    return this.#initPromise;
+  }
+
+  async #runMigrations() {
+    const onEvent = (detail) => {
+      const eventDetail = {
+        ...detail,
+        engine: this,
+      };
+      this.dispatchEvent(new CustomEvent(COPIO_EVENTS.MIGRATION, { detail: eventDetail }));
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent(COPIO_EVENTS.MIGRATION, { detail: eventDetail }));
+      }
+    };
+
+    return MigrationRunner.run({
+      storage: this.#storage,
+      migrations: this.#migrations,
+      targetVersion: this.#targetSchemaVersion,
+      onEvent,
+    });
+  }
+
+  async #ensureReady() {
+    if (!this.#initPromise) {
+      await this.init();
+    } else {
+      await this.#initPromise;
+    }
+  }
+
+  /**
+   * Retrieves the current schema version from storage (CPO-013).
+   * @returns {Promise<number|null>}
+   */
+  async getSchemaVersion() {
+    return this.#storage.getSchemaVersion();
   }
 
   // --- Configuration & Feature Gating API (CPO-035) ---
@@ -498,43 +569,53 @@ export class CopioEngine {
   // --- Document Repository Delegation ---
 
   async listDocuments() {
+    await this.#ensureReady();
     return this.#repository.listDocs();
   }
 
   async getDocument(id) {
+    await this.#ensureReady();
     return this.#repository.getDoc(id);
   }
 
   async createDocument(name, pages) {
+    await this.#ensureReady();
     return this.#repository.createDoc(name, pages);
   }
 
   async deleteDocument(id, options = {}) {
+    await this.#ensureReady();
     return this.#repository.deleteDoc(id, options);
   }
 
   async undoDeleteDocument(id) {
+    await this.#ensureReady();
     return this.#repository.undoDeleteDoc(id);
   }
 
   async renameDocument(id, name) {
+    await this.#ensureReady();
     return this.#repository.renameDoc(id, name);
   }
 
   async addPages(id, pages) {
+    await this.#ensureReady();
     return this.#repository.addPages(id, pages);
   }
 
   async deletePage(id, pageId, options = {}) {
+    await this.#ensureReady();
     this.#pushUndo(id, { type: 'delete', pageId });
     return this.#repository.deletePage(id, pageId, options);
   }
 
   async undoDeletePage(id, pageId) {
+    await this.#ensureReady();
     return this.#repository.undoDeletePage(id, pageId);
   }
 
   async updatePage(id, pageId, updates) {
+    await this.#ensureReady();
     return this.#repository.updatePage(id, pageId, updates);
   }
 
@@ -992,6 +1073,9 @@ export {
   MemoryStorageAdapter,
   IndexedDbStorageAdapter,
   createDefaultAdapter,
+  MigrationRunner,
+  CURRENT_SCHEMA_VERSION,
+  DEFAULT_MIGRATIONS,
   ImageProcessorPort,
   Canvas2DAdapter,
   NullImageProcessorAdapter,
