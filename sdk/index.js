@@ -35,6 +35,16 @@ export {
 export { SyncManager } from '../js/services/sync-service.js';
 
 export {
+  HandoffSession,
+  LoopbackTransport,
+  randomHandoffId,
+  encodeSessionToken,
+  decodeSessionToken,
+  buildHandoffUrl,
+  parseHandoffUrl,
+} from './handoff-session.js';
+
+export {
   exportDocumentAsPdf,
   exportDocumentAsImages,
 } from '../js/services/export-utils.js';

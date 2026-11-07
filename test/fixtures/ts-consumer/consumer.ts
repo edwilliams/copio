@@ -21,6 +21,8 @@ import {
   LicenseManager,
   BUILD_DATE,
   VERSION,
+  HandoffSession,
+  LoopbackTransport,
 } from '@copio/sdk';
 
 // 1. Test instantiation and typed properties on CopioScanner
@@ -107,3 +109,17 @@ const syncPort: SyncPort = new NullSyncAdapter();
 const domainPage = new CopioPage({ id: 'p1', src: 'data:image/png;base64,...' });
 const domainDoc = new CopioDocument({ id: 'd1', name: 'Receipt', pages: [domainPage] });
 const session = new ScanSession({ mode: 'single', aspect: 'receipt' });
+
+// 7. Test Phone-to-Desktop Handoff Session (CPO-090)
+const [hostTransport, senderTransport] = LoopbackTransport.createPair();
+const hostSession = new HandoffSession({ role: 'host', transport: hostTransport });
+const senderSession = new HandoffSession({ role: 'sender', transport: senderTransport });
+async function testHandoff() {
+  const { token, url } = await hostSession.startHost({ baseUrl: 'https://example.com' });
+  await senderSession.startSender(token);
+  await senderSession.sendPage({
+    id: 'p1',
+    blob: new Uint8Array([1, 2, 3]),
+  });
+  await senderSession.complete();
+}
