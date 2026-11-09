@@ -54,7 +54,7 @@ async function buildSdk() {
       core: path.join(rootDir, 'sdk/core.js'),
       scanner: path.join(rootDir, 'sdk/scanner.js'),
       sync: path.join(rootDir, 'sdk/sync.js'),
-      handoff: path.join(rootDir, 'sdk/handoff-session.js'),
+      handoff: path.join(rootDir, 'sdk/handoff.js'),
       ocr: path.join(rootDir, 'js/services/ocr-service.js'),
       export: path.join(rootDir, 'js/services/export-utils.js'),
       'adapters/index': path.join(rootDir, 'js/adapters/index.js'),

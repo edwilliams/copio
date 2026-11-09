@@ -29,7 +29,7 @@
       "default": "./dist/sync.js"
     },
     "./handoff": {
-      "types": "./dist/types/sdk/handoff-session.d.ts",
+      "types": "./dist/types/sdk/handoff.d.ts",
       "import": "./dist/handoff.js",
       "default": "./dist/handoff.js"
     },
@@ -55,6 +55,8 @@
     "dist/cdn.js",
     "dist/scanner.js",
     "sdk/scanner.js",
+    "dist/handoff.js",
+    "sdk/handoff.js",
     "*.css"
   ],
   "publishConfig": {

@@ -31,6 +31,11 @@ const BUDGETS = {
     maxGzipKb: 60,
     label: 'Sync (P2P WebRTC)',
   },
+  handoff: {
+    entry: path.join(distDir, 'handoff.js'),
+    maxGzipKb: 35,
+    label: 'Handoff (Desktop widget + E2EE session)',
+  },
   cdn: {
     entry: path.join(distDir, 'cdn.js'),
     maxGzipKb: 200,

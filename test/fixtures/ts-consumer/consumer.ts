@@ -23,6 +23,7 @@ import {
   VERSION,
   HandoffSession,
   LoopbackTransport,
+  CopioHandoff,
 } from '@copio/sdk';
 
 // 1. Test instantiation and typed properties on CopioScanner
@@ -123,3 +124,27 @@ async function testHandoff() {
   });
   await senderSession.complete();
 }
+
+// 8. Test <copio-handoff> Desktop Web Component (CPO-091)
+const handoffEl: CopioHandoff = new CopioHandoff();
+handoffEl.mode = 'batch';
+handoffEl.theme = 'light';
+handoffEl.ttlMs = 300000;
+const handoffMode: string = handoffEl.mode;
+const handoffState: string = handoffEl.state;
+const handoffPages: Array<any> = handoffEl.pages;
+
+const createdHandoff = document.createElement('copio-handoff');
+createdHandoff.mode = 'single';
+createdHandoff.addEventListener('copio:handoff-connected', (e: Event) => {
+  const ce = e as CustomEvent;
+  console.log('Handoff connected:', ce.detail);
+});
+createdHandoff.addEventListener('copio:page-added', (e: Event) => {
+  const ce = e as CustomEvent;
+  console.log('Handoff page added:', ce.detail);
+});
+createdHandoff.addEventListener('copio:scan-complete', (e: Event) => {
+  const ce = e as CustomEvent;
+  console.log('Handoff scan complete:', ce.detail);
+});
