@@ -86,6 +86,12 @@ export class CopioHandoff extends BaseElement {
   #sessionDocId = null;
   #unsubs = [];
   #autoStart = true;
+  #relayUrl = '';
+  #signalingUrl = '';
+  #iceServers = null;
+  #iceTransportPolicy = 'all';
+  #customTransport = null;
+  #connectionInfo = null;
 
   static get observedAttributes() {
     return [
@@ -96,6 +102,11 @@ export class CopioHandoff extends BaseElement {
       'ttl',
       'mode',
       'aspect',
+      'relay-url',
+      'ice-servers',
+      'signaling-url',
+      'ice-transport-policy',
+      'transport',
     ];
   }
 
@@ -243,6 +254,121 @@ export class CopioHandoff extends BaseElement {
     return this.#url;
   }
 
+  get relayUrl() {
+    return this.#relayUrl || (typeof this.getAttribute === 'function' ? this.getAttribute('relay-url') || '' : '');
+  }
+
+  set relayUrl(val) {
+    this.#relayUrl = val || '';
+    if (typeof this.setAttribute === 'function') {
+      if (val) this.setAttribute('relay-url', val);
+      else this.removeAttribute('relay-url');
+    }
+  }
+
+  get signalingUrl() {
+    return (
+      this.#signalingUrl ||
+      (typeof this.getAttribute === 'function' ? this.getAttribute('signaling-url') || '' : '')
+    );
+  }
+
+  set signalingUrl(val) {
+    this.#signalingUrl = val || '';
+    if (typeof this.setAttribute === 'function') {
+      if (val) this.setAttribute('signaling-url', val);
+      else this.removeAttribute('signaling-url');
+    }
+  }
+
+  get iceServers() {
+    if (this.#iceServers) return this.#iceServers;
+    const attr = typeof this.getAttribute === 'function' ? this.getAttribute('ice-servers') : null;
+    if (attr) {
+      try {
+        const parsed = JSON.parse(attr);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return attr.split(',').map((u) => ({ urls: u.trim() }));
+      }
+    }
+    return null;
+  }
+
+  set iceServers(val) {
+    if (Array.isArray(val)) {
+      this.#iceServers = val;
+    } else if (typeof val === 'string') {
+      try {
+        this.#iceServers = JSON.parse(val);
+      } catch {
+        this.#iceServers = val ? [{ urls: val }] : null;
+      }
+    } else {
+      this.#iceServers = null;
+    }
+    if (typeof this.setAttribute === 'function') {
+      if (Array.isArray(val)) this.setAttribute('ice-servers', JSON.stringify(val));
+      else if (val) this.setAttribute('ice-servers', String(val));
+      else this.removeAttribute('ice-servers');
+    }
+  }
+
+  get iceTransportPolicy() {
+    return typeof this.getAttribute === 'function'
+      ? this.getAttribute('ice-transport-policy') || this.#iceTransportPolicy || 'all'
+      : this.#iceTransportPolicy || 'all';
+  }
+
+  set iceTransportPolicy(val) {
+    this.#iceTransportPolicy = val || 'all';
+    if (typeof this.setAttribute === 'function') {
+      if (val) this.setAttribute('ice-transport-policy', val);
+      else this.removeAttribute('ice-transport-policy');
+    }
+  }
+
+  get transport() {
+    if (this.#customTransport) return this.#customTransport;
+    return typeof this.getAttribute === 'function'
+      ? this.getAttribute('transport') || 'auto'
+      : 'auto';
+  }
+
+  set transport(val) {
+    if (typeof val === 'string') {
+      if (typeof this.setAttribute === 'function') {
+        this.setAttribute('transport', val);
+      }
+    } else {
+      this.#customTransport = val;
+    }
+  }
+
+  get connectionInfo() {
+    return (
+      this.#connectionInfo || {
+        transport: /** @type {'direct'|'turn'} */ (
+          this.iceTransportPolicy === 'relay' ? 'turn' : 'direct'
+        ),
+        rttMs: 0,
+      }
+    );
+  }
+
+  /**
+   * Retrieves connection diagnostics for the active session.
+   * @returns {Promise<{ transport: 'direct'|'turn', rttMs: number }>}
+   */
+  async getConnectionInfo() {
+    if (this.#session && typeof this.#session.getConnectionInfo === 'function') {
+      const info = await this.#session.getConnectionInfo();
+      this.#connectionInfo = info;
+      return info;
+    }
+    return this.connectionInfo;
+  }
+
   // --- Public Methods ---
 
   /**
@@ -250,6 +376,7 @@ export class CopioHandoff extends BaseElement {
    * @param {Object} [options]
    * @param {string} [options.baseUrl]
    * @param {string} [options.peerId]
+   * @param {boolean} [options.peer]
    * @param {Object} [options.transport]
    * @returns {Promise<{ token: Object, url: string }>}
    */
@@ -259,7 +386,40 @@ export class CopioHandoff extends BaseElement {
     this.#activeProgress = null;
     this.#errorMessage = '';
 
-    const transport = options.transport || new LoopbackTransport();
+    let transport = options.transport || this.#customTransport;
+
+    if (!transport) {
+      const wantsPeer =
+        Boolean(options.peer) ||
+        this.getAttribute('transport') === 'peer' ||
+        Boolean(this.relayUrl) ||
+        Boolean(this.signalingUrl) ||
+        Boolean(this.iceServers);
+
+      if (wantsPeer) {
+        try {
+          const { HandoffPeerTransport } = await import('../js/services/handoff-transport.js');
+          transport = new HandoffPeerTransport({
+            role: 'host',
+            peerId: options.peerId,
+            relayUrl: this.relayUrl,
+            signalingUrl: this.signalingUrl,
+            iceServers: this.iceServers,
+            iceTransportPolicy: /** @type {'all'|'relay'} */ (this.iceTransportPolicy),
+          });
+        } catch (err) {
+          console.warn('[CopioHandoff] Failed to initialize HandoffPeerTransport, falling back to loopback:', err);
+          transport = new LoopbackTransport();
+        }
+      } else {
+        const loopback = new LoopbackTransport();
+        if (this.iceTransportPolicy === 'relay') {
+          loopback.forceRelay = true;
+          loopback.iceTransportPolicy = 'relay';
+        }
+        transport = loopback;
+      }
+    }
 
     const session = new HandoffSession({
       role: 'host',
@@ -274,6 +434,9 @@ export class CopioHandoff extends BaseElement {
     const { token, url } = await session.startHost({
       baseUrl,
       peerId: options.peerId,
+      relayUrl: this.relayUrl,
+      signalingUrl: this.signalingUrl,
+      iceServers: this.iceServers,
     });
 
     if (transport instanceof LoopbackTransport && token?.peerId) {
@@ -372,7 +535,16 @@ export class CopioHandoff extends BaseElement {
             sessionId: this.#token?.sessionId || '',
             peerId: this.#token?.peerId || '',
           });
+          session.getConnectionInfo().then((info) => {
+            this.#connectionInfo = info;
+            this.dispatch(COPIO_EVENTS.CONNECTION_INFO, info);
+          }).catch(() => {});
         }
+      }),
+
+      session.on('connectionInfo', (info) => {
+        this.#connectionInfo = info;
+        this.dispatch(COPIO_EVENTS.CONNECTION_INFO, info);
       }),
 
       session.on('progress', (progress) => {

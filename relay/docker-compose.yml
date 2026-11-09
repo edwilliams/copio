@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  copio-signaling:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: copio-signaling
+    restart: unless-stopped
+    ports:
+      - "${PORT:-9000}:9000"
+    environment:
+      - PORT=9000
+      - COTURN_HOST=${COTURN_HOST:-localhost}
+      - COTURN_PORT=3478
+      - COTURN_TLS_PORT=5349
+      - COTURN_SECRET=${COTURN_SECRET:-copio_turn_secret_change_me}
+    depends_on:
+      - coturn
+
+  coturn:
+    image: coturn/coturn:latest
+    container_name: copio-coturn
+    restart: unless-stopped
+    network_mode: "host"
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command:
+      - "-c"
+      - "/etc/coturn/turnserver.conf"

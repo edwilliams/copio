@@ -145,6 +145,10 @@ export class CopioEngine extends EventTarget {
   #redoStack = new Map();
   #migrations = [...DEFAULT_MIGRATIONS];
   #targetSchemaVersion = CURRENT_SCHEMA_VERSION;
+  #relayUrl = '';
+  #signalingUrl = '';
+  #iceServers = null;
+  #iceTransportPolicy = 'all';
   #initPromise = null;
 
   /**
@@ -163,6 +167,10 @@ export class CopioEngine extends EventTarget {
    * @param {boolean} [options.pdf=true] - Whether PDF module is enabled (developer opt-in CPO-042)
    * @param {import('../js/services/migration-runner.js').MigrationDefinition[]} [options.migrations] - Custom or additional migrations (CPO-013)
    * @param {number} [options.schemaVersion] - Target schema version (CPO-013)
+   * @param {string} [options.relayUrl] - Self-hosted or custom Copio Relay base URL (CPO-092)
+   * @param {string} [options.signalingUrl] - Custom WebRTC signaling server URL (CPO-092)
+   * @param {Array<RTCIceServer>} [options.iceServers] - Custom STUN/TURN ICE servers (CPO-092)
+   * @param {'all'|'relay'} [options.iceTransportPolicy] - ICE candidate transport policy (CPO-092)
    */
   constructor(options = {}) {
     super();
@@ -216,6 +224,18 @@ export class CopioEngine extends EventTarget {
       this.pdf = Boolean(options.pdf);
     } else if (options.exportFormats !== undefined && !this.#exportFormats.includes('pdf')) {
       this.pdf = false;
+    }
+    if (options.relayUrl !== undefined) {
+      this.#relayUrl = String(options.relayUrl || '');
+    }
+    if (options.signalingUrl !== undefined) {
+      this.#signalingUrl = String(options.signalingUrl || '');
+    }
+    if (options.iceServers !== undefined) {
+      this.#iceServers = Array.isArray(options.iceServers) ? options.iceServers : null;
+    }
+    if (options.iceTransportPolicy !== undefined) {
+      this.#iceTransportPolicy = options.iceTransportPolicy || 'all';
     }
   }
 
@@ -497,6 +517,38 @@ export class CopioEngine extends EventTarget {
    */
   set licenseKey(key) {
     this.#licenseKey = String(key || '');
+  }
+
+  get relayUrl() {
+    return this.#relayUrl;
+  }
+
+  set relayUrl(url) {
+    this.#relayUrl = String(url || '');
+  }
+
+  get signalingUrl() {
+    return this.#signalingUrl;
+  }
+
+  set signalingUrl(url) {
+    this.#signalingUrl = String(url || '');
+  }
+
+  get iceServers() {
+    return this.#iceServers;
+  }
+
+  set iceServers(servers) {
+    this.#iceServers = Array.isArray(servers) ? servers : null;
+  }
+
+  get iceTransportPolicy() {
+    return this.#iceTransportPolicy;
+  }
+
+  set iceTransportPolicy(policy) {
+    this.#iceTransportPolicy = policy || 'all';
   }
 
   /**

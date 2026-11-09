@@ -1,0 +1,14 @@
+{
+  "name": "@copio/relay",
+  "version": "0.1.0",
+  "description": "Self-hostable Copio Relay WebRTC signaling and STUN/TURN kit",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "AGPL-3.0"
+}

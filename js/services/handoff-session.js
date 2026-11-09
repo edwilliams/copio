@@ -125,6 +125,8 @@ export class LoopbackTransport {
   #onMessageHandlers = new Set();
   #onCloseHandlers = new Set();
   #closed = false;
+  #forceRelay = false;
+  #iceTransportPolicy = 'all';
 
   static #registry = new Map();
 
@@ -262,6 +264,35 @@ export class LoopbackTransport {
     }
   }
 
+  get forceRelay() {
+    return this.#forceRelay;
+  }
+
+  set forceRelay(val) {
+    this.#forceRelay = Boolean(val);
+  }
+
+  get iceTransportPolicy() {
+    return this.#iceTransportPolicy;
+  }
+
+  set iceTransportPolicy(val) {
+    this.#iceTransportPolicy = val;
+  }
+
+  /**
+   * Returns loopback connection diagnostics.
+   * Emulates TURN relay when forceRelay is true or iceTransportPolicy is 'relay'.
+   * @returns {Promise<{ transport: 'direct'|'turn', rttMs: number }>}
+   */
+  async getConnectionInfo() {
+    const isTurn = this.#forceRelay || this.#iceTransportPolicy === 'relay';
+    return {
+      transport: /** @type {'direct'|'turn'} */ (isTurn ? 'turn' : 'direct'),
+      rttMs: isTurn ? 15 : 0,
+    };
+  }
+
   close() {
     if (this.#closed) return;
     this.#closed = true;
@@ -325,6 +356,7 @@ export class HandoffSession {
   // Listeners
   #listeners = {
     stateChange: new Set(),
+    connectionInfo: new Set(),
     progress: new Set(),
     page: new Set(),
     complete: new Set(),
@@ -407,6 +439,11 @@ export class HandoffSession {
     if (this.#state === newState) return;
     this.#state = newState;
     this.#emit('stateChange', newState);
+    if (newState === 'connected') {
+      this.getConnectionInfo().then((info) => {
+        this.#emit('connectionInfo', info);
+      }).catch(() => {});
+    }
   }
 
   #fail(error) {
@@ -476,6 +513,9 @@ export class HandoffSession {
    * @param {Object} [params]
    * @param {string} [params.baseUrl]
    * @param {string} [params.peerId]
+   * @param {string} [params.relayUrl]
+   * @param {string} [params.signalingUrl]
+   * @param {Array<RTCIceServer>} [params.iceServers]
    * @returns {Promise<{ token: Object, url: string, rawToken: string }>}
    */
   async startHost(params = {}) {
@@ -496,6 +536,9 @@ export class HandoffSession {
       pubKey,
       expiresAt,
     };
+    if (params.relayUrl) this.#sessionToken.relayUrl = params.relayUrl;
+    if (params.signalingUrl) this.#sessionToken.signalingUrl = params.signalingUrl;
+    if (params.iceServers) this.#sessionToken.iceServers = params.iceServers;
 
     const baseUrl = params.baseUrl || (typeof location !== 'undefined' ? `${location.origin}${location.pathname}` : '');
     const url = buildHandoffUrl(baseUrl, this.#sessionToken);
@@ -887,6 +930,17 @@ export class HandoffSession {
         this.#setState('connected');
       }
     }
+  }
+
+  /**
+   * Retrieves connection diagnostics from the underlying transport.
+   * @returns {Promise<{ transport: 'direct'|'turn', rttMs: number }>}
+   */
+  async getConnectionInfo() {
+    if (this.#transport && typeof this.#transport.getConnectionInfo === 'function') {
+      return await this.#transport.getConnectionInfo();
+    }
+    return { transport: 'direct', rttMs: 0 };
   }
 
   /**
