@@ -63,7 +63,12 @@ export function decodeSessionToken(tokenStr) {
   }
   let json;
   try {
-    json = JSON.parse(base64UrlToUtf8(tokenStr));
+    const trimmed = tokenStr.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      json = JSON.parse(trimmed);
+    } else {
+      json = JSON.parse(base64UrlToUtf8(tokenStr));
+    }
   } catch (err) {
     throw new Error(`Failed to decode handoff token: ${err.message}`);
   }
@@ -121,6 +126,62 @@ export class LoopbackTransport {
   #onCloseHandlers = new Set();
   #closed = false;
 
+  static #registry = new Map();
+
+  /**
+   * Registers a transport endpoint under a peerId for automatic pairing.
+   * @param {string} peerId
+   * @param {LoopbackTransport} transport
+   * @returns {Function} Unregister function
+   */
+  static register(peerId, transport) {
+    LoopbackTransport.#registry.set(peerId, transport);
+    return () => LoopbackTransport.#registry.delete(peerId);
+  }
+
+  /**
+   * Checks if a peerId is registered in the loopback registry.
+   * @param {string} peerId
+   * @returns {boolean}
+   */
+  static has(peerId) {
+    return LoopbackTransport.#registry.has(peerId);
+  }
+
+  /**
+   * Gets a registered loopback transport.
+   * @param {string} peerId
+   * @returns {LoopbackTransport|undefined}
+   */
+  static get(peerId) {
+    return LoopbackTransport.#registry.get(peerId);
+  }
+
+  /**
+   * Clears all registered loopback transports.
+   */
+  static clearRegistry() {
+    LoopbackTransport.#registry.clear();
+  }
+
+  /**
+   * Creates a sender transport linked to a registered host peer.
+   * @param {string} hostPeerId
+   * @returns {LoopbackTransport}
+   */
+  static createLinkedSender(hostPeerId) {
+    const hostTransport = LoopbackTransport.#registry.get(hostPeerId);
+    if (!hostTransport) {
+      throw new Error(`No registered loopback host for peerId: ${hostPeerId}`);
+    }
+    const senderTransport = new LoopbackTransport();
+    hostTransport.#peer = senderTransport;
+    senderTransport.#peer = hostTransport;
+    hostTransport.#closed = false;
+    senderTransport.#closed = false;
+    return senderTransport;
+  }
+
   /**
    * Creates a connected pair of loopback endpoints [endpointA, endpointB].
    * @returns {[LoopbackTransport, LoopbackTransport]}
@@ -167,6 +228,38 @@ export class LoopbackTransport {
   onClose(handler) {
     this.#onCloseHandlers.add(handler);
     return () => this.#onCloseHandlers.delete(handler);
+  }
+
+  /**
+   * Simulates an interruption / connection drop without destroying the instance.
+   */
+  interrupt() {
+    this.#closed = true;
+    for (const handler of this.#onCloseHandlers) {
+      try {
+        handler();
+      } catch (err) {
+        console.error('[LoopbackTransport] close handler error:', err);
+      }
+    }
+    if (this.#peer && !this.#peer.#closed) {
+      this.#peer.interrupt();
+    }
+  }
+
+  /**
+   * Restores a closed or interrupted transport.
+   * @param {LoopbackTransport} [newPeer]
+   */
+  reconnect(newPeer = null) {
+    this.#closed = false;
+    if (newPeer) {
+      this.#peer = newPeer;
+      newPeer.#peer = this;
+      newPeer.#closed = false;
+    } else if (this.#peer) {
+      this.#peer.#closed = false;
+    }
   }
 
   close() {
@@ -337,7 +430,7 @@ export class HandoffSession {
     });
     transport.onClose(() => {
       if (this.#state !== 'closed' && this.#state !== 'complete') {
-        this.#setState('closed');
+        this.#setState('disconnected');
       }
     });
   }
@@ -463,6 +556,49 @@ export class HandoffSession {
     this.#transport.send({
       type: 'handshake_init',
       sessionId: token.sessionId,
+      senderPubKey: senderPubKeyB64,
+    });
+  }
+
+  /**
+   * Reconnects sender session using a new or existing transport.
+   * @param {Object} [newTransport]
+   * @returns {Promise<void>}
+   */
+  async reconnect(newTransport = null) {
+    if (this.#role !== 'sender') {
+      throw new Error('reconnect() can only be called on a sender session');
+    }
+    if (!this.#sessionToken) {
+      throw new Error('Cannot reconnect: no session token');
+    }
+    if (Date.now() > this.#sessionToken.expiresAt) {
+      this.#setState('expired');
+      throw new Error('Handoff session has expired');
+    }
+
+    if (newTransport) {
+      this.setTransport(newTransport);
+    } else if (this.#transport && typeof this.#transport.reconnect === 'function') {
+      this.#transport.reconnect();
+    }
+
+    this.#setState('connecting');
+
+    if (!this.#keyPair) {
+      this.#keyPair = await generateEcdhKeyPair();
+    }
+    const senderPubKeyB64 = await exportPublicKey(this.#keyPair.publicKey);
+    const hostPubKey = await importPublicKey(this.#sessionToken.pubKey);
+    this.#sharedKey = await deriveSharedKey(this.#keyPair.privateKey, hostPubKey);
+
+    if (!this.#transport || this.#transport.isClosed) {
+      throw new Error('Cannot reconnect without active transport');
+    }
+
+    this.#transport.send({
+      type: 'handshake_init',
+      sessionId: this.#sessionToken.sessionId,
       senderPubKey: senderPubKeyB64,
     });
   }

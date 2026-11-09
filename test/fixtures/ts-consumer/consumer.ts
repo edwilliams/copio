@@ -36,6 +36,7 @@ scanner.ocrLanguages = ['eng'];
 scanner.theme = 'light';
 scanner.ocrEnabled = true;
 scanner.pdf = true;
+scanner.handoff = 'https://example.com/scan#handoff=token';
 
 const currentMode: 'single' | 'document' = scanner.mode;
 const currentDocId: string | null = scanner.docId;
@@ -45,6 +46,8 @@ const isOpen: boolean = scanner.isOpen;
 const hasCrop: boolean = scanner.hasFeature('crop');
 const isOcrEnabled: boolean = scanner.ocrEnabled;
 const isPdfEnabled: boolean = scanner.pdf;
+const isHandoffActive: boolean = scanner.isHandoff;
+const scannerHandoffState: string = scanner.handoffState;
 
 // 2. Test typed methods on CopioScanner
 async function testScannerMethods() {
@@ -54,6 +57,9 @@ async function testScannerMethods() {
   const pdfBlob: Blob = await scanner.exportPdf({ download: false });
   const zipBlob: Blob = await scanner.exportZip({ download: false });
   const ocrResult = await scanner.ocr();
+  await scanner.completeScan();
+  await scanner.reconnectHandoff();
+  await scanner.resetHandoff();
   await scanner.clear();
   await scanner.close();
 }
