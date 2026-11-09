@@ -11,6 +11,7 @@
  */
 
 import { rm, mkdir, cp, stat } from 'fs/promises';
+import fs from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,6 +21,44 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.resolve(rootDir, 'dist');
 const buildDate = new Date().toISOString();
+
+function minifyCss(css) {
+  return css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([{}:;,>])\s*/g, '$1')
+    .replace(/;\}/g, '}')
+    .replace(/\b0(px|rem|em|%)\b/g, '0')
+    .replace(/:0 0 0 0/g, ':0')
+    .replace(/:0 0/g, ':0')
+    .replace(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/g, 'rgba($1,$2,$3,$4)')
+    .trim();
+}
+
+const cssMinifyPlugin = {
+  name: 'css-minify',
+  setup(build) {
+    build.onLoad({ filter: /sdk\/(styles|handoff-styles)\.js$/ }, async (args) => {
+      let content = await fs.promises.readFile(args.path, 'utf8');
+      content = content.replace(/(export const \w+Css = )`([\s\S]*?)`;/g, (match, prefix, css) => {
+        return `${prefix}${JSON.stringify(minifyCss(css))};`;
+      });
+      return { contents: content, loader: 'js' };
+    });
+    build.onLoad({ filter: /sdk\/scanner\.js$/ }, async (args) => {
+      let content = await fs.promises.readFile(args.path, 'utf8');
+      content = content.replace(/(\.innerHTML\s*=\s*`)([\s\S]*?)(`;)/g, (match, prefix, html, suffix) => {
+        const minified = html
+          .replace(/<!--[\s\S]*?-->/g, '')
+          .replace(/>\s+</g, '><')
+          .replace(/\s+/g, ' ')
+          .trim();
+        return `${prefix}${minified}${suffix}`;
+      });
+      return { contents: content, loader: 'js' };
+    });
+  },
+};
 
 // Stub out optional Node.js modules embedded in PDF.js / third-party libs
 // so browser bundlers (Vite, Rollup, Webpack) resolve cleanly without externalizing errors.
@@ -83,7 +122,7 @@ async function buildSdk() {
     minify: true,
     sourcemap: true,
     target: ['es2022'],
-    plugins: [browserShimPlugin],
+    plugins: [browserShimPlugin, cssMinifyPlugin],
     define: {
       __BUILD_DATE__: JSON.stringify(buildDate),
     },
@@ -105,7 +144,7 @@ async function buildSdk() {
     banner: {
       js: '/* @copio/sdk <copio-scanner> Web Component bundle */',
     },
-    plugins: [browserShimPlugin],
+    plugins: [browserShimPlugin, cssMinifyPlugin],
     define: {
       __BUILD_DATE__: JSON.stringify(buildDate),
     },
@@ -123,7 +162,7 @@ async function buildSdk() {
     minify: true,
     sourcemap: true,
     target: ['es2022'],
-    plugins: [browserShimPlugin],
+    plugins: [browserShimPlugin, cssMinifyPlugin],
     define: {
       __BUILD_DATE__: JSON.stringify(buildDate),
     },

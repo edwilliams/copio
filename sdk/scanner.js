@@ -70,6 +70,10 @@ export class CopioScanner extends BaseElement {
       'ocr',
       'pdf',
       'handoff',
+      'relay-url',
+      'ice-servers',
+      'signaling-url',
+      'ice-transport-policy',
     ];
   }
 
@@ -94,6 +98,13 @@ export class CopioScanner extends BaseElement {
       if (this.hasAttribute('license-key')) opts.licenseKey = this.getAttribute('license-key');
       if (this.hasAttribute('ocr')) opts.ocr = this.getAttribute('ocr') !== 'false';
       if (this.hasAttribute('pdf')) opts.pdf = this.getAttribute('pdf') !== 'false';
+      for (const k of ['relay-url', 'signaling-url', 'ice-transport-policy']) {
+        if (this.hasAttribute(k)) opts[k.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = this.getAttribute(k);
+      }
+      if (this.hasAttribute('ice-servers')) {
+        try { opts.iceServers = JSON.parse(this.getAttribute('ice-servers')); }
+        catch { opts.iceServers = [{ urls: this.getAttribute('ice-servers') }]; }
+      }
     }
     this.#engine = new CopioEngine(opts);
     this.#engine.addEventListener(COPIO_EVENTS.MIGRATION, (e) => {
@@ -227,6 +238,17 @@ export class CopioScanner extends BaseElement {
       case 'pdf':
         this.#engine.pdf = newValue !== 'false';
         this.#updateChildViews();
+        break;
+      case 'relay-url':
+      case 'signaling-url':
+      case 'ice-transport-policy':
+        if (this.#engine) this.#engine[name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = newValue;
+        break;
+      case 'ice-servers':
+        if (this.#engine) {
+          try { this.#engine.iceServers = JSON.parse(newValue); }
+          catch { this.#engine.iceServers = newValue ? [{ urls: newValue }] : null; }
+        }
         break;
       case 'stage':
         if (newValue === 'viewfinder' || newValue === 'workbench') {
@@ -1619,6 +1641,10 @@ export class CopioScanner extends BaseElement {
           transport = new HandoffPeerTransport({
             role: 'sender',
             targetPeerId: token.peerId,
+            relayUrl: token.relayUrl || this.relayUrl,
+            signalingUrl: token.signalingUrl || this.signalingUrl,
+            iceServers: token.iceServers || this.iceServers,
+            iceTransportPolicy: this.iceTransportPolicy,
           });
         } catch {
           transport = new LoopbackTransport();
@@ -1656,6 +1682,10 @@ export class CopioScanner extends BaseElement {
           });
         }
         this.#syncHandoffDom();
+      }),
+
+      session.on('connectionInfo', (info) => {
+        this.dispatch(COPIO_EVENTS.CONNECTION_INFO, info);
       }),
 
       session.on('progress', (progress) => {
@@ -2127,6 +2157,49 @@ export class CopioScanner extends BaseElement {
     if (this.#engine) {
       this.#engine.licenseKey = val;
     }
+  }
+
+  #syncAttr(name, val) {
+    if (typeof this.setAttribute === 'function') {
+      if (val) this.setAttribute(name, typeof val === 'object' ? JSON.stringify(val) : String(val));
+      else this.removeAttribute(name);
+    }
+  }
+
+  get relayUrl() {
+    return this.#engine?.relayUrl || '';
+  }
+
+  set relayUrl(val) {
+    if (this.#engine) this.#engine.relayUrl = val;
+    this.#syncAttr('relay-url', val);
+  }
+
+  get signalingUrl() {
+    return this.#engine?.signalingUrl || '';
+  }
+
+  set signalingUrl(val) {
+    if (this.#engine) this.#engine.signalingUrl = val;
+    this.#syncAttr('signaling-url', val);
+  }
+
+  get iceServers() {
+    return this.#engine?.iceServers || null;
+  }
+
+  set iceServers(val) {
+    if (this.#engine) this.#engine.iceServers = val;
+    this.#syncAttr('ice-servers', val);
+  }
+
+  get iceTransportPolicy() {
+    return this.#engine?.iceTransportPolicy || 'all';
+  }
+
+  set iceTransportPolicy(val) {
+    if (this.#engine) this.#engine.iceTransportPolicy = val;
+    this.#syncAttr('ice-transport-policy', val);
   }
 
   get storage() {

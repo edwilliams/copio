@@ -7,7 +7,7 @@
  */
 
 import { loadPeerJs } from '../utils/module-loader.js';
-import { getIceServers } from './ice-servers.js';
+import { getIceServers, parseRelayUrl } from './ice-servers.js';
 
 export class HandoffPeerTransport {
   #role; // 'host' | 'sender'
@@ -15,6 +15,11 @@ export class HandoffPeerTransport {
   #targetPeerId = null;
   #peer = null;
   #conn = null;
+  #customIceServers = null;
+  #relayUrl = null;
+  #signalingUrl = null;
+  #iceTransportPolicy = 'all'; // 'all' | 'relay'
+  #lastConnectionInfo = null;
   #onMessageHandlers = new Set();
   #onCloseHandlers = new Set();
   #onOpenHandlers = new Set();
@@ -31,6 +36,10 @@ export class HandoffPeerTransport {
    * @param {string} [options.peerId] - Local peer ID (required for host)
    * @param {string} [options.targetPeerId] - Remote peer ID (required for sender)
    * @param {Array<RTCIceServer>} [options.iceServers]
+   * @param {string} [options.relayUrl] - Base URL for Copio Relay signaling / TURN endpoint
+   * @param {string} [options.signalingUrl] - URL for custom WebRTC signaling server
+   * @param {'all'|'relay'} [options.iceTransportPolicy='all'] - ICE candidate transport policy
+   * @param {any} [options.peerInstance] - Injected Peer instance (for tests)
    */
   constructor(options = {}) {
     if (!options.role || (options.role !== 'host' && options.role !== 'sender')) {
@@ -39,24 +48,62 @@ export class HandoffPeerTransport {
     this.#role = options.role;
     this.#peerId = options.peerId || null;
     this.#targetPeerId = options.targetPeerId || null;
+    this.#customIceServers = options.iceServers || null;
+    this.#relayUrl = options.relayUrl || null;
+    this.#signalingUrl = options.signalingUrl || null;
+    this.#iceTransportPolicy = options.iceTransportPolicy || 'all';
 
     if (this.#role === 'sender' && !this.#targetPeerId) {
       throw new Error('Sender transport requires targetPeerId');
     }
 
-    this.#init(options.iceServers).catch((err) => {
-      console.warn('[HandoffPeerTransport] init error:', err);
-    });
+    if (options.peerInstance) {
+      this.#peer = options.peerInstance;
+      this.#bindPeerEvents(this.#peer);
+    } else {
+      this.#init().catch((err) => {
+        console.warn('[HandoffPeerTransport] init error:', err);
+      });
+    }
   }
 
-  async #init(customIceServers = null) {
+  get peerId() {
+    return this.#peerId;
+  }
+
+  get targetPeerId() {
+    return this.#targetPeerId;
+  }
+
+  get relayUrl() {
+    return this.#relayUrl;
+  }
+
+  get signalingUrl() {
+    return this.#signalingUrl;
+  }
+
+  get iceTransportPolicy() {
+    return this.#iceTransportPolicy;
+  }
+
+  get connectionInfo() {
+    return this.#lastConnectionInfo || {
+      transport: this.#iceTransportPolicy === 'relay' ? 'turn' : 'direct',
+      rttMs: 0,
+    };
+  }
+
+  async #init() {
     if (this.#isDestroyed) return;
 
     try {
-      const [iceServers, Peer] = await Promise.all([
-        customIceServers ? Promise.resolve(customIceServers) : getIceServers(),
-        loadPeerJs(),
-      ]);
+      let iceServers = this.#customIceServers;
+      if (!iceServers || iceServers.length === 0) {
+        iceServers = await getIceServers({ relayUrl: this.#relayUrl });
+      }
+
+      const Peer = await loadPeerJs();
 
       if (this.#isDestroyed) return;
       if (!Peer) {
@@ -64,7 +111,23 @@ export class HandoffPeerTransport {
       }
 
       const config = { iceServers };
+      if (this.#iceTransportPolicy) {
+        config.iceTransportPolicy = this.#iceTransportPolicy;
+      }
+
       const peerOptions = { config, debug: 0 };
+
+      // Configure custom signaling server if signalingUrl or relayUrl is provided
+      const sigUrl = this.#signalingUrl || this.#relayUrl;
+      if (sigUrl) {
+        const parsed = parseRelayUrl(sigUrl);
+        if (parsed) {
+          peerOptions.host = parsed.host;
+          peerOptions.port = parsed.port;
+          peerOptions.path = parsed.path;
+          peerOptions.secure = parsed.secure;
+        }
+      }
 
       if (this.#role === 'host' && this.#peerId) {
         this.#peer = new Peer(this.#peerId, peerOptions);
@@ -72,35 +135,39 @@ export class HandoffPeerTransport {
         this.#peer = new Peer(peerOptions);
       }
 
-      this.#peer.on('open', (id) => {
-        this.#peerId = id;
-        if (this.#role === 'sender' && this.#targetPeerId) {
-          this.#connectToHost();
-        }
-      });
-
-      this.#peer.on('connection', (conn) => {
-        if (this.#role === 'host') {
-          this.#attachConnection(conn);
-        }
-      });
-
-      this.#peer.on('error', (err) => {
-        console.warn('[HandoffPeerTransport] peer error:', err);
-        if (this.#role === 'sender' && !this.#closed) {
-          this.#scheduleReconnect();
-        }
-      });
-
-      this.#peer.on('close', () => {
-        this.#triggerClose();
-      });
+      this.#bindPeerEvents(this.#peer);
     } catch (err) {
       console.warn('[HandoffPeerTransport] init failed:', err);
       if (this.#role === 'sender' && !this.#closed) {
         this.#scheduleReconnect();
       }
     }
+  }
+
+  #bindPeerEvents(peer) {
+    peer.on('open', (id) => {
+      this.#peerId = id;
+      if (this.#role === 'sender' && this.#targetPeerId) {
+        this.#connectToHost();
+      }
+    });
+
+    peer.on('connection', (conn) => {
+      if (this.#role === 'host') {
+        this.#attachConnection(conn);
+      }
+    });
+
+    peer.on('error', (err) => {
+      console.warn('[HandoffPeerTransport] peer error:', err);
+      if (this.#role === 'sender' && !this.#closed) {
+        this.#scheduleReconnect();
+      }
+    });
+
+    peer.on('close', () => {
+      this.#triggerClose();
+    });
   }
 
   #connectToHost() {
@@ -249,6 +316,68 @@ export class HandoffPeerTransport {
       }
     }
     return () => this.#onOpenHandlers.delete(handler);
+  }
+
+  /**
+   * Retrieves connection diagnostics (telemetry-free).
+   * @returns {Promise<{ transport: 'direct' | 'turn', rttMs: number }>}
+   */
+  async getConnectionInfo() {
+    const forcedTurn = this.#iceTransportPolicy === 'relay';
+
+    const pc = this.#conn?.peerConnection || this.#conn?._peerConnection;
+    if (pc && typeof pc.getStats === 'function') {
+      try {
+        const stats = await pc.getStats();
+        let selectedPair = null;
+
+        for (const report of stats.values()) {
+          if (report.type === 'transport' && report.selectedCandidatePairId) {
+            selectedPair = stats.get(report.selectedCandidatePairId);
+            break;
+          }
+        }
+
+        if (!selectedPair) {
+          for (const report of stats.values()) {
+            if (
+              report.type === 'candidate-pair' &&
+              (report.selected || report.nominated || report.state === 'succeeded')
+            ) {
+              selectedPair = report;
+              break;
+            }
+          }
+        }
+
+        if (selectedPair) {
+          const localCandidate = stats.get(selectedPair.localCandidateId);
+          const remoteCandidate = stats.get(selectedPair.remoteCandidateId);
+
+          const isTurn =
+            forcedTurn ||
+            localCandidate?.candidateType === 'relay' ||
+            remoteCandidate?.candidateType === 'relay';
+
+          const rtt = selectedPair.currentRoundTripTime ?? selectedPair.roundTripTime ?? 0;
+          const info = {
+            transport: /** @type {'direct'|'turn'} */ (isTurn ? 'turn' : 'direct'),
+            rttMs: Math.round(rtt * 1000),
+          };
+          this.#lastConnectionInfo = info;
+          return info;
+        }
+      } catch (err) {
+        console.warn('[HandoffPeerTransport] getStats error:', err);
+      }
+    }
+
+    const fallback = {
+      transport: /** @type {'direct'|'turn'} */ (forcedTurn ? 'turn' : 'direct'),
+      rttMs: 0,
+    };
+    this.#lastConnectionInfo = fallback;
+    return fallback;
   }
 
   close() {

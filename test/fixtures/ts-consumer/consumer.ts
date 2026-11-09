@@ -131,17 +131,33 @@ async function testHandoff() {
   await senderSession.complete();
 }
 
-// 8. Test <copio-handoff> Desktop Web Component (CPO-091)
+// 8. Test <copio-handoff> Desktop Web Component (CPO-091 / CPO-092)
 const handoffEl: CopioHandoff = new CopioHandoff();
 handoffEl.mode = 'batch';
 handoffEl.theme = 'light';
 handoffEl.ttlMs = 300000;
+handoffEl.relayUrl = 'https://relay.example.com';
+handoffEl.signalingUrl = 'wss://relay.example.com';
+handoffEl.iceTransportPolicy = 'relay';
 const handoffMode: string = handoffEl.mode;
 const handoffState: string = handoffEl.state;
 const handoffPages: Array<any> = handoffEl.pages;
+const handoffRelay: string = handoffEl.relayUrl;
+
+// 9. Test Engine Relay Config (CPO-092)
+const relayEngine = new CopioEngine({
+  relayUrl: 'https://relay.example.com',
+  signalingUrl: 'wss://relay.example.com',
+  iceTransportPolicy: 'relay',
+});
+const engineRelayUrl: string = relayEngine.relayUrl;
 
 const createdHandoff = document.createElement('copio-handoff');
 createdHandoff.mode = 'single';
+createdHandoff.addEventListener('copio:connection-info', (e: Event) => {
+  const ce = e as CustomEvent;
+  console.log('Connection info:', ce.detail);
+});
 createdHandoff.addEventListener('copio:handoff-connected', (e: Event) => {
   const ce = e as CustomEvent;
   console.log('Handoff connected:', ce.detail);
