@@ -368,9 +368,435 @@
       border: 1px solid rgba(255, 255, 255, 0.25);
       flex-shrink: 0;
     }
+
+    /* ==========================================================================
+       4. PHONE-TO-DESKTOP HANDOFF DEMO (CPO-093)
+       ========================================================================== */
+    .handoff-stage-container {
+      display: none;
+      width: 100%;
+      height: 100%;
+      max-width: 1160px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .handoff-stage-container.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .handoff-stage-inner {
+      width: 100%;
+      max-width: 880px;
+      transition: all 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .handoff-stage-container.handoff-split-active .handoff-stage-inner {
+      max-width: 1140px;
+      display: grid;
+      grid-template-columns: minmax(420px, 1fr) 380px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 880px) {
+      .handoff-stage-container.handoff-split-active .handoff-stage-inner {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    /* Desktop SaaS Mock Card */
+    .saas-mock-card {
+      background: var(--sandbox-surface);
+      border: 1px solid var(--sandbox-border);
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .saas-mock-header {
+      padding: 18px 24px 16px;
+      border-bottom: 1px solid var(--sandbox-border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .saas-header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .saas-app-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #38bdf8;
+    }
+
+    .saas-app-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+
+    .saas-card-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--sandbox-text);
+      letter-spacing: -0.01em;
+    }
+
+    .saas-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--sandbox-text-muted);
+      margin-top: 2px;
+    }
+
+    .saas-meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .saas-meta-tag strong {
+      color: #cbd5e1;
+    }
+
+    .saas-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(245, 158, 11, 0.14);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .saas-status-pill.verified {
+      background: rgba(34, 197, 94, 0.14);
+      color: #22c55e;
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .saas-simulate-btn {
+      appearance: none;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.16) 0%, rgba(37, 99, 235, 0.16) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 160ms ease;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .saas-simulate-btn:hover {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(37, 99, 235, 0.25) 100%);
+      border-color: #38bdf8;
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .saas-simulate-btn[aria-pressed="true"] {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+    }
+
+    .saas-simulate-pill {
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.18);
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .saas-mock-body {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .saas-dropzone-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--sandbox-text-muted);
+    }
+
+    .saas-handoff-host-wrap {
+      border: 1px solid var(--sandbox-border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0b0f17;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .saas-handoff-host-wrap copio-handoff {
+      width: 100%;
+      height: 100%;
+      min-height: 480px;
+      flex: 1;
+    }
+
+    /* Verified Attachment Banner */
+    .saas-verified-card {
+      display: none;
+      background: rgba(34, 197, 94, 0.08);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 10px;
+      padding: 14px 18px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .saas-verified-card.visible {
+      display: flex;
+    }
+
+    .saas-verified-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .saas-verified-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid #22c55e;
+      color: #22c55e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .saas-verified-text-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 2px;
+    }
+
+    .saas-verified-text-sub {
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: var(--sandbox-mono);
+    }
+
+    .saas-verified-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Simulated Mobile Phone Mockup */
+    .simulated-phone-pane {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 380px;
+    }
+
+    .handoff-stage-container.handoff-split-active .simulated-phone-pane {
+      display: flex;
+    }
+
+    .simulated-phone-device {
+      width: 360px;
+      height: 700px;
+      background: #0b0f17;
+      border: 10px solid #1e293b;
+      border-radius: 46px;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.75), inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .phone-island-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 24px;
+      background: #000;
+      border-radius: 16px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+    }
+
+    .phone-camera-lens {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .phone-status-bar {
+      height: 38px;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      z-index: 30;
+      flex-shrink: 0;
+      background: rgba(11, 15, 23, 0.8);
+      backdrop-filter: blur(8px);
+    }
+
+    .phone-status-time {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .phone-status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .phone-browser-bar {
+      padding: 6px 12px;
+      background: #131b26;
+      border-bottom: 1px solid var(--sandbox-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 20;
+      flex-shrink: 0;
+    }
+
+    .phone-browser-url {
+      font-size: 11px;
+      font-family: var(--sandbox-mono);
+      color: #94a3b8;
+      background: #0b0f17;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .phone-quick-sample-btn {
+      appearance: none;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: all 140ms ease;
+    }
+
+    .phone-quick-sample-btn:hover {
+      background: rgba(56, 189, 248, 0.22);
+      color: #fff;
+    }
+
+    .phone-scanner-viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phone-scanner-viewport copio-scanner {
+      width: 100%;
+      height: 100%;
+      flex: 1;
+    }
+
+    .phone-home-indicator {
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: #0b0f17;
+    }
+
+    .phone-home-bar {
+      width: 110px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.4);
+    }
   </style>
 </head>
 <body>
+  <!-- Dedicated Fullscreen Mobile Container for Real Phone Scanning (CPO-093) -->
+  <div id="mobile-handoff-standalone" style="display:none; width:100vw; height:100vh; position:fixed; inset:0; z-index:9999; background:#0b0f17;">
+    <copio-scanner id="mobile-standalone-scanner" mode="single" aspect="receipt" theme="dark"></copio-scanner>
+  </div>
+
   <div class="sandbox-layout">
     <!-- Top Sandbox Control Bar -->
     <header class="sandbox-topbar">
@@ -411,6 +837,9 @@
             </button>
             <button type="button" class="seg-btn" data-scenario-btn="invoice" aria-pressed="false">
               3. Batch Invoice (3p)
+            </button>
+            <button type="button" class="seg-btn" data-scenario-btn="handoff" aria-pressed="false">
+              4. 📱→💻 Phone Handoff
             </button>
           </div>
         </div>
@@ -466,6 +895,122 @@
             theme="dark"
           ></copio-scanner>
         </div>
+
+        <!-- ==================================================================
+             PHONE-TO-DESKTOP HANDOFF STAGE (CPO-093)
+             ================================================================== -->
+        <div id="handoff-stage-container" class="handoff-stage-container">
+          <div class="handoff-stage-inner" id="handoff-stage-inner">
+            <!-- Left Pane: Desktop SaaS Mock Card -->
+            <div class="saas-mock-card" id="saas-mock-card">
+              <div class="saas-mock-header">
+                <div class="saas-header-left">
+                  <div class="saas-app-badge">
+                    <span class="dot"></span>
+                    <span>EXPENSE REPORT #1042</span>
+                  </div>
+                  <h2 class="saas-card-title">Attach Receipt or Invoice</h2>
+                  <div class="saas-meta-row">
+                    <span class="saas-meta-tag">Vendor: <strong>Nordic Coffee Roasters</strong></span>
+                    <span style="color:var(--sandbox-border);">•</span>
+                    <span class="saas-meta-tag">Amount: <strong>$45.08 USD</strong></span>
+                    <span style="color:var(--sandbox-border);">•</span>
+                    <span class="saas-status-pill" id="saas-status-pill">
+                      ⏳ Pending Receipt
+                    </span>
+                  </div>
+                </div>
+                <div class="saas-header-right">
+                  <button
+                    type="button"
+                    class="saas-simulate-btn"
+                    id="btn-toggle-split-view"
+                    aria-pressed="false"
+                    title="Open simulated mobile scanner side-by-side in browser"
+                  >
+                    <span>📱 Simulate Phone in Split View</span>
+                    <span class="saas-simulate-pill">1-Click</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="saas-mock-body">
+                <div class="saas-dropzone-label">
+                  Attach via Mobile Camera QR or Fallback Upload
+                </div>
+
+                <div class="saas-handoff-host-wrap" id="saas-handoff-host-wrap">
+                  <copio-handoff
+                    id="live-handoff"
+                    mode="single"
+                    aspect="receipt"
+                    theme="dark"
+                    transport="peer"
+                  ></copio-handoff>
+                </div>
+
+                <!-- Verified Attachment Banner -->
+                <div class="saas-verified-card" id="saas-verified-card">
+                  <div class="saas-verified-info">
+                    <div class="saas-verified-icon">✓</div>
+                    <div>
+                      <div class="saas-verified-text-title" id="saas-verified-title">Receipt Attached &amp; Verified</div>
+                      <div class="saas-verified-text-sub" id="saas-verified-sub">1 page · E2EE WebRTC transfer · Searchable PDF generated</div>
+                    </div>
+                  </div>
+                  <div class="saas-verified-actions">
+                    <button type="button" class="seg-btn" id="btn-download-searchable-pdf" style="font-size:11px; padding:6px 12px; background:#0284c7; color:#fff;">
+                      📄 Download Searchable PDF
+                    </button>
+                    <button type="button" class="seg-btn" id="btn-reset-handoff-demo" style="font-size:11px; padding:6px 10px; border:1px solid var(--sandbox-border);">
+                      Attach Another
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Pane: Simulated Mobile Phone Mockup -->
+            <div class="simulated-phone-pane" id="simulated-phone-pane">
+              <div class="simulated-phone-device">
+                <div class="phone-island-notch">
+                  <div class="phone-camera-lens"></div>
+                </div>
+
+                <div class="phone-status-bar">
+                  <span class="phone-status-time">9:41</span>
+                  <div class="phone-status-icons">
+                    <span>5G</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+
+                <div class="phone-browser-bar">
+                  <div class="phone-browser-url">
+                    <span>🔒</span>
+                    <span id="simulated-phone-url">copio.netlify.app/scan</span>
+                  </div>
+                  <button type="button" class="phone-quick-sample-btn" id="btn-phone-sample" title="Feed realistic receipt into mobile phone scanner">
+                    ✨ Sample
+                  </button>
+                </div>
+
+                <div class="phone-scanner-viewport">
+                  <copio-scanner
+                    id="simulated-scanner"
+                    mode="single"
+                    aspect="receipt"
+                    theme="dark"
+                  ></copio-scanner>
+                </div>
+
+                <div class="phone-home-indicator">
+                  <div class="phone-home-bar"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Right Slide-Out Event & CSS Token Inspector Drawer -->
@@ -517,6 +1062,31 @@
     import { registerService } from './dist/core.js';
     import * as ocrService from './dist/ocr.js';
     import * as exportService from './dist/export.js';
+    import './dist/handoff.js';
+
+    // Check if loaded on mobile phone scanning QR code (CPO-093)
+    function checkMobileHandoffMode() {
+      const isMobileHandoff = /(?:copio-)?handoff=/.test(window.location.hash);
+      const mobileContainer = document.getElementById('mobile-handoff-standalone');
+      const sandboxLayout = document.querySelector('.sandbox-layout');
+      const mobileScanner = document.getElementById('mobile-standalone-scanner');
+
+      if (isMobileHandoff) {
+        if (sandboxLayout) sandboxLayout.style.display = 'none';
+        if (mobileContainer) mobileContainer.style.display = 'block';
+        if (mobileScanner && !mobileScanner.hasAttribute('handoff')) {
+          mobileScanner.setAttribute('handoff', window.location.hash);
+        }
+        return true;
+      } else {
+        if (sandboxLayout) sandboxLayout.style.display = '';
+        if (mobileContainer) mobileContainer.style.display = 'none';
+        return false;
+      }
+    }
+
+    window.addEventListener('hashchange', checkMobileHandoffMode);
+    checkMobileHandoffMode();
 
     // Register optional OCR & PDF/Export ports so workbench OCR and exports work out-of-the-box
     registerService('ocr', ocrService);
@@ -553,6 +1123,13 @@
         mode: 'batch',
         aspect: 'a4',
         maxPages: 0,
+      },
+      handoff: {
+        id: 'handoff',
+        title: '📱→💻 Phone-to-Desktop Handoff',
+        mode: 'single',
+        aspect: 'receipt',
+        maxPages: 1,
       },
     };
 
@@ -836,6 +1413,22 @@
     const eventCountBadge = document.getElementById('event-count-badge');
     const inspectorDrawer = document.getElementById('inspector-drawer');
 
+    // Phone-to-Desktop Handoff Elements (CPO-093)
+    const handoffStageContainer = document.getElementById('handoff-stage-container');
+    const liveHandoff = document.getElementById('live-handoff');
+    const simulatedScanner = document.getElementById('simulated-scanner');
+    const btnToggleSplitView = document.getElementById('btn-toggle-split-view');
+    const btnPhoneSample = document.getElementById('btn-phone-sample');
+    const btnDownloadPdf = document.getElementById('btn-download-searchable-pdf');
+    const btnResetHandoff = document.getElementById('btn-reset-handoff-demo');
+    const saasStatusPill = document.getElementById('saas-status-pill');
+    const saasVerifiedCard = document.getElementById('saas-verified-card');
+    const saasVerifiedTitle = document.getElementById('saas-verified-title');
+    const saasVerifiedSub = document.getElementById('saas-verified-sub');
+    const simulatedPhoneUrl = document.getElementById('simulated-phone-url');
+
+    let splitViewActive = false;
+    let latestPdfBlob = null;
     let currentContainer = 'modal';
     let currentScenario = 'receipt';
     let currentTheme = 'dark';
@@ -843,15 +1436,25 @@
     let inspectorOpen = true;
 
     function updateMountBarUi() {
-      const scenarioCfg = SCENARIOS[currentScenario];
-      const maxAttr = scenarioCfg.maxPages > 0 ? ` <span class="attr">max-pages=</span><span class="val">"${scenarioCfg.maxPages}"</span>` : '';
-      mountCodePreview.innerHTML =
-        `<span class="tag">&lt;copio-scanner</span> ` +
-        `<span class="attr">mode=</span><span class="val">"${scenarioCfg.mode}"</span> ` +
-        `<span class="attr">aspect=</span><span class="val">"${scenarioCfg.aspect}"</span>` +
-        maxAttr +
-        ` <span class="attr">theme=</span><span class="val">"${currentTheme}"</span>` +
-        `<span class="tag">&gt;&lt;/copio-scanner&gt;</span>`;
+      if (currentScenario === 'handoff') {
+        mountCodePreview.innerHTML =
+          `<span class="tag">&lt;copio-handoff</span> ` +
+          `<span class="attr">mode=</span><span class="val">"single"</span> ` +
+          `<span class="attr">aspect=</span><span class="val">"receipt"</span> ` +
+          `<span class="attr">theme=</span><span class="val">"${currentTheme}"</span> ` +
+          `<span class="attr">transport=</span><span class="val">"peer"</span>` +
+          `<span class="tag">&gt;&lt;/copio-handoff&gt;</span>`;
+      } else {
+        const scenarioCfg = SCENARIOS[currentScenario];
+        const maxAttr = scenarioCfg.maxPages > 0 ? ` <span class="attr">max-pages=</span><span class="val">"${scenarioCfg.maxPages}"</span>` : '';
+        mountCodePreview.innerHTML =
+          `<span class="tag">&lt;copio-scanner</span> ` +
+          `<span class="attr">mode=</span><span class="val">"${scenarioCfg.mode}"</span> ` +
+          `<span class="attr">aspect=</span><span class="val">"${scenarioCfg.aspect}"</span>` +
+          maxAttr +
+          ` <span class="attr">theme=</span><span class="val">"${currentTheme}"</span>` +
+          `<span class="tag">&gt;&lt;/copio-scanner&gt;</span>`;
+      }
 
       const dimsMap = {
         modal: '360px × 640px (@container ≤400px)',
@@ -916,8 +1519,152 @@
       });
     });
 
+    // Listen to real CustomEvents emitted by <copio-handoff> (CPO-093)
+    if (liveHandoff) {
+      [
+        COPIO_EVENTS.HANDOFF_CONNECTED,
+        COPIO_EVENTS.CONNECTION_INFO,
+        COPIO_EVENTS.PAGE_ADDED,
+        COPIO_EVENTS.ERROR,
+      ].forEach((evtName) => {
+        liveHandoff.addEventListener(evtName, (e) => {
+          logCustomEvent(evtName, e.detail);
+        });
+      });
+
+      liveHandoff.addEventListener(COPIO_EVENTS.SCAN_COMPLETE, async (e) => {
+        logCustomEvent(COPIO_EVENTS.SCAN_COMPLETE, e.detail);
+
+        // Automatically compile Searchable PDF from received pages
+        if (e.detail?.pages?.length > 0) {
+          try {
+            const pdfBlob = await exportService.exportDocumentAsPdf(
+              'Expense-1042-Receipt',
+              e.detail.pages,
+              {
+                searchable: true,
+                download: false,
+                showProgress: false,
+              }
+            );
+
+            if (pdfBlob) {
+              latestPdfBlob = pdfBlob;
+              logCustomEvent(COPIO_EVENTS.EXPORT_COMPLETE, {
+                format: 'pdf',
+                searchable: true,
+                docName: 'Expense-1042-Receipt.pdf',
+                sizeBytes: pdfBlob.size,
+                sizeKb: Number((pdfBlob.size / 1024).toFixed(1)),
+                pageCount: e.detail.pages.length,
+                pdfBlob,
+              });
+
+              if (saasStatusPill) {
+                saasStatusPill.className = 'saas-status-pill verified';
+                saasStatusPill.innerHTML = `✓ Verified ($45.08)`;
+              }
+              if (saasVerifiedCard) {
+                saasVerifiedCard.classList.add('visible');
+              }
+              if (saasVerifiedTitle) {
+                saasVerifiedTitle.textContent = `Receipt Attached & Verified ($45.08)`;
+              }
+              if (saasVerifiedSub) {
+                saasVerifiedSub.textContent = `${e.detail.pages.length} page · ${(pdfBlob.size / 1024).toFixed(1)} KB Searchable PDF · WebRTC E2EE`;
+              }
+            }
+          } catch (err) {
+            console.warn('[Handoff Demo] PDF export notice:', err);
+          }
+        }
+      });
+    }
+
+    // Split View Controller
+    function setSplitView(active) {
+      splitViewActive = active;
+      if (btnToggleSplitView) {
+        btnToggleSplitView.setAttribute('aria-pressed', String(active));
+        if (active) {
+          btnToggleSplitView.innerHTML = `<span>📱 Close Split View</span>`;
+        } else {
+          btnToggleSplitView.innerHTML = `<span>📱 Simulate Phone in Split View</span><span class="saas-simulate-pill">1-Click</span>`;
+        }
+      }
+      if (handoffStageContainer) {
+        handoffStageContainer.classList.toggle('handoff-split-active', active);
+      }
+
+      if (active && liveHandoff && simulatedScanner) {
+        if (liveHandoff.url) {
+          simulatedScanner.setAttribute('handoff', liveHandoff.url);
+          if (simulatedPhoneUrl) {
+            simulatedPhoneUrl.textContent = liveHandoff.url.replace(/^https?:\/\//, '');
+          }
+        }
+      }
+    }
+
+    btnToggleSplitView?.addEventListener('click', () => {
+      setSplitView(!splitViewActive);
+    });
+
+    btnPhoneSample?.addEventListener('click', async () => {
+      const dataUrl = generateDocumentDataUrl('receipt');
+      const file = await dataUrlToFile(dataUrl, 'nordic-coffee-receipt.png');
+      await simulatedScanner.addFiles([file]);
+      simulatedScanner.stage = 'workbench';
+    });
+
+    btnDownloadPdf?.addEventListener('click', () => {
+      if (!latestPdfBlob) return;
+      const url = URL.createObjectURL(latestPdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Expense-1042-Receipt.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    });
+
+    btnResetHandoff?.addEventListener('click', async () => {
+      latestPdfBlob = null;
+      if (liveHandoff) {
+        await liveHandoff.clear();
+      }
+      if (saasVerifiedCard) {
+        saasVerifiedCard.classList.remove('visible');
+      }
+      if (saasStatusPill) {
+        saasStatusPill.className = 'saas-status-pill';
+        saasStatusPill.innerHTML = `⏳ Pending Receipt`;
+      }
+      if (splitViewActive && simulatedScanner) {
+        simulatedScanner.resetHandoffSender();
+        if (liveHandoff?.url) {
+          simulatedScanner.setAttribute('handoff', liveHandoff.url);
+          if (simulatedPhoneUrl) {
+            simulatedPhoneUrl.textContent = liveHandoff.url.replace(/^https?:\/\//, '');
+          }
+        }
+      }
+    });
+
     // Optional sample generator button in the sandbox header bar (leaves <copio-scanner> Shutter & Import 100% native for real photos/camera)
     document.getElementById('btn-load-sample')?.addEventListener('click', async () => {
+      if (currentScenario === 'handoff') {
+        if (!splitViewActive) {
+          setSplitView(true);
+        }
+        const dataUrl = generateDocumentDataUrl('receipt');
+        const file = await dataUrlToFile(dataUrl, 'nordic-coffee-receipt.png');
+        await simulatedScanner.addFiles([file]);
+        simulatedScanner.stage = 'workbench';
+        return;
+      }
+
       const pages = await scanner.getPages();
       let kind = 'receipt';
       let filename = 'receipt.png';
@@ -940,6 +1687,25 @@
     async function loadScenario(scenarioKey) {
       currentScenario = scenarioKey;
       const cfg = SCENARIOS[scenarioKey];
+
+      if (scenarioKey === 'handoff') {
+        hostFrame.style.display = 'none';
+        handoffStageContainer.classList.add('active');
+        updateMountBarUi();
+        if (liveHandoff) {
+          liveHandoff.setAttribute('theme', currentTheme);
+          if (simulatedPhoneUrl && liveHandoff.url) {
+            simulatedPhoneUrl.textContent = liveHandoff.url.replace(/^https?:\/\//, '');
+          }
+        }
+        return;
+      }
+
+      hostFrame.style.display = '';
+      handoffStageContainer.classList.remove('active');
+      if (splitViewActive) {
+        setSplitView(false);
+      }
 
       await scanner.clear();
       scanner.setAttribute('mode', cfg.mode);
@@ -999,6 +1765,8 @@
       btn.addEventListener('click', () => {
         currentTheme = btn.getAttribute('data-theme-btn');
         scanner.setAttribute('theme', currentTheme);
+        if (liveHandoff) liveHandoff.setAttribute('theme', currentTheme);
+        if (simulatedScanner) simulatedScanner.setAttribute('theme', currentTheme);
         document.querySelectorAll('[data-theme-btn]').forEach((b) => {
           b.setAttribute('aria-pressed', String(b === btn));
         });

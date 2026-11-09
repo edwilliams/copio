@@ -396,12 +396,17 @@ export class CopioHandoff extends BaseElement {
         Boolean(this.signalingUrl) ||
         Boolean(this.iceServers);
 
+      const peerId =
+        options.peerId ||
+        (wantsPeer ? randomHandoffId('copio-hnd-') : randomHandoffId('peer_'));
+      options.peerId = peerId;
+
       if (wantsPeer) {
         try {
           const { HandoffPeerTransport } = await import('../js/services/handoff-transport.js');
           transport = new HandoffPeerTransport({
             role: 'host',
-            peerId: options.peerId,
+            peerId,
             relayUrl: this.relayUrl,
             signalingUrl: this.signalingUrl,
             iceServers: this.iceServers,
