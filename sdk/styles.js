@@ -1218,6 +1218,150 @@ export const scannerCss = `
     min-width: 200px;
   }
 }
+
+/* Mobile Handoff Sender Mode (CPO-094) */
+.copio-handoff-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(2, 132, 199, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: var(--copio-radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--copio-color-text);
+  backdrop-filter: blur(8px);
+}
+.copio-handoff-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--copio-color-warning);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.copio-handoff-dot.connected {
+  background: var(--copio-color-success);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+.copio-handoff-dot.connecting,
+.copio-handoff-dot.reconnecting {
+  background: var(--copio-color-warning);
+  animation: copio-pulse 1.4s ease-in-out infinite;
+}
+.copio-handoff-dot.disconnected,
+.copio-handoff-dot.error {
+  background: var(--copio-color-danger);
+}
+.copio-handoff-retry-btn {
+  appearance: none;
+  border: none;
+  background: var(--copio-color-surface-elevated);
+  color: var(--copio-color-text);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--copio-radius-sm);
+  cursor: pointer;
+}
+.copio-handoff-progress-view,
+.copio-handoff-confirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--copio-spacing-xl);
+}
+.copio-handoff-progress-view {
+  z-index: 50;
+  background: var(--copio-color-surface-overlay, rgba(15, 22, 32, 0.92));
+  backdrop-filter: blur(12px);
+}
+.copio-handoff-confirm {
+  z-index: 60;
+  background: var(--copio-color-bg);
+}
+.copio-handoff-progress-card,
+.copio-handoff-confirm-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--copio-color-surface);
+  border: 1px solid var(--copio-color-border-strong);
+  border-radius: var(--copio-radius-lg);
+  padding: var(--copio-spacing-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--copio-spacing-md);
+  box-shadow: var(--copio-shadow-elevated);
+}
+.copio-handoff-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(148, 163, 184, 0.2);
+  border-top-color: var(--copio-color-primary);
+  border-radius: 50%;
+  animation: copio-spin 0.8s linear infinite;
+}
+.copio-handoff-progress-title,
+.copio-handoff-confirm-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--copio-color-text);
+  margin: 0;
+}
+.copio-handoff-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--copio-color-surface-elevated);
+  border-radius: var(--copio-radius-pill);
+  overflow: hidden;
+  border: 1px solid var(--copio-color-border);
+}
+.copio-handoff-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--copio-color-primary), #0284c7);
+  border-radius: var(--copio-radius-pill);
+  transition: width var(--copio-transition-fast);
+}
+.copio-handoff-progress-desc,
+.copio-handoff-confirm-subtitle {
+  font-size: 12px;
+  color: var(--copio-color-text-muted);
+  margin: 0;
+}
+.copio-handoff-confirm-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--copio-color-success);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.copio-handoff-confirm-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: var(--copio-color-surface-elevated);
+  border: 1px solid var(--copio-color-border);
+  border-radius: var(--copio-radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--copio-color-primary);
+}
+.copio-handoff-confirm-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
 `;
 
 let cachedScannerSheet = null;

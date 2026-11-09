@@ -10,6 +10,12 @@ import { COPIO_EVENTS, dispatchCopioEvent } from './events.js';
 import { setAssetBase } from '../js/utils/module-loader.js';
 import { notify, setContainer, getContainer } from '../js/services/notify.js';
 import { scannerCss, getScannerStyleSheet, adoptScannerStyles } from './styles.js';
+import {
+  HandoffSession,
+  LoopbackTransport,
+  parseHandoffUrl,
+  decodeSessionToken,
+} from '../js/services/handoff-session.js';
 
 /** @type {typeof HTMLElement} */
 const BaseElement = typeof HTMLElement !== 'undefined' ? HTMLElement : /** @type {any} */ (class {});
@@ -32,6 +38,12 @@ export class CopioScanner extends BaseElement {
   #cameraStream = null;
   #wasStreamingBeforeHide = false;
   #grabCanvas = null;
+  #handoffSession = null;
+  #handoffToken = null;
+  #handoffState = 'idle'; // 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'sending' | 'complete' | 'error'
+  #handoffUnsubs = [];
+  #handoffProgress = null;
+  #handoffRetryCount = 0;
   onShutter = null;
 
   get #targetDocId() {
@@ -57,6 +69,7 @@ export class CopioScanner extends BaseElement {
       'theme',
       'ocr',
       'pdf',
+      'handoff',
     ];
   }
 
@@ -124,6 +137,12 @@ export class CopioScanner extends BaseElement {
       setAssetBase(this.getAttribute('asset-base'));
     }
 
+    if (this.#isHandoffMode()) {
+      this.#initHandoffMode().catch((err) => {
+        console.warn('[CopioScanner] Handoff init error:', err);
+      });
+    }
+
     this.#updateChildViews();
     this.#syncView();
   }
@@ -135,6 +154,7 @@ export class CopioScanner extends BaseElement {
     if (typeof window !== 'undefined') {
       window.removeEventListener('pagehide', this.#onPageHide);
     }
+    this.#cleanupHandoff();
     this.#stopCameraStream();
     if (this.#grabCanvas) {
       this.#grabCanvas.width = 0;
@@ -167,6 +187,10 @@ export class CopioScanner extends BaseElement {
       if (this.#wasStreamingBeforeHide && this.#stage === 'viewfinder') {
         this.#wasStreamingBeforeHide = false;
         this.startCamera().catch(() => {});
+      }
+      // Mobile browser returning from background: verify handoff connection
+      if (this.#isHandoffMode() && this.#handoffSession && !this.#handoffSession.isConnected && this.#handoffState !== 'complete') {
+        this.reconnectHandoff().catch(() => {});
       }
     }
   };
@@ -231,6 +255,13 @@ export class CopioScanner extends BaseElement {
       case 'theme':
         this.#syncView();
         break;
+      case 'handoff':
+        if (newValue && newValue !== 'false') {
+          this.#initHandoffMode().catch(() => {});
+        } else if (newValue === 'false') {
+          this.#cleanupHandoff();
+        }
+        break;
     }
   }
 
@@ -284,6 +315,11 @@ export class CopioScanner extends BaseElement {
             <div class="copio-step-pill" id="step-pill">
               <span class="copio-status-dot"></span>
               <span id="step-pill-text">${initialStepText}</span>
+            </div>
+            <div class="copio-handoff-pill" id="handoff-pill" style="display:none;" title="Phone-to-Desktop Handoff">
+              <span class="copio-handoff-dot" id="handoff-dot"></span>
+              <span class="copio-handoff-status-text" id="handoff-status-text">Paired with computer</span>
+              <button type="button" class="copio-handoff-retry-btn" id="btn-handoff-retry" style="display:none;" title="Retry connection">Retry</button>
             </div>
             <div class="copio-privacy-pill" title="100% Local On-Device Processing">
               <span>🔒 100% Local</span>
@@ -432,6 +468,37 @@ export class CopioScanner extends BaseElement {
           <div class="copio-toast-region" id="toast-region" aria-live="polite"></div>
         </div>
 
+        <!-- Mobile Handoff Progress Overlay -->
+        <div class="copio-handoff-progress-view" id="handoff-progress-view" style="display: none;" part="handoff-progress">
+          <div class="copio-handoff-progress-card">
+            <div class="copio-handoff-spinner"></div>
+            <h4 class="copio-handoff-progress-title" id="handoff-progress-title">Sending to your computer…</h4>
+            <div class="copio-handoff-progress-track">
+              <div class="copio-handoff-progress-bar" id="handoff-progress-bar" style="width: 0%;"></div>
+            </div>
+            <p class="copio-handoff-progress-desc" id="handoff-progress-desc">Encrypting and streaming pages…</p>
+          </div>
+        </div>
+
+        <!-- Mobile Handoff Confirmation Screen (CPO-094) -->
+        <div class="copio-handoff-confirm" id="handoff-confirm-view" style="display: none;" part="handoff-confirm">
+          <div class="copio-handoff-confirm-card">
+            <div class="copio-handoff-confirm-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            </div>
+            <h3 class="copio-handoff-confirm-title">Sent to your computer</h3>
+            <p class="copio-handoff-confirm-subtitle">You can close this tab now.</p>
+            <div class="copio-handoff-confirm-badge" id="handoff-confirm-count">1 page transferred</div>
+            <div class="copio-handoff-confirm-actions">
+              <button type="button" class="copio-btn copio-btn-secondary" id="btn-handoff-scan-more">
+                Scan More Documents
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Hidden input for file picker fallback -->
         <input type="file" id="internal-file-input" accept="image/*" style="display: none;" />
         <slot></slot>
@@ -510,6 +577,14 @@ export class CopioScanner extends BaseElement {
 
     shadow.getElementById('btn-primary-complete')?.addEventListener('click', async () => {
       await this.#handlePrimaryCtaClick();
+    });
+
+    // Handoff buttons
+    shadow.getElementById('btn-handoff-retry')?.addEventListener('click', () => {
+      this.reconnectHandoff().catch(() => {});
+    });
+    shadow.getElementById('btn-handoff-scan-more')?.addEventListener('click', async () => {
+      await this.resetHandoff();
     });
 
     // Card switcher buttons
@@ -820,7 +895,17 @@ export class CopioScanner extends BaseElement {
       // Primary CTA label
       const primaryCta = shadow.getElementById('btn-primary-complete');
       if (primaryCta) {
-        if (this.aspect === 'card' && this.maxPages === 2 && pages.length === 1) {
+        if (this.isHandoff) {
+          if (this.aspect === 'card' && this.maxPages === 2 && pages.length === 1) {
+            primaryCta.textContent = 'Next: Capture Back (Step 2/2) →';
+          } else if (this.aspect === 'card' && pages.length >= 2) {
+            primaryCta.textContent = '↑ Send ID Card to Computer (2 Sides)';
+          } else if (this.mode === 'batch') {
+            primaryCta.textContent = `↑ Send ${pages.length} Pages to Computer`;
+          } else {
+            primaryCta.textContent = '↑ Send to Computer';
+          }
+        } else if (this.aspect === 'card' && this.maxPages === 2 && pages.length === 1) {
           primaryCta.textContent = 'Next: Capture Back (Step 2/2) →';
         } else if (this.aspect === 'card' && pages.length >= 2) {
           primaryCta.textContent = '✓ Complete ID Scan (2 Sides)';
@@ -830,6 +915,9 @@ export class CopioScanner extends BaseElement {
           primaryCta.textContent = '✓ Use Photo';
         }
       }
+
+      // Handoff DOM sync
+      this.#syncHandoffDom();
 
       // Filmstrip rendering
       this.#renderFilmstrip(pages);
@@ -1379,7 +1467,431 @@ export class CopioScanner extends BaseElement {
       }
     }
 
+    // If mobile handoff sender mode is active, stream pages over HandoffSession
+    if (this.isHandoff && this.#handoffSession) {
+      await this.#streamHandoffPages(summarizedPages, payload);
+      return;
+    }
+
     this.dispatch(COPIO_EVENTS.SCAN_COMPLETE, payload);
+  }
+
+  async completeScan() {
+    return this.#handlePrimaryCtaClick();
+  }
+
+  // --- Configuration Properties (CPO-034, CPO-035, CPO-038) ---
+
+  /**
+   * @returns {string|null}
+   */
+  get handoff() {
+    return typeof this.getAttribute === 'function' ? this.getAttribute('handoff') : null;
+  }
+
+  /**
+   * @param {string|boolean|null} val
+   */
+  set handoff(val) {
+    if (typeof this.setAttribute === 'function') {
+      if (val != null && (typeof val !== 'boolean' || val === true)) {
+        this.setAttribute('handoff', typeof val === 'string' ? val : '');
+      } else {
+        this.removeAttribute('handoff');
+      }
+    }
+  }
+
+  get isHandoff() {
+    return this.#isHandoffMode();
+  }
+
+  get handoffSession() {
+    return this.#handoffSession;
+  }
+
+  get handoffState() {
+    return this.#handoffState;
+  }
+
+  get handoffProgress() {
+    return this.#handoffProgress;
+  }
+
+  get handoffRetryCount() {
+    return this.#handoffRetryCount;
+  }
+
+  /**
+   * Attaches an existing HandoffSession (e.g. LoopbackTransport in automated tests).
+   * @param {HandoffSession} session
+   * @param {Object} [token]
+   */
+  attachHandoffSession(session, token = null) {
+    this.#cleanupHandoff();
+    this.#handoffSession = session;
+    this.#handoffToken = token || session?.token || null;
+    this.#bindHandoffSessionEvents(session);
+    this.#handoffState = session.isConnected ? 'connected' : (session.state === 'idle' ? 'connecting' : session.state);
+    this.#syncHandoffDom();
+  }
+
+  /**
+   * Reconnects to desktop host session.
+   */
+  async reconnectHandoff() {
+    if (!this.#handoffSession || !this.#handoffToken) return;
+    if (this.#handoffState === 'complete' || this.#handoffState === 'connecting') return;
+
+    this.#handoffRetryCount++;
+    this.#handoffState = 'reconnecting';
+    this.#syncHandoffDom();
+
+    try {
+      if (LoopbackTransport.has(this.#handoffToken.peerId)) {
+        const linked = LoopbackTransport.createLinkedSender(this.#handoffToken.peerId);
+        await this.#handoffSession.reconnect(linked);
+      } else {
+        await this.#handoffSession.reconnect();
+      }
+    } catch (err) {
+      console.warn('[CopioScanner] Handoff reconnect failed:', err);
+      this.#handoffState = 'disconnected';
+      this.#syncHandoffDom(err?.message || 'Reconnection failed');
+    }
+  }
+
+  /**
+   * Resets handoff sender view and confirmation screen to allow scanning more documents.
+   */
+  async resetHandoff() {
+    this.#handoffState = this.#handoffSession?.isConnected ? 'connected' : 'idle';
+    this.#handoffProgress = null;
+    const shadow = this.shadowRoot;
+    if (shadow) {
+      const confirmView = shadow.getElementById('handoff-confirm-view');
+      if (confirmView) confirmView.style.display = 'none';
+      const progressView = shadow.getElementById('handoff-progress-view');
+      if (progressView) progressView.style.display = 'none';
+    }
+    await this.clear();
+    this.stage = 'viewfinder';
+    this.#syncHandoffDom();
+  }
+
+  #isHandoffMode() {
+    if (this.#handoffSession) return true;
+    if (typeof this.hasAttribute === 'function' && this.hasAttribute('handoff')) {
+      return this.getAttribute('handoff') !== 'false';
+    }
+    if (typeof window !== 'undefined' && window.location?.hash) {
+      return /(?:copio-)?handoff=/.test(window.location.hash);
+    }
+    return false;
+  }
+
+  async #initHandoffMode() {
+    if (this.#handoffSession) return;
+    if (!this.#isHandoffMode()) return;
+
+    let tokenStr = typeof this.getAttribute === 'function' ? this.getAttribute('handoff') : null;
+    if (!tokenStr && typeof window !== 'undefined' && window.location?.hash) {
+      tokenStr = window.location.hash;
+    }
+    if (!tokenStr) return;
+
+    try {
+      const token = typeof tokenStr === 'string' && tokenStr.includes('#')
+        ? parseHandoffUrl(tokenStr)
+        : decodeSessionToken(tokenStr);
+
+      this.#handoffToken = token;
+      this.#handoffState = 'connecting';
+      this.#syncHandoffDom();
+
+      // Check loopback registry first
+      let transport = null;
+      if (LoopbackTransport.has(token.peerId)) {
+        transport = LoopbackTransport.createLinkedSender(token.peerId);
+      } else {
+        try {
+          const { HandoffPeerTransport } = await import('../js/services/handoff-transport.js');
+          transport = new HandoffPeerTransport({
+            role: 'sender',
+            targetPeerId: token.peerId,
+          });
+        } catch {
+          transport = new LoopbackTransport();
+        }
+      }
+
+      const session = new HandoffSession({
+        role: 'sender',
+        transport,
+      });
+
+      this.#handoffSession = session;
+      this.#bindHandoffSessionEvents(session);
+      await session.startSender(token);
+    } catch (err) {
+      console.warn('[CopioScanner] Handoff sender init failed:', err);
+      this.#handoffState = 'error';
+      this.#syncHandoffDom(err?.message || 'Connection error');
+    }
+  }
+
+  #bindHandoffSessionEvents(session) {
+    this.#handoffUnsubs.push(
+      session.on('stateChange', (newState) => {
+        if (newState === 'closed') {
+          this.#handoffState = 'disconnected';
+        } else {
+          this.#handoffState = newState;
+        }
+        if (newState === 'connected') {
+          this.#handoffRetryCount = 0;
+          this.dispatch(COPIO_EVENTS.HANDOFF_CONNECTED, {
+            sessionId: this.#handoffToken?.sessionId || '',
+            peerId: this.#handoffToken?.peerId || '',
+          });
+        }
+        this.#syncHandoffDom();
+      }),
+
+      session.on('progress', (progress) => {
+        this.#handoffProgress = progress;
+        this.#updateHandoffProgressDom(progress);
+      }),
+
+      session.on('complete', () => {
+        this.#handoffState = 'complete';
+        this.#syncHandoffDom();
+      }),
+
+      session.on('error', (err) => {
+        console.warn('[CopioScanner] Handoff session error:', err);
+        this.#handoffState = 'error';
+        this.#syncHandoffDom(err?.message || 'Connection error');
+      })
+    );
+  }
+
+  #cleanupHandoff() {
+    for (const unsub of this.#handoffUnsubs) {
+      try {
+        unsub();
+      } catch {
+        // ignore
+      }
+    }
+    this.#handoffUnsubs = [];
+    if (this.#handoffSession) {
+      try {
+        this.#handoffSession.close();
+      } catch {
+        // ignore
+      }
+      this.#handoffSession = null;
+    }
+    this.#handoffToken = null;
+    this.#handoffState = 'idle';
+    this.#handoffProgress = null;
+  }
+
+  #syncHandoffDom(errorMsg = '') {
+    const shadow = this.shadowRoot;
+    if (!shadow) return;
+
+    const pill = shadow.getElementById('handoff-pill');
+    const dot = shadow.getElementById('handoff-dot');
+    const statusText = shadow.getElementById('handoff-status-text');
+    const retryBtn = shadow.getElementById('btn-handoff-retry');
+
+    if (!pill || !dot || !statusText) return;
+
+    if (!this.#isHandoffMode()) {
+      pill.style.display = 'none';
+      return;
+    }
+
+    pill.style.display = 'inline-flex';
+    dot.className = `copio-handoff-dot ${this.#handoffState}`;
+
+    const labels = {
+      connecting: 'Connecting to computer…',
+      connected: 'Paired with computer',
+      reconnecting: 'Reconnecting to computer…',
+      disconnected: 'Disconnected',
+      sending: 'Sending to computer…',
+      complete: 'Sent to computer ✓',
+      error: errorMsg || 'Connection error',
+    };
+    statusText.textContent = labels[this.#handoffState] || 'Desktop Handoff';
+    if (retryBtn) {
+      retryBtn.style.display = (this.#handoffState === 'disconnected' || this.#handoffState === 'error') ? 'inline-block' : 'none';
+    }
+  }
+
+  #updateHandoffProgressDom(progress) {
+    const shadow = this.shadowRoot;
+    if (!shadow || !progress) return;
+    const bar = shadow.getElementById('handoff-progress-bar');
+    const desc = shadow.getElementById('handoff-progress-desc');
+    if (bar && typeof progress.percent === 'number') {
+      bar.style.width = `${progress.percent}%`;
+    }
+    if (desc && progress.bytesSent && progress.totalBytes) {
+      const sentKb = Math.round(progress.bytesSent / 1024);
+      const totalKb = Math.round(progress.totalBytes / 1024);
+      desc.textContent = `Streaming chunks: ${sentKb} KB / ${totalKb} KB (${progress.percent}%)`;
+    }
+  }
+
+  async #streamHandoffPages(pages, payload) {
+    const shadow = this.shadowRoot;
+    const progressView = shadow?.getElementById('handoff-progress-view');
+    const progressBar = shadow?.getElementById('handoff-progress-bar');
+    const progressTitle = shadow?.getElementById('handoff-progress-title');
+    const progressDesc = shadow?.getElementById('handoff-progress-desc');
+
+    if (progressView) progressView.style.display = 'flex';
+
+    this.#handoffState = 'sending';
+    this.#syncHandoffDom();
+
+    try {
+      // 1. Stream each page in chunks
+      for (let idx = 0; idx < pages.length; idx++) {
+        const page = pages[idx];
+        if (progressTitle) {
+          progressTitle.textContent = pages.length > 1
+            ? `Sending page ${idx + 1} of ${pages.length}…`
+            : 'Sending page to computer…';
+        }
+        if (progressDesc) {
+          progressDesc.textContent = 'Encrypting with AES-GCM-256…';
+        }
+
+        const blob = await this.#ensureBlobForPage(page);
+
+        // Send page with retry on connection drop
+        let sent = false;
+        let attempts = 0;
+        while (!sent && attempts < 3) {
+          try {
+            if (!this.#handoffSession.isConnected) {
+              await this.reconnectHandoff();
+              await this.#waitForHandoffConnected(6000);
+            }
+            await this.#handoffSession.sendPage({
+              id: page.id,
+              pageIndex: idx,
+              mimeType: blob.type || 'image/jpeg',
+              blob,
+              metadata: {
+                width: page.dimensions?.width,
+                height: page.dimensions?.height,
+                label: page.label,
+              },
+            });
+            sent = true;
+          } catch (err) {
+            attempts++;
+            if (attempts >= 3) throw err;
+            await this.reconnectHandoff();
+            await this.#waitForHandoffConnected(6000);
+          }
+        }
+      }
+
+      // 2. Complete the session
+      if (progressTitle) progressTitle.textContent = 'Finalizing scan session…';
+      if (progressBar) progressBar.style.width = '100%';
+
+      await this.#handoffSession.complete({
+        docId: payload.docId,
+        summary: {
+          mode: payload.mode,
+          aspect: payload.aspect,
+          pageCount: pages.length,
+        },
+      });
+
+      this.#handoffState = 'complete';
+      if (progressView) progressView.style.display = 'none';
+
+      // 3. Show clean confirmation screen (CPO-094)
+      const confirmView = shadow?.getElementById('handoff-confirm-view');
+      const confirmCount = shadow?.getElementById('handoff-confirm-count');
+      if (confirmView) {
+        confirmView.style.display = 'flex';
+      }
+      if (confirmCount) {
+        confirmCount.textContent = `${pages.length} page${pages.length === 1 ? '' : 's'} transferred to desktop`;
+      }
+      this.#syncHandoffDom();
+
+      // Dispatch standard scan-complete event matching <copio-scanner>
+      this.dispatch(COPIO_EVENTS.SCAN_COMPLETE, payload);
+    } catch (err) {
+      console.error('[CopioScanner] Handoff streaming error:', err);
+      if (progressView) progressView.style.display = 'none';
+      this.#handoffState = 'error';
+      this.#syncHandoffDom(err.message);
+      this.dispatch(COPIO_EVENTS.ERROR, {
+        code: 'HANDOFF_STREAMING_FAILED',
+        message: err.message,
+        error: err,
+      });
+    }
+  }
+
+  async #waitForHandoffConnected(timeoutMs = 6000) {
+    if (this.#handoffSession?.isConnected) return;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        unsub();
+        reject(new Error('Timeout waiting for handoff connection'));
+      }, timeoutMs);
+
+      const unsub = this.#handoffSession.on('stateChange', (st) => {
+        if (st === 'connected') {
+          clearTimeout(timer);
+          unsub();
+          resolve(undefined);
+        }
+      });
+    });
+  }
+
+  async #ensureBlobForPage(page) {
+    if (page.blob instanceof Blob) {
+      return page.blob;
+    }
+    const src = page.src || page.originalSrc;
+    if (src && typeof fetch === 'function' && (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http'))) {
+      try {
+        const res = await fetch(src);
+        const blob = await res.blob();
+        if (blob && blob.size > 0) return blob;
+      } catch {
+        // fallback
+      }
+    }
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = page.dimensions?.width || 120;
+      canvas.height = page.dimensions?.height || 160;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      return new Promise((resolve) => {
+        canvas.toBlob((b) => resolve(b || new Blob()), 'image/jpeg');
+      });
+    }
+    return new Blob([], { type: 'image/jpeg' });
   }
 
   // --- Configuration Properties (CPO-034, CPO-035, CPO-038) ---

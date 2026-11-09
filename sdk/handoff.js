@@ -259,10 +259,12 @@ export class CopioHandoff extends BaseElement {
     this.#activeProgress = null;
     this.#errorMessage = '';
 
+    const transport = options.transport || new LoopbackTransport();
+
     const session = new HandoffSession({
       role: 'host',
       ttlMs: this.ttlMs,
-      transport: options.transport,
+      transport,
     });
 
     this.#session = session;
@@ -273,6 +275,10 @@ export class CopioHandoff extends BaseElement {
       baseUrl,
       peerId: options.peerId,
     });
+
+    if (transport instanceof LoopbackTransport && token?.peerId) {
+      LoopbackTransport.register(token.peerId, transport);
+    }
 
     this.#token = token;
     this.#url = url;
