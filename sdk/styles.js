@@ -519,7 +519,7 @@ export const scannerCss = `
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px;
   background: var(--copio-color-surface);
   border-top: 1px solid var(--copio-color-border);
   min-height: 84px;
@@ -884,7 +884,7 @@ export const scannerCss = `
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) 12px;
   background: var(--copio-color-surface);
   border-top: 1px solid var(--copio-color-border);
   min-height: 56px;
@@ -897,12 +897,13 @@ export const scannerCss = `
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
 }
 
 .copio-toolbar-tools .copio-tool-btn {
-  flex: 1 1 56px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .copio-toolbar-actions {
@@ -910,6 +911,7 @@ export const scannerCss = `
   align-items: center;
   gap: 8px;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .copio-toolbar-actions .copio-btn-primary {
@@ -1137,10 +1139,21 @@ export const scannerCss = `
   .copio-subtitle {
     display: none;
   }
+  .copio-stage-canvas,
+  .copio-canvas-viewport {
+    min-height: 120px;
+    padding: 10px 12px 24px 12px;
+  }
   .copio-filmstrip,
   .copio-filmstrip-bar {
     gap: 6px;
     padding: 6px 8px;
+    min-height: 64px;
+  }
+  .copio-toolbar,
+  .copio-controls-dock {
+    gap: 6px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)) 10px;
   }
   .copio-tool-btn {
     font-size: 10px;
@@ -1199,6 +1212,11 @@ export const scannerCss = `
   .copio-toolbar-tools {
     width: auto;
     flex: 1;
+    gap: 6px;
+  }
+  .copio-toolbar-tools .copio-tool-btn {
+    flex: 1 1 56px;
+    min-width: var(--copio-touch-target-min);
   }
   .copio-toolbar-actions {
     width: auto;

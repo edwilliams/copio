@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Copio SDK — Embeddable Document Scanner Web Component</title>
   <meta name="description" content="Embeddable, zero-config &lt;copio-scanner&gt; Web Component for mobile document scanning, non-destructive crop/rotate/B&amp;W editing, and client-side OCR." />
   <meta name="theme-color" content="#0b0f17" />
@@ -789,11 +789,35 @@
       border-radius: 2px;
       background: rgba(255, 255, 255, 0.4);
     }
+
+    /* Fullscreen Mobile Handoff Container (Dynamic Viewport Height + Safe Area) */
+    .mobile-handoff-standalone {
+      display: none;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      max-height: var(--mobile-handoff-vh, 100dvh);
+      z-index: 9999;
+      background: #0b0f17;
+      overflow: hidden;
+    }
+
+    .mobile-handoff-standalone copio-scanner {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
   </style>
 </head>
 <body>
   <!-- Dedicated Fullscreen Mobile Container for Real Phone Scanning (CPO-093) -->
-  <div id="mobile-handoff-standalone" style="display:none; width:100vw; height:100vh; position:fixed; inset:0; z-index:9999; background:#0b0f17;">
+  <div id="mobile-handoff-standalone" class="mobile-handoff-standalone">
     <copio-scanner id="mobile-standalone-scanner" mode="single" aspect="receipt" theme="dark"></copio-scanner>
   </div>
 
@@ -893,6 +917,7 @@
             mode="single"
             aspect="receipt"
             theme="dark"
+            handoff="false"
           ></copio-scanner>
         </div>
 
@@ -1001,6 +1026,7 @@
                     mode="single"
                     aspect="receipt"
                     theme="dark"
+                    handoff="false"
                   ></copio-scanner>
                 </div>
 
@@ -1065,6 +1091,16 @@
     import './dist/handoff.js';
 
     // Check if loaded on mobile phone scanning QR code (CPO-093)
+    function syncMobileViewportHeight() {
+      const mobileContainer = document.getElementById('mobile-handoff-standalone');
+      if (!mobileContainer) return;
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      if (vh > 0) {
+        mobileContainer.style.setProperty('--mobile-handoff-vh', `${vh}px`);
+        mobileContainer.style.height = `${vh}px`;
+      }
+    }
+
     function checkMobileHandoffMode() {
       const isMobileHandoff = /(?:copio-)?handoff=/.test(window.location.hash);
       const mobileContainer = document.getElementById('mobile-handoff-standalone');
@@ -1073,7 +1109,10 @@
 
       if (isMobileHandoff) {
         if (sandboxLayout) sandboxLayout.style.display = 'none';
-        if (mobileContainer) mobileContainer.style.display = 'block';
+        if (mobileContainer) {
+          mobileContainer.style.display = 'flex';
+          syncMobileViewportHeight();
+        }
         if (mobileScanner && !mobileScanner.hasAttribute('handoff')) {
           mobileScanner.setAttribute('handoff', window.location.hash);
         }
@@ -1085,8 +1124,12 @@
       }
     }
 
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncMobileViewportHeight);
+    }
+    window.addEventListener('resize', syncMobileViewportHeight);
     window.addEventListener('hashchange', checkMobileHandoffMode);
-    checkMobileHandoffMode();
+    const isInitialMobileHandoff = checkMobileHandoffMode();
 
     // Register optional OCR & PDF/Export ports so workbench OCR and exports work out-of-the-box
     registerService('ocr', ocrService);
@@ -1805,8 +1848,10 @@
       }).catch(() => {});
     }
 
-    // Initialize default scenario
-    loadScenario('receipt');
+    // Initialize default scenario unless opened directly in standalone mobile handoff mode
+    if (!isInitialMobileHandoff) {
+      loadScenario('receipt');
+    }
   </script>
 </body>
 </html>

@@ -169,5 +169,59 @@ describe('CPO-093: Interactive Phone-to-Desktop Handoff Demo in SDK Sandbox', fu
       expect(realPhoneScanner.handoffState).to.equal('connected');
       expect(desktopEl.state).to.equal('connected');
     });
+
+    it('renders all 6 edit tools on a single row and keeps the Send to Computer button visible inside compact mobile viewports', async () => {
+      const desktopEl = document.createElement('copio-handoff');
+      fixtureContainer.appendChild(desktopEl);
+      await wait(50);
+
+      // Simulate a compact mobile browser viewport (360px wide x 560px visible height with browser bars)
+      const mobileFrame = document.createElement('div');
+      mobileFrame.style.width = '360px';
+      mobileFrame.style.height = '560px';
+      mobileFrame.style.display = 'flex';
+      mobileFrame.style.flexDirection = 'column';
+      mobileFrame.style.overflow = 'hidden';
+      fixtureContainer.appendChild(mobileFrame);
+
+      const mobileScanner = document.createElement('copio-scanner');
+      mobileScanner.mode = 'single';
+      mobileScanner.aspect = 'receipt';
+      mobileScanner.style.flex = '1 1 auto';
+      mobileScanner.style.width = '100%';
+      mobileScanner.style.height = '100%';
+      mobileScanner.style.minHeight = '0';
+      mobileScanner.setAttribute('handoff', desktopEl.url);
+      mobileFrame.appendChild(mobileScanner);
+      await wait(100);
+
+      const dummyBlob = await createDummyImageBlob('#10b981', 300, 500);
+      await mobileScanner.addFiles([new File([dummyBlob], 'mobile-receipt.jpg', { type: 'image/jpeg' })]);
+      await wait(60);
+
+      expect(mobileScanner.stage).to.equal('workbench');
+
+      // 1. All 6 edit tool buttons (Retake, Crop, Rotate, B&W, OCR, Delete) fit on a single row
+      const toolButtons = Array.from(
+        mobileScanner.shadowRoot.querySelectorAll('.copio-toolbar-tools .copio-tool-btn')
+      );
+      expect(toolButtons.length).to.equal(6);
+      const firstTop = Math.round(toolButtons[0].getBoundingClientRect().top);
+      for (const btn of toolButtons) {
+        expect(Math.abs(Math.round(btn.getBoundingClientRect().top) - firstTop)).to.be.at.most(2);
+      }
+
+      // 2. Primary "↑ Send to Computer" button is rendered visibly within the mobile viewport bounds
+      const sendBtn = mobileScanner.shadowRoot.getElementById('btn-primary-complete');
+      expect(sendBtn).to.exist;
+      expect(sendBtn.textContent).to.include('Send to Computer');
+
+      const frameRect = mobileFrame.getBoundingClientRect();
+      const sendRect = sendBtn.getBoundingClientRect();
+      expect(sendRect.height).to.be.at.least(44);
+      expect(sendRect.width).to.be.greaterThan(200);
+      expect(Math.round(sendRect.bottom)).to.be.at.most(Math.round(frameRect.bottom));
+      expect(Math.round(sendRect.top)).to.be.at.least(Math.round(frameRect.top));
+    });
   });
 });
