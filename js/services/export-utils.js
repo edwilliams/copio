@@ -148,23 +148,62 @@ export async function exportDocumentAsPdf(docName, pages, options = {}) {
           const y = (A4_HEIGHT - scaledHeight) / 2;
 
           let imageBuffer = null;
-          if (page.blob instanceof Blob) {
-            imageBuffer = await page.blob.arrayBuffer();
-          } else if (page.src instanceof Blob) {
-            imageBuffer = await page.src.arrayBuffer();
-          } else if (typeof page.src === 'string' && page.src.startsWith('blob:')) {
-            try {
-              const resp = await fetch(page.src);
-              const b = await resp.blob();
-              imageBuffer = await b.arrayBuffer();
-            } catch {}
+          const hasDataUrlSrc = typeof page.src === 'string' && page.src.startsWith('data:');
+          if (!hasDataUrlSrc) {
+            if (page.blob instanceof Blob) {
+              imageBuffer = await page.blob.arrayBuffer();
+            } else if (page.src instanceof Blob) {
+              imageBuffer = await page.src.arrayBuffer();
+            } else if (typeof page.src === 'string' && page.src.startsWith('blob:')) {
+              try {
+                const resp = await fetch(page.src);
+                const b = await resp.blob();
+                imageBuffer = await b.arrayBuffer();
+              } catch {}
+            }
           }
 
           if (imageBuffer) {
-            doc.image(imageBuffer, x, y, {
-              width: scaledWidth,
-              height: scaledHeight,
-            });
+            const bytes = new Uint8Array(imageBuffer);
+            const isJpeg = bytes.length > 2 && bytes[0] === 0xff && bytes[1] === 0xd8;
+            const isPng =
+              bytes.length > 4 &&
+              bytes[0] === 0x89 &&
+              bytes[1] === 0x50 &&
+              bytes[2] === 0x4e &&
+              bytes[3] === 0x47;
+
+            if (!isJpeg && !isPng && typeof document !== 'undefined') {
+              // Convert browser-decoded formats (e.g. WebP, GIF, BMP, HEIC) to JPEG for PDFKit
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width;
+              canvas.height = img.naturalHeight || img.height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                doc.image(jpegDataUrl, x, y, {
+                  width: scaledWidth,
+                  height: scaledHeight,
+                });
+              }
+              canvas.width = 0;
+              canvas.height = 0;
+            } else {
+              // Guard against PDFKit _imageRegistry['[object ArrayBuffer]'] collision across pages
+              if (doc._imageRegistry) {
+                delete doc._imageRegistry['[object ArrayBuffer]'];
+              }
+              doc.image(imageBuffer, x, y, {
+                width: scaledWidth,
+                height: scaledHeight,
+              });
+              if (doc._imageRegistry) {
+                delete doc._imageRegistry['[object ArrayBuffer]'];
+              }
+            }
           } else {
             doc.image(imgSrc, x, y, {
               width: scaledWidth,

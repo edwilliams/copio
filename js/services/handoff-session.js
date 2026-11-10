@@ -406,7 +406,12 @@ export class HandoffSession {
   }
 
   get isConnected() {
-    return this.#state === 'connected' || this.#state === 'receiving' || this.#state === 'sending';
+    return (
+      this.#state === 'connected' ||
+      this.#state === 'receiving' ||
+      this.#state === 'sending' ||
+      (this.#state === 'complete' && Boolean(this.#sharedKey) && Boolean(this.#transport) && !this.#transport.isClosed)
+    );
   }
 
   /**
