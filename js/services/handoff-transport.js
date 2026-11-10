@@ -8,6 +8,7 @@
 
 import { loadPeerJs } from '../utils/module-loader.js';
 import { getIceServers, parseRelayUrl } from './ice-servers.js';
+import { LoopbackTransport } from './handoff-session.js';
 
 export class HandoffPeerTransport {
   #role; // 'host' | 'sender'
@@ -29,6 +30,8 @@ export class HandoffPeerTransport {
   #maxReconnectAttempts = 5;
   #reconnectTimer = null;
   #pendingQueue = [];
+  #loopback = null;
+  #loopbackUnregister = null;
 
   /**
    * @param {Object} [options]
@@ -55,6 +58,10 @@ export class HandoffPeerTransport {
 
     if (this.#role === 'sender' && !this.#targetPeerId) {
       throw new Error('Sender transport requires targetPeerId');
+    }
+
+    if (this.#role === 'host' && this.#peerId) {
+      this.#setupLoopbackBridge();
     }
 
     if (options.peerInstance) {
@@ -144,9 +151,21 @@ export class HandoffPeerTransport {
     }
   }
 
+  #setupLoopbackBridge() {
+    if (this.#loopback || !this.#peerId) return;
+    this.#loopback = new LoopbackTransport();
+    this.#loopbackUnregister = LoopbackTransport.register(this.#peerId, this.#loopback);
+    this.#loopback.onMessage((data) => {
+      this.#deliver(data);
+    });
+  }
+
   #bindPeerEvents(peer) {
     peer.on('open', (id) => {
       this.#peerId = id;
+      if (this.#role === 'host') {
+        this.#setupLoopbackBridge();
+      }
       if (this.#role === 'sender' && this.#targetPeerId) {
         this.#connectToHost();
       }
@@ -268,9 +287,16 @@ export class HandoffPeerTransport {
     if (this.#isDestroyed) {
       throw new Error('Cannot send on destroyed HandoffPeerTransport');
     }
+    if (this.#loopback) {
+      try {
+        this.#loopback.send(data);
+      } catch {
+        // loopback peer may not be connected
+      }
+    }
     if (this.#conn && this.#conn.open) {
       this.#conn.send(data);
-    } else {
+    } else if (this.#role === 'sender' || (this.#conn && !this.#conn.open)) {
       // Queue until open
       this.#pendingQueue.push(data);
     }
@@ -384,6 +410,18 @@ export class HandoffPeerTransport {
     this.#closed = true;
     this.#isDestroyed = true;
     clearTimeout(this.#reconnectTimer);
+    if (this.#loopbackUnregister) {
+      this.#loopbackUnregister();
+      this.#loopbackUnregister = null;
+    }
+    if (this.#loopback) {
+      try {
+        this.#loopback.close();
+      } catch {
+        // ignore
+      }
+      this.#loopback = null;
+    }
     if (this.#conn) {
       try {
         this.#conn.close();
