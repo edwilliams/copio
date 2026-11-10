@@ -1472,6 +1472,7 @@
 
     let splitViewActive = false;
     let latestPdfBlob = null;
+    let latestPdfPromise = null;
     let currentContainer = 'modal';
     let currentScenario = 'receipt';
     let currentTheme = 'dark';
@@ -1581,25 +1582,36 @@
         // Automatically compile Searchable PDF from received pages
         if (e.detail?.pages?.length > 0) {
           try {
-            const pdfBlob = await exportService.exportDocumentAsPdf(
+            if (btnDownloadPdf) {
+              btnDownloadPdf.textContent = '⏳ Compiling Searchable PDF…';
+            }
+            const pagesSnapshot = [...e.detail.pages];
+            const compilePromise = exportService.exportDocumentAsPdf(
               'Expense-1042-Receipt',
-              e.detail.pages,
+              pagesSnapshot,
               {
                 searchable: true,
                 download: false,
                 showProgress: false,
               }
             );
+            latestPdfPromise = compilePromise;
+            const pdfBlob = await compilePromise;
 
-            if (pdfBlob) {
+            if (btnDownloadPdf && latestPdfPromise === compilePromise) {
+              btnDownloadPdf.textContent = '📄 Download Searchable PDF';
+            }
+
+            if (pdfBlob && latestPdfPromise === compilePromise) {
               latestPdfBlob = pdfBlob;
+              const pageWord = pagesSnapshot.length === 1 ? 'page' : 'pages';
               logCustomEvent(COPIO_EVENTS.EXPORT_COMPLETE, {
                 format: 'pdf',
                 searchable: true,
                 docName: 'Expense-1042-Receipt.pdf',
                 sizeBytes: pdfBlob.size,
                 sizeKb: Number((pdfBlob.size / 1024).toFixed(1)),
-                pageCount: e.detail.pages.length,
+                pageCount: pagesSnapshot.length,
                 pdfBlob,
               });
 
@@ -1614,10 +1626,13 @@
                 saasVerifiedTitle.textContent = `Receipt Attached & Verified ($45.08)`;
               }
               if (saasVerifiedSub) {
-                saasVerifiedSub.textContent = `${e.detail.pages.length} page · ${(pdfBlob.size / 1024).toFixed(1)} KB Searchable PDF · WebRTC E2EE`;
+                saasVerifiedSub.textContent = `${pagesSnapshot.length} ${pageWord} · ${(pdfBlob.size / 1024).toFixed(1)} KB Searchable PDF · WebRTC E2EE`;
               }
             }
           } catch (err) {
+            if (btnDownloadPdf) {
+              btnDownloadPdf.textContent = '📄 Download Searchable PDF';
+            }
             console.warn('[Handoff Demo] PDF export notice:', err);
           }
         }
@@ -1660,7 +1675,13 @@
       simulatedScanner.stage = 'workbench';
     });
 
-    btnDownloadPdf?.addEventListener('click', () => {
+    btnDownloadPdf?.addEventListener('click', async () => {
+      if (latestPdfPromise) {
+        try {
+          const blob = await latestPdfPromise;
+          if (blob) latestPdfBlob = blob;
+        } catch {}
+      }
       if (!latestPdfBlob) return;
       const url = URL.createObjectURL(latestPdfBlob);
       const a = document.createElement('a');
@@ -1674,6 +1695,7 @@
 
     btnResetHandoff?.addEventListener('click', async () => {
       latestPdfBlob = null;
+      latestPdfPromise = null;
       if (liveHandoff) {
         await liveHandoff.clear();
       }

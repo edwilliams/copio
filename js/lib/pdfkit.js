@@ -2276,13 +2276,13 @@ module.exports = {
     }
     x = (_ref = x != null ? x : options.x) != null ? _ref : this.x;
     y = (_ref1 = y != null ? y : options.y) != null ? _ref1 : this.y;
-    if (!Buffer.isBuffer(src)) {
+    if (typeof src === 'string') {
       image = this._imageRegistry[src];
     }
     if (!image) {
       image = PDFImage.open(src, 'I' + (++this._imageCount));
       image.embed(this);
-      if (!Buffer.isBuffer(src)) {
+      if (typeof src === 'string') {
         this._imageRegistry[src] = image;
       }
     }

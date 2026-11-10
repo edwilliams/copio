@@ -4,6 +4,7 @@ import '../sdk/index.js';
 import {
   LoopbackTransport,
   COPIO_EVENTS,
+  renderPdfPagesToDataUrls,
 } from '../sdk/index.js';
 import { exportDocumentAsPdf } from '../js/services/export-utils.js';
 
@@ -146,6 +147,102 @@ describe('CPO-093: Interactive Phone-to-Desktop Handoff Demo in SDK Sandbox', fu
       expect(pdfBlob).to.exist;
       expect(pdfBlob.type).to.equal('application/pdf');
       expect(pdfBlob.size).to.be.greaterThan(500);
+    });
+
+    it('preserves distinct images in Searchable PDF when combining a taken photo and an uploaded image', async () => {
+      const desktopEl = document.createElement('copio-handoff');
+      fixtureContainer.appendChild(desktopEl);
+      await wait(50);
+
+      const mobileEl = document.createElement('copio-scanner');
+      mobileEl.mode = 'single';
+      mobileEl.setAttribute('handoff', desktopEl.url);
+      fixtureContainer.appendChild(mobileEl);
+      await wait(100);
+
+      // 1. Send a captured JPEG photo (solid red #ff0000)
+      const photoCanvas = document.createElement('canvas');
+      photoCanvas.width = 160;
+      photoCanvas.height = 160;
+      const photoCtx = photoCanvas.getContext('2d');
+      photoCtx.fillStyle = '#ff0000';
+      photoCtx.fillRect(0, 0, 160, 160);
+      const photoBlob = await new Promise((resolve) => photoCanvas.toBlob(resolve, 'image/jpeg', 0.95));
+
+      await mobileEl.addFiles([new File([photoBlob], 'capture_photo.jpg', { type: 'image/jpeg' })]);
+      await wait(40);
+      await mobileEl.completeScan();
+      await wait(150);
+
+      // 2. Click "Scan More Documents" on mobile and upload a PNG image (solid blue #0000ff)
+      await mobileEl.resetHandoff();
+      await wait(40);
+
+      const uploadCanvas = document.createElement('canvas');
+      uploadCanvas.width = 160;
+      uploadCanvas.height = 160;
+      const uploadCtx = uploadCanvas.getContext('2d');
+      uploadCtx.fillStyle = '#0000ff';
+      uploadCtx.fillRect(0, 0, 160, 160);
+      const uploadBlob = await new Promise((resolve) => uploadCanvas.toBlob(resolve, 'image/png'));
+
+      let finalComplete = null;
+      desktopEl.addEventListener(COPIO_EVENTS.SCAN_COMPLETE, (e) => {
+        finalComplete = e.detail;
+      });
+
+      await mobileEl.addFiles([new File([uploadBlob], 'uploaded_image.png', { type: 'image/png' })]);
+      await wait(40);
+      await mobileEl.completeScan();
+      await wait(180);
+
+      expect(finalComplete).to.exist;
+      expect(finalComplete.pages.length).to.equal(2);
+
+      // 3. Export Searchable PDF (with mock recognizeImageText for fast deterministic test)
+      const pdfBlob = await exportDocumentAsPdf(
+        'Expense-1042-Receipt',
+        finalComplete.pages,
+        {
+          searchable: true,
+          download: false,
+          showProgress: false,
+          recognizeImageText: async () => ({
+            text: 'SAMPLE TEXT',
+            confidence: 95,
+            words: [{ text: 'SAMPLE', bbox: { x0: 10, y0: 10, x1: 60, y1: 24 } }],
+          }),
+        }
+      );
+
+      expect(pdfBlob).to.exist;
+      const renderedPages = await renderPdfPagesToDataUrls(await pdfBlob.arrayBuffer(), 1.0);
+      expect(renderedPages.length).to.equal(2);
+
+      async function getCenterRgb(dataUrl) {
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = dataUrl;
+        });
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const [r, g, b] = ctx.getImageData(Math.floor(img.width / 2), Math.floor(img.height / 2), 1, 1).data;
+        return { r, g, b };
+      }
+
+      const page1Rgb = await getCenterRgb(renderedPages[0]);
+      const page2Rgb = await getCenterRgb(renderedPages[1]);
+
+      // Page 1 must be the red photo; Page 2 must be the blue uploaded image (not the red photo repeated)
+      expect(page1Rgb.r).to.be.greaterThan(200);
+      expect(page1Rgb.b).to.be.lessThan(50);
+      expect(page2Rgb.b).to.be.greaterThan(200);
+      expect(page2Rgb.r).to.be.lessThan(50);
     });
   });
 
