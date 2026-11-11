@@ -38,6 +38,12 @@ import {
 import { NullOcrAdapter } from '../js/adapters/ocr/null-ocr-adapter.js';
 import { NullPdfAdapter } from '../js/adapters/pdf/null-pdf-adapter.js';
 import {
+  EdgeDetectorPort,
+  DEFAULT_FALLBACK_QUAD,
+  cloneQuad,
+} from '../js/adapters/edge/edge-detector-port.js';
+import { NullEdgeDetectorAdapter } from '../js/adapters/edge/null-edge-detector-adapter.js';
+import {
   ImageProcessorPort,
   Canvas2DAdapter,
   NullImageProcessorAdapter,
@@ -1133,6 +1139,10 @@ export {
   NullImageProcessorAdapter,
   NullOcrAdapter,
   NullPdfAdapter,
+  EdgeDetectorPort,
+  DEFAULT_FALLBACK_QUAD,
+  cloneQuad,
+  NullEdgeDetectorAdapter,
   Document,
   Page,
   ScanSession,

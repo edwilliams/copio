@@ -129,6 +129,14 @@ export {
 } from '../js/adapters/sync/index.js';
 
 export {
+  EdgeDetectorPort,
+  DEFAULT_FALLBACK_QUAD,
+  cloneQuad,
+  NullEdgeDetectorAdapter,
+  ScanicWasmEdgeAdapter,
+} from '../js/adapters/edge/index.js';
+
+export {
   Document,
   Page,
   ScanSession,
@@ -143,11 +151,13 @@ import { SyncManager } from '../js/services/sync-service.js';
 import { TesseractWasmAdapter } from '../js/adapters/ocr/tesseract-wasm-adapter.js';
 import { PdfKitAdapter } from '../js/adapters/pdf/pdfkit-adapter.js';
 import { Canvas2DAdapter } from '../js/adapters/image/canvas2d-adapter.js';
+import { ScanicWasmEdgeAdapter } from '../js/adapters/edge/scanic-wasm-adapter.js';
 
 registerService('export', exportService);
 registerService('ocr', new TesseractWasmAdapter());
 registerService('sync', SyncManager);
 registerService('pdf', new PdfKitAdapter());
 registerService('imageProcessor', new Canvas2DAdapter());
+registerService('edge', new ScanicWasmEdgeAdapter());
 
 export { registerService, getRegisteredService } from './core.js';

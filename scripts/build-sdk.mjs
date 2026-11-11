@@ -114,6 +114,9 @@ async function buildSdk() {
       'adapters/sync/index': path.join(rootDir, 'js/adapters/sync/index.js'),
       'adapters/sync/null-sync-adapter': path.join(rootDir, 'js/adapters/sync/null-sync-adapter.js'),
       'adapters/sync/peerjs-adapter': path.join(rootDir, 'js/adapters/sync/peerjs-adapter.js'),
+      'adapters/edge/index': path.join(rootDir, 'js/adapters/edge/index.js'),
+      'adapters/edge/null-edge-detector-adapter': path.join(rootDir, 'js/adapters/edge/null-edge-detector-adapter.js'),
+      'adapters/edge/scanic-wasm-adapter': path.join(rootDir, 'js/adapters/edge/scanic-wasm-adapter.js'),
     },
     bundle: true,
     splitting: true,
@@ -181,6 +184,7 @@ async function buildSdk() {
     { src: path.join(rootDir, 'js/lib/tesseract-worker.min.js'), dest: path.join(distAssets, 'tesseract-worker.min.js') },
     { src: path.join(rootDir, 'js/lib/pdf.worker.min.mjs'), dest: path.join(distAssets, 'pdf.worker.min.mjs') },
     { src: path.join(rootDir, 'js/lib/pdf.min.mjs'), dest: path.join(distAssets, 'pdf.min.mjs') },
+    { src: path.join(rootDir, 'js/lib/scanic-detector.js'), dest: path.join(distAssets, 'scanic-detector.js') },
     { src: path.join(rootDir, 'assets/tessdata'), dest: path.join(distAssets, 'tessdata') },
     { src: path.join(rootDir, 'assets/icons'), dest: path.join(distAssets, 'icons') },
   ];
@@ -203,6 +207,7 @@ async function buildSdk() {
     'pdfkit.js',
     'peerjs.min.js',
     'qrcode.js',
+    'scanic-detector.js',
     'tesseract-worker.min.js',
     'tesseract.min.js',
   ];

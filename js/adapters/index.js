@@ -7,3 +7,4 @@ export * from './ocr/index.js';
 export * from './pdf/index.js';
 export * from './image/index.js';
 export * from './sync/index.js';
+export * from './edge/index.js';
