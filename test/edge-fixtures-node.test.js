@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  EdgeDetectorPort,
+  NullEdgeDetectorAdapter,
+  ScanicWasmEdgeAdapter,
+  DEFAULT_FALLBACK_QUAD,
+} from '../js/adapters/edge/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -241,4 +247,72 @@ test('CPO-073 ADR write-up exists and documents all required candidate measureme
     assert.ok(content.includes('90.6%'), 'ADR must record hit rate vs ground truth');
     assert.ok(content.includes('AGPL-3.0'), 'ADR must evaluate licence compatibility with CPO-001');
   }
+});
+
+test('CPO-074 EdgeDetectorPort, NullEdgeDetectorAdapter, and ScanicWasmEdgeAdapter work in headless Node.js', async () => {
+  // 1. Base port contract throws when not implemented
+  const basePort = new EdgeDetectorPort();
+  await assert.rejects(() => basePort.detect({}), /must be implemented/);
+  await assert.rejects(() => basePort.getEdgeWorker(), /must be implemented/);
+  await assert.rejects(() => basePort.terminateEdgeWorker(), /must be implemented/);
+
+  // 2. NullEdgeDetectorAdapter returns null by default and throws FEATURE_DISABLED when configured
+  const nullAdapter = new NullEdgeDetectorAdapter();
+  assert.equal(await nullAdapter.getEdgeWorker(), null);
+  assert.equal(await nullAdapter.detect({ data: new Uint8ClampedArray(16), width: 2, height: 2 }), null);
+  await nullAdapter.terminateEdgeWorker();
+
+  const strictNullAdapter = new NullEdgeDetectorAdapter({ throwOnDetect: true });
+  await assert.rejects(
+    async () => {
+      await strictNullAdapter.detect({ data: new Uint8ClampedArray(16), width: 2, height: 2 });
+    },
+    (err) => err.code === 'FEATURE_DISABLED'
+  );
+
+  // 3. ScanicWasmEdgeAdapter detects synthetic document in headless Node.js via WASM fallback
+  const width = 400;
+  const height = 500;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const inDoc = x >= 60 && x <= 340 && y >= 75 && y <= 425;
+      const val = inDoc ? 245 : 25;
+      rgba[idx] = val;
+      rgba[idx + 1] = val;
+      rgba[idx + 2] = val;
+      rgba[idx + 3] = 255;
+    }
+  }
+
+  const scanicAdapter = new ScanicWasmEdgeAdapter();
+  const result = await scanicAdapter.detect({ data: rgba, width, height });
+  assert.ok(result, 'Expected ScanicWasmEdgeAdapter to detect synthetic document in Node.js');
+  assert.equal(result.isFallback, false);
+  assert.ok(result.confidence >= 0.55, `Expected confidence >= 0.55, got ${result.confidence}`);
+
+  const expectedQuad = {
+    topLeft: { x: 60 / width, y: 75 / height },
+    topRight: { x: 340 / width, y: 75 / height },
+    bottomRight: { x: 340 / width, y: 425 / height },
+    bottomLeft: { x: 60 / width, y: 425 / height },
+  };
+  const iou = computeQuadIoU(result.normalizedCorners, expectedQuad);
+  assert.ok(iou >= 0.9, `Expected IoU >= 0.90 on synthetic document, got ${iou.toFixed(3)}`);
+
+  // 4. Blank uniform buffer returns null or 5%-inset fallback quad when fallbackOnLowConfidence=true
+  const blank = new Uint8ClampedArray(200 * 200 * 4).fill(128);
+  const noHit = await scanicAdapter.detect({ data: blank, width: 200, height: 200 });
+  assert.equal(noHit, null);
+
+  const fallbackHit = await scanicAdapter.detect(
+    { data: blank, width: 200, height: 200 },
+    { fallbackOnLowConfidence: true }
+  );
+  assert.ok(fallbackHit);
+  assert.equal(fallbackHit.isFallback, true);
+  assert.deepEqual(fallbackHit.quad, DEFAULT_FALLBACK_QUAD);
+
+  await scanicAdapter.terminateEdgeWorker();
 });

@@ -15,6 +15,10 @@ import {
   NullImageProcessorAdapter,
   SyncPort,
   NullSyncAdapter,
+  EdgeDetectorPort,
+  NullEdgeDetectorAdapter,
+  ScanicWasmEdgeAdapter,
+  DEFAULT_FALLBACK_QUAD,
   Document as CopioDocument,
   Page as CopioPage,
   ScanSession,
@@ -113,6 +117,9 @@ async function testMigrationRunner() {
 // 6. Test Hexagonal Ports & Domain Models
 const imgProcessor: ImageProcessorPort = new NullImageProcessorAdapter();
 const syncPort: SyncPort = new NullSyncAdapter();
+const edgePort: EdgeDetectorPort = new NullEdgeDetectorAdapter();
+const scanicEdge: EdgeDetectorPort = new ScanicWasmEdgeAdapter();
+const fallbackTlX: number = DEFAULT_FALLBACK_QUAD.topLeft.x;
 const domainPage = new CopioPage({ id: 'p1', src: 'data:image/png;base64,...' });
 const domainDoc = new CopioDocument({ id: 'd1', name: 'Receipt', pages: [domainPage] });
 const session = new ScanSession({ mode: 'single', aspect: 'receipt' });

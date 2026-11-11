@@ -10,6 +10,7 @@ Whenever you complete a ticket:
    - Verify CI checks pass using `gh pr checks`.
    - Provide the user with the PR URL and the accompanying Netlify Deploy Preview URL:
      `https://deploy-preview-<PR_NUMBER>--copio.netlify.app`
+   - Include simple, step-by-step instructions (in both the PR description and the completion response) on how to test the changes from a user's perspective, or explicitly note if user-facing UI testing isn't applicable (e.g. for research spikes, internal adapters, or CI/build-only changes) and how to verify it instead.
 
 ## `/goal` Execution Mode: Single Ticket (Default) vs. Continuous Loop
 When invoked via `/goal`:
