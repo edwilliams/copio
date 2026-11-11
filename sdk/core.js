@@ -41,6 +41,7 @@ import {
   EdgeDetectorPort,
   DEFAULT_FALLBACK_QUAD,
   cloneQuad,
+  quadToCropRect,
 } from '../js/adapters/edge/edge-detector-port.js';
 import { NullEdgeDetectorAdapter } from '../js/adapters/edge/null-edge-detector-adapter.js';
 import {
@@ -58,6 +59,9 @@ import {
   cropRotatedToOriginal,
   cropOriginalToRotated,
 } from './models.js';
+
+/** @typedef {import('../js/adapters/edge/edge-detector-port.js').EdgePoint} EdgePoint */
+/** @typedef {import('../js/adapters/edge/edge-detector-port.js').EdgeQuad} EdgeQuad */
 
 export const DEFAULT_FEATURES = ['crop', 'rotate', 'filter', 'ocr', 'export', 'sync'];
 export const DEFAULT_EXPORT_FORMATS = ['pdf', 'zip', 'png', 'jpg'];
@@ -558,6 +562,26 @@ export class CopioEngine extends EventTarget {
   }
 
   /**
+   * Configured EdgeDetectorPort instance.
+   * @returns {EdgeDetectorPort}
+   */
+  get edgeDetector() {
+    return this.getService('edge') || getRegisteredService('edge') || new NullEdgeDetectorAdapter();
+  }
+
+  /**
+   * Detect document boundaries in an image or video frame.
+   * @param {any} image
+   * @param {import('../js/adapters/edge/edge-detector-port.js').EdgeDetectOptions} [options]
+   * @returns {Promise<import('../js/adapters/edge/edge-detector-port.js').EdgeDetectionResult|null>}
+   */
+  async detectEdges(image, options = {}) {
+    const detector = this.edgeDetector;
+    if (!detector || typeof detector.detect !== 'function') return null;
+    return detector.detect(image, options);
+  }
+
+  /**
    * Underlying StoragePort adapter.
    * @returns {StoragePort}
    */
@@ -819,9 +843,10 @@ export class CopioEngine extends EventTarget {
    * 
    * @param {FileList|File[]|Blob[]} files
    * @param {string} [docId] - Target document ID (if omitted, attaches to latest or creates new doc)
+   * @param {Object} [options] - Ingest options (e.g. prefilledQuad, autoCrop)
    * @returns {Promise<Array<Object>>} Added page entities
    */
-  async addFiles(files, docId = null) {
+  async addFiles(files, docId = null, options = {}) {
     if (!files || files.length === 0) return [];
     const fileList = Array.from(files);
 
@@ -852,11 +877,28 @@ export class CopioEngine extends EventTarget {
           orientation = await extractExif(file);
         } catch {}
 
+        let initialEdits = { crop: null, rotation: 0, filter: 'none' };
+        if (options.prefilledQuad) {
+          initialEdits.quad = cloneQuad(options.prefilledQuad);
+          initialEdits.crop = quadToCropRect(options.prefilledQuad);
+        } else if (options.autoCrop) {
+          try {
+            const edgeService = this.getService('edge');
+            if (edgeService && typeof edgeService.detect === 'function') {
+              const res = await edgeService.detect(base64);
+              if (res && res.quad && res.confidence >= 0.45 && !res.isFallback) {
+                initialEdits.quad = cloneQuad(res.quad);
+                initialEdits.crop = quadToCropRect(res.quad);
+              }
+            }
+          } catch {}
+        }
+
         newPages.push({
           id: randomId(),
           src: base64,
           originalSrc: base64,
-          edits: { crop: null, rotation: 0, filter: 'none' },
+          edits: initialEdits,
           type: 'image',
           name: /** @type {any} */ (file).name || 'Captured Image',
           orientation,
@@ -1142,6 +1184,7 @@ export {
   EdgeDetectorPort,
   DEFAULT_FALLBACK_QUAD,
   cloneQuad,
+  quadToCropRect,
   NullEdgeDetectorAdapter,
   Document,
   Page,

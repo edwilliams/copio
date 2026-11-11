@@ -23,6 +23,7 @@ export const COPIO_EVENTS = {
   SYNC_CONNECTED: 'copio:sync-connected',
   HANDOFF_CONNECTED: 'copio:handoff-connected',
   CONNECTION_INFO: 'copio:connection-info',
+  EDGE_DETECTED: 'copio:edge-detected',
   MIGRATION: 'copio:migration',
   ERROR: 'copio:error',
 };
@@ -99,6 +100,12 @@ export function dispatchCopioEvent(target, eventName, detail = {}) {
  * @typedef {Object} CopioConnectionInfoDetail
  * @property {'direct'|'turn'} transport - Transport candidate type ('direct' or 'turn')
  * @property {number} [rttMs] - Round-trip time in milliseconds
+ * 
+ * @typedef {Object} CopioEdgeDetectedDetail
+ * @property {import('./core.js').EdgeQuad} quad - Detected normalized [0, 1] quadrilateral
+ * @property {number} confidence - Detection confidence score in [0, 1]
+ * @property {number} [durationMs] - Execution latency in milliseconds
+ * @property {boolean} [isStable] - Whether quad has been geometrically stable
  * 
  * @typedef {Object} CopioErrorDetail
  * @property {string} code - Error classification code (e.g. 'FEATURE_DISABLED')

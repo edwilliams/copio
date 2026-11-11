@@ -132,6 +132,7 @@ export {
   EdgeDetectorPort,
   DEFAULT_FALLBACK_QUAD,
   cloneQuad,
+  quadToCropRect,
   NullEdgeDetectorAdapter,
   ScanicWasmEdgeAdapter,
 } from '../js/adapters/edge/index.js';

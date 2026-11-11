@@ -77,6 +77,28 @@ export function cloneQuad(quad = DEFAULT_FALLBACK_QUAD) {
 }
 
 /**
+ * Convert a normalized quad to an axis-aligned normalized crop rectangle { x, y, w, h }.
+ * @param {EdgeQuad} [quad]
+ * @returns {{ x: number, y: number, w: number, h: number }}
+ */
+export function quadToCropRect(quad) {
+  if (!quad) return { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
+  const pts = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
+  const minX = Math.max(0, Math.min(...pts.map((p) => Number(p?.x ?? 0))));
+  const maxX = Math.min(1, Math.max(...pts.map((p) => Number(p?.x ?? 1))));
+  const minY = Math.max(0, Math.min(...pts.map((p) => Number(p?.y ?? 0))));
+  const maxY = Math.min(1, Math.max(...pts.map((p) => Number(p?.y ?? 1))));
+  const w = Math.max(0.01, Math.min(1 - minX, maxX - minX));
+  const h = Math.max(0.01, Math.min(1 - minY, maxY - minY));
+  return {
+    x: Math.round(minX * 1000) / 1000,
+    y: Math.round(minY * 1000) / 1000,
+    w: Math.round(w * 1000) / 1000,
+    h: Math.round(h * 1000) / 1000,
+  };
+}
+
+/**
  * Base contract for EdgeDetectorPort implementations.
  */
 export class EdgeDetectorPort {

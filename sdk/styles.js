@@ -448,6 +448,28 @@ export const scannerCss = `
   z-index: 1;
 }
 
+/* Live Viewfinder SVG Quad Overlay (CPO-076) */
+.copio-live-quad-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+.copio-live-quad-polygon {
+  fill: rgba(56, 189, 248, 0.16);
+  stroke: var(--copio-color-primary, #38bdf8);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.copio-camera-feed.is-detected .copio-live-quad-polygon {
+  fill: rgba(34, 197, 94, 0.18);
+  stroke: #22c55e;
+}
+
 .copio-camera-placeholder {
   position: relative;
   z-index: 2;
