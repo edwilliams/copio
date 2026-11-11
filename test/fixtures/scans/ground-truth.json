@@ -1,0 +1,1505 @@
+{
+  "formatVersion": 1,
+  "dataset": "copio-scans-v1",
+  "description": "Shared labelled 32-image real-photo document scan fixture set for CPO-073 (edge spike), CPO-074 (auto pre-crop), CPO-071 (adaptive B&W filter), and CPO-075 (auto-shutter).",
+  "totalImages": 32,
+  "categories": {
+    "receipt": 11,
+    "a4_document": 11,
+    "id_card": 10
+  },
+  "cpo071Fixtures": {
+    "shadowed_receipt": "receipt_01.jpg",
+    "angled_white_page": "a4_doc_01.jpg",
+    "id_card": "id_card_01.jpg",
+    "yellow_paper": "a4_doc_03.jpg",
+    "low_light": "a4_doc_05.jpg"
+  },
+  "images": {
+    "receipt_01.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "flat",
+        "low_light",
+        "shadowed_receipt"
+      ],
+      "description": "Supermarket thermal receipt on dark surface under dim uneven lighting",
+      "corners": {
+        "topLeft": {
+          "x": 57.79,
+          "y": 230.42
+        },
+        "topRight": {
+          "x": 509.15,
+          "y": 226.33
+        },
+        "bottomRight": {
+          "x": 574.42,
+          "y": 846.34
+        },
+        "bottomLeft": {
+          "x": 11.35,
+          "y": 856.67
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.100335,
+          "y": 0.225019
+        },
+        "topRight": {
+          "x": 0.883936,
+          "y": 0.221028
+        },
+        "bottomRight": {
+          "x": 0.997256,
+          "y": 0.826506
+        },
+        "bottomLeft": {
+          "x": 0.019712,
+          "y": 0.836596
+        }
+      }
+    },
+    "receipt_02.jpg": {
+      "width": 1024,
+      "height": 768,
+      "category": "receipt",
+      "conditions": [
+        "flat",
+        "low_contrast",
+        "yellow_paper"
+      ],
+      "description": "Wide horizontal receipt slip on warm wood-toned desk",
+      "corners": {
+        "topLeft": {
+          "x": 206.12,
+          "y": 275.01
+        },
+        "topRight": {
+          "x": 858.6,
+          "y": 242.45
+        },
+        "bottomRight": {
+          "x": 897.79,
+          "y": 528.75
+        },
+        "bottomLeft": {
+          "x": 184.31,
+          "y": 546.7
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.201287,
+          "y": 0.358088
+        },
+        "topRight": {
+          "x": 0.83848,
+          "y": 0.315686
+        },
+        "bottomRight": {
+          "x": 0.876746,
+          "y": 0.68848
+        },
+        "bottomLeft": {
+          "x": 0.179994,
+          "y": 0.711846
+        }
+      }
+    },
+    "receipt_03.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "angled",
+        "low_light",
+        "shadowed_receipt"
+      ],
+      "description": "Long retail receipt at slight skew on dark textured desk",
+      "corners": {
+        "topLeft": {
+          "x": 169.73,
+          "y": 313.76
+        },
+        "topRight": {
+          "x": 496.31,
+          "y": 293.84
+        },
+        "bottomRight": {
+          "x": 575.91,
+          "y": 796.52
+        },
+        "bottomLeft": {
+          "x": 211.83,
+          "y": 846.87
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.220997,
+          "y": 0.306403
+        },
+        "topRight": {
+          "x": 0.646242,
+          "y": 0.286949
+        },
+        "bottomRight": {
+          "x": 0.749877,
+          "y": 0.777849
+        },
+        "bottomLeft": {
+          "x": 0.275817,
+          "y": 0.827022
+        }
+      }
+    },
+    "receipt_04.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "angled",
+        "cluttered"
+      ],
+      "description": "Tall thermal receipt held at angle over cluttered surface",
+      "corners": {
+        "topLeft": {
+          "x": 149.18,
+          "y": 2.05
+        },
+        "topRight": {
+          "x": 391.68,
+          "y": 7.17
+        },
+        "bottomRight": {
+          "x": 421.06,
+          "y": 1009.66
+        },
+        "bottomLeft": {
+          "x": 165.31,
+          "y": 983.04
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.259,
+          "y": 0.002
+        },
+        "topRight": {
+          "x": 0.68,
+          "y": 0.007
+        },
+        "bottomRight": {
+          "x": 0.731,
+          "y": 0.986
+        },
+        "bottomLeft": {
+          "x": 0.287,
+          "y": 0.96
+        }
+      }
+    },
+    "receipt_05.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "flat",
+        "shadowed_receipt"
+      ],
+      "description": "Retail receipt on contrasting tabletop with top shadow gradient",
+      "corners": {
+        "topLeft": {
+          "x": 99.65,
+          "y": 129.02
+        },
+        "topRight": {
+          "x": 429.7,
+          "y": 122.88
+        },
+        "bottomRight": {
+          "x": 456.19,
+          "y": 765.95
+        },
+        "bottomLeft": {
+          "x": 99.65,
+          "y": 773.12
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.173,
+          "y": 0.126
+        },
+        "topRight": {
+          "x": 0.746,
+          "y": 0.12
+        },
+        "bottomRight": {
+          "x": 0.792,
+          "y": 0.748
+        },
+        "bottomLeft": {
+          "x": 0.173,
+          "y": 0.755
+        }
+      }
+    },
+    "receipt_06.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "angled",
+        "low_contrast"
+      ],
+      "description": "Creased thermal receipt with soft edge contrast",
+      "corners": {
+        "topLeft": {
+          "x": 119.81,
+          "y": 161.79
+        },
+        "topRight": {
+          "x": 463.68,
+          "y": 169.98
+        },
+        "bottomRight": {
+          "x": 460.8,
+          "y": 847.87
+        },
+        "bottomLeft": {
+          "x": 106.56,
+          "y": 844.8
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.208,
+          "y": 0.158
+        },
+        "topRight": {
+          "x": 0.805,
+          "y": 0.166
+        },
+        "bottomRight": {
+          "x": 0.8,
+          "y": 0.828
+        },
+        "bottomLeft": {
+          "x": 0.185,
+          "y": 0.825
+        }
+      }
+    },
+    "receipt_07.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "angled",
+        "cluttered"
+      ],
+      "description": "Narrow store receipt surrounded by desk objects",
+      "corners": {
+        "topLeft": {
+          "x": 0.0,
+          "y": 123.7
+        },
+        "topRight": {
+          "x": 396.92,
+          "y": 0.0
+        },
+        "bottomRight": {
+          "x": 580.2,
+          "y": 940.76
+        },
+        "bottomLeft": {
+          "x": 170.49,
+          "y": 1024.0
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.0,
+          "y": 0.120804
+        },
+        "topRight": {
+          "x": 0.516819,
+          "y": 0.0
+        },
+        "bottomRight": {
+          "x": 0.755469,
+          "y": 0.918712
+        },
+        "bottomLeft": {
+          "x": 0.221997,
+          "y": 1.0
+        }
+      }
+    },
+    "receipt_08.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "flat"
+      ],
+      "description": "Clean flat thermal receipt on dark surface",
+      "corners": {
+        "topLeft": {
+          "x": 133.06,
+          "y": 142.34
+        },
+        "topRight": {
+          "x": 426.24,
+          "y": 133.12
+        },
+        "bottomRight": {
+          "x": 463.1,
+          "y": 722.94
+        },
+        "bottomLeft": {
+          "x": 153.22,
+          "y": 733.18
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.231,
+          "y": 0.139
+        },
+        "topRight": {
+          "x": 0.74,
+          "y": 0.13
+        },
+        "bottomRight": {
+          "x": 0.804,
+          "y": 0.706
+        },
+        "bottomLeft": {
+          "x": 0.266,
+          "y": 0.716
+        }
+      }
+    },
+    "receipt_09.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "flat",
+        "low_light"
+      ],
+      "description": "Flat receipt captured in low ambient light",
+      "corners": {
+        "topLeft": {
+          "x": 6.91,
+          "y": 106.5
+        },
+        "topRight": {
+          "x": 530.5,
+          "y": 84.99
+        },
+        "bottomRight": {
+          "x": 525.89,
+          "y": 555.01
+        },
+        "bottomLeft": {
+          "x": 8.06,
+          "y": 513.02
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.012,
+          "y": 0.104
+        },
+        "topRight": {
+          "x": 0.921,
+          "y": 0.083
+        },
+        "bottomRight": {
+          "x": 0.913,
+          "y": 0.542
+        },
+        "bottomLeft": {
+          "x": 0.014,
+          "y": 0.501
+        }
+      }
+    },
+    "receipt_10.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "receipt",
+      "conditions": [
+        "angled",
+        "yellow_paper"
+      ],
+      "description": "Warm-tinted receipt photographed at an angle",
+      "corners": {
+        "topLeft": {
+          "x": 169.73,
+          "y": 189.44
+        },
+        "topRight": {
+          "x": 559.87,
+          "y": 183.3
+        },
+        "bottomRight": {
+          "x": 589.82,
+          "y": 845.82
+        },
+        "bottomLeft": {
+          "x": 155.9,
+          "y": 849.92
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.221,
+          "y": 0.185
+        },
+        "topRight": {
+          "x": 0.729,
+          "y": 0.179
+        },
+        "bottomRight": {
+          "x": 0.768,
+          "y": 0.826
+        },
+        "bottomLeft": {
+          "x": 0.203,
+          "y": 0.83
+        }
+      }
+    },
+    "receipt_11.jpg": {
+      "width": 750,
+      "height": 1000,
+      "category": "receipt",
+      "conditions": [
+        "flat",
+        "cluttered",
+        "low_contrast"
+      ],
+      "description": "Challenging crinkled receipt on wood grain with strong background edges",
+      "corners": {
+        "topLeft": {
+          "x": 160.2,
+          "y": 11.9
+        },
+        "topRight": {
+          "x": 564.3,
+          "y": 12.4
+        },
+        "bottomRight": {
+          "x": 646.8,
+          "y": 988.3
+        },
+        "bottomLeft": {
+          "x": 135.1,
+          "y": 988.3
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.2136,
+          "y": 0.0119
+        },
+        "topRight": {
+          "x": 0.7524,
+          "y": 0.0124
+        },
+        "bottomRight": {
+          "x": 0.8624,
+          "y": 0.9883
+        },
+        "bottomLeft": {
+          "x": 0.180133,
+          "y": 0.9883
+        }
+      }
+    },
+    "a4_doc_01.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "a4_document",
+      "conditions": [
+        "flat",
+        "angled_white_page"
+      ],
+      "description": "White A4 printed page with perspective trapezoid on warm tabletop",
+      "corners": {
+        "topLeft": {
+          "x": 132.67,
+          "y": 119.94
+        },
+        "topRight": {
+          "x": 615.62,
+          "y": 125.7
+        },
+        "bottomRight": {
+          "x": 731.84,
+          "y": 865.02
+        },
+        "bottomLeft": {
+          "x": 39.04,
+          "y": 880.38
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.17275,
+          "y": 0.117125
+        },
+        "topRight": {
+          "x": 0.801583,
+          "y": 0.12275
+        },
+        "bottomRight": {
+          "x": 0.952917,
+          "y": 0.84475
+        },
+        "bottomLeft": {
+          "x": 0.050833,
+          "y": 0.85975
+        }
+      }
+    },
+    "a4_doc_02.jpg": {
+      "width": 1024,
+      "height": 768,
+      "category": "a4_document",
+      "conditions": [
+        "flat"
+      ],
+      "description": "Printed document sheet lying flat on dark desk surface",
+      "corners": {
+        "topLeft": {
+          "x": 104.94,
+          "y": 73.35
+        },
+        "topRight": {
+          "x": 914.38,
+          "y": 82.98
+        },
+        "bottomRight": {
+          "x": 951.47,
+          "y": 726.81
+        },
+        "bottomLeft": {
+          "x": 64.5,
+          "y": 737.79
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.102482,
+          "y": 0.095507
+        },
+        "topRight": {
+          "x": 0.892953,
+          "y": 0.108047
+        },
+        "bottomRight": {
+          "x": 0.929167,
+          "y": 0.946364
+        },
+        "bottomLeft": {
+          "x": 0.06299,
+          "y": 0.960662
+        }
+      }
+    },
+    "a4_doc_03.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "a4_document",
+      "conditions": [
+        "angled",
+        "angled_white_page",
+        "yellow_paper"
+      ],
+      "description": "Strongly angled A4 document on warm wooden desk",
+      "corners": {
+        "topLeft": {
+          "x": 27.55,
+          "y": 202.13
+        },
+        "topRight": {
+          "x": 481.47,
+          "y": 127.69
+        },
+        "bottomRight": {
+          "x": 741.43,
+          "y": 659.73
+        },
+        "bottomLeft": {
+          "x": 256.63,
+          "y": 871.84
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.035866,
+          "y": 0.197396
+        },
+        "topRight": {
+          "x": 0.62692,
+          "y": 0.124694
+        },
+        "bottomRight": {
+          "x": 0.9654,
+          "y": 0.644271
+        },
+        "bottomLeft": {
+          "x": 0.33415,
+          "y": 0.851409
+        }
+      }
+    },
+    "a4_doc_04.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "a4_document",
+      "conditions": [
+        "flat",
+        "low_contrast",
+        "yellow_paper"
+      ],
+      "description": "A4 sheet on light warm background with low border contrast",
+      "corners": {
+        "topLeft": {
+          "x": 110.49,
+          "y": 106.42
+        },
+        "topRight": {
+          "x": 619.42,
+          "y": 100.77
+        },
+        "bottomRight": {
+          "x": 679.12,
+          "y": 986.6
+        },
+        "bottomLeft": {
+          "x": 44.11,
+          "y": 984.91
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.143873,
+          "y": 0.103922
+        },
+        "topRight": {
+          "x": 0.806536,
+          "y": 0.098407
+        },
+        "bottomRight": {
+          "x": 0.884273,
+          "y": 0.96348
+        },
+        "bottomLeft": {
+          "x": 0.057435,
+          "y": 0.961826
+        }
+      }
+    },
+    "a4_doc_05.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "a4_document",
+      "conditions": [
+        "flat",
+        "low_light"
+      ],
+      "description": "Full-frame A4 document page under dim indoor illumination",
+      "corners": {
+        "topLeft": {
+          "x": 19.0,
+          "y": 41.6
+        },
+        "topRight": {
+          "x": 759.7,
+          "y": 45.83
+        },
+        "bottomRight": {
+          "x": 762.51,
+          "y": 1011.6
+        },
+        "bottomLeft": {
+          "x": 5.93,
+          "y": 1008.55
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.024743,
+          "y": 0.040625
+        },
+        "topRight": {
+          "x": 0.989198,
+          "y": 0.044753
+        },
+        "bottomRight": {
+          "x": 0.99285,
+          "y": 0.987886
+        },
+        "bottomLeft": {
+          "x": 0.007716,
+          "y": 0.984915
+        }
+      }
+    },
+    "a4_doc_06.jpg": {
+      "width": 768,
+      "height": 1024,
+      "category": "a4_document",
+      "conditions": [
+        "angled",
+        "cluttered",
+        "angled_white_page"
+      ],
+      "description": "Skewed A4 page with surrounding desk clutter",
+      "corners": {
+        "topLeft": {
+          "x": 30.9,
+          "y": 229.4
+        },
+        "topRight": {
+          "x": 570.4,
+          "y": 152.6
+        },
+        "bottomRight": {
+          "x": 727.2,
+          "y": 858.6
+        },
+        "bottomLeft": {
+          "x": 132.7,
+          "y": 985.0
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.040234,
+          "y": 0.224023
+        },
+        "topRight": {
+          "x": 0.742708,
+          "y": 0.149023
+        },
+        "bottomRight": {
+          "x": 0.946875,
+          "y": 0.838477
+        },
+        "bottomLeft": {
+          "x": 0.172786,
+          "y": 0.961914
+        }
+      }
+    },
+    "a4_doc_07.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "a4_document",
+      "conditions": [
+        "angled",
+        "low_contrast"
+      ],
+      "description": "Angled white sheet on neutral surface",
+      "corners": {
+        "topLeft": {
+          "x": 145.28,
+          "y": 52.48
+        },
+        "topRight": {
+          "x": 616.96,
+          "y": 186.24
+        },
+        "bottomRight": {
+          "x": 599.04,
+          "y": 586.24
+        },
+        "bottomLeft": {
+          "x": 32.0,
+          "y": 516.48
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.227,
+          "y": 0.082
+        },
+        "topRight": {
+          "x": 0.964,
+          "y": 0.291
+        },
+        "bottomRight": {
+          "x": 0.936,
+          "y": 0.916
+        },
+        "bottomLeft": {
+          "x": 0.05,
+          "y": 0.807
+        }
+      }
+    },
+    "a4_doc_08.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "a4_document",
+      "conditions": [
+        "angled",
+        "cluttered"
+      ],
+      "description": "A4 document photographed at oblique angle over patterned floor",
+      "corners": {
+        "topLeft": {
+          "x": 128.0,
+          "y": 53.12
+        },
+        "topRight": {
+          "x": 583.68,
+          "y": 79.36
+        },
+        "bottomRight": {
+          "x": 490.24,
+          "y": 573.44
+        },
+        "bottomLeft": {
+          "x": 53.12,
+          "y": 581.76
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.2,
+          "y": 0.083
+        },
+        "topRight": {
+          "x": 0.912,
+          "y": 0.124
+        },
+        "bottomRight": {
+          "x": 0.766,
+          "y": 0.896
+        },
+        "bottomLeft": {
+          "x": 0.083,
+          "y": 0.909
+        }
+      }
+    },
+    "a4_doc_09.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "a4_document",
+      "conditions": [
+        "flat"
+      ],
+      "description": "Centered A4 form on high-contrast surface",
+      "corners": {
+        "topLeft": {
+          "x": 213.76,
+          "y": 119.68
+        },
+        "topRight": {
+          "x": 531.2,
+          "y": 175.36
+        },
+        "bottomRight": {
+          "x": 435.2,
+          "y": 528.64
+        },
+        "bottomLeft": {
+          "x": 87.04,
+          "y": 468.48
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.334,
+          "y": 0.187
+        },
+        "topRight": {
+          "x": 0.83,
+          "y": 0.274
+        },
+        "bottomRight": {
+          "x": 0.68,
+          "y": 0.826
+        },
+        "bottomLeft": {
+          "x": 0.136,
+          "y": 0.732
+        }
+      }
+    },
+    "a4_doc_10.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "a4_document",
+      "conditions": [
+        "angled",
+        "low_light"
+      ],
+      "description": "Skewed A4 page in shadowed indoor lighting",
+      "corners": {
+        "topLeft": {
+          "x": 92.8,
+          "y": 81.28
+        },
+        "topRight": {
+          "x": 549.12,
+          "y": 33.28
+        },
+        "bottomRight": {
+          "x": 609.92,
+          "y": 607.36
+        },
+        "bottomLeft": {
+          "x": 36.48,
+          "y": 577.92
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.145,
+          "y": 0.127
+        },
+        "topRight": {
+          "x": 0.858,
+          "y": 0.052
+        },
+        "bottomRight": {
+          "x": 0.953,
+          "y": 0.949
+        },
+        "bottomLeft": {
+          "x": 0.057,
+          "y": 0.903
+        }
+      }
+    },
+    "a4_doc_11.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "a4_document",
+      "conditions": [
+        "angled",
+        "cluttered",
+        "low_contrast"
+      ],
+      "description": "Challenging strongly rotated document on low-contrast background",
+      "corners": {
+        "topLeft": {
+          "x": 21.6,
+          "y": 195.3
+        },
+        "topRight": {
+          "x": 299.9,
+          "y": 56.6
+        },
+        "bottomRight": {
+          "x": 586.5,
+          "y": 442.4
+        },
+        "bottomLeft": {
+          "x": 329.4,
+          "y": 550.6
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.03375,
+          "y": 0.305156
+        },
+        "topRight": {
+          "x": 0.468594,
+          "y": 0.088438
+        },
+        "bottomRight": {
+          "x": 0.916406,
+          "y": 0.69125
+        },
+        "bottomLeft": {
+          "x": 0.514687,
+          "y": 0.860313
+        }
+      }
+    },
+    "id_card_01.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "id_card",
+      "conditions": [
+        "flat",
+        "id_card",
+        "low_light"
+      ],
+      "description": "ID card centered on dark surface",
+      "corners": {
+        "topLeft": {
+          "x": 203.6,
+          "y": 194.5
+        },
+        "topRight": {
+          "x": 458.0,
+          "y": 187.0
+        },
+        "bottomRight": {
+          "x": 463.8,
+          "y": 467.9
+        },
+        "bottomLeft": {
+          "x": 156.9,
+          "y": 453.0
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.318125,
+          "y": 0.303906
+        },
+        "topRight": {
+          "x": 0.715625,
+          "y": 0.292187
+        },
+        "bottomRight": {
+          "x": 0.724688,
+          "y": 0.731094
+        },
+        "bottomLeft": {
+          "x": 0.245156,
+          "y": 0.707812
+        }
+      }
+    },
+    "id_card_02.jpg": {
+      "width": 880,
+      "height": 660,
+      "category": "id_card",
+      "conditions": [
+        "angled",
+        "id_card"
+      ],
+      "description": "Perspective-skewed card on dark matte background",
+      "corners": {
+        "topLeft": {
+          "x": 314.5,
+          "y": 83.3
+        },
+        "topRight": {
+          "x": 645.9,
+          "y": 101.1
+        },
+        "bottomRight": {
+          "x": 647.2,
+          "y": 590.7
+        },
+        "bottomLeft": {
+          "x": 156.2,
+          "y": 527.0
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.357386,
+          "y": 0.126212
+        },
+        "topRight": {
+          "x": 0.733977,
+          "y": 0.153182
+        },
+        "bottomRight": {
+          "x": 0.735455,
+          "y": 0.895
+        },
+        "bottomLeft": {
+          "x": 0.1775,
+          "y": 0.798485
+        }
+      }
+    },
+    "id_card_03.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "id_card",
+      "conditions": [
+        "angled",
+        "id_card",
+        "cluttered"
+      ],
+      "description": "National ID card held at angle over background clutter",
+      "corners": {
+        "topLeft": {
+          "x": 49.92,
+          "y": 17.92
+        },
+        "topRight": {
+          "x": 513.92,
+          "y": 26.24
+        },
+        "bottomRight": {
+          "x": 537.6,
+          "y": 570.88
+        },
+        "bottomLeft": {
+          "x": 25.6,
+          "y": 590.72
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.078,
+          "y": 0.028
+        },
+        "topRight": {
+          "x": 0.803,
+          "y": 0.041
+        },
+        "bottomRight": {
+          "x": 0.84,
+          "y": 0.892
+        },
+        "bottomLeft": {
+          "x": 0.04,
+          "y": 0.923
+        }
+      }
+    },
+    "id_card_04.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "id_card",
+      "conditions": [
+        "flat",
+        "id_card"
+      ],
+      "description": "ID card captured in portrait mobile frame",
+      "corners": {
+        "topLeft": {
+          "x": 34.9,
+          "y": 264.68
+        },
+        "topRight": {
+          "x": 563.65,
+          "y": 289.18
+        },
+        "bottomRight": {
+          "x": 549.16,
+          "y": 665.93
+        },
+        "bottomLeft": {
+          "x": 11.45,
+          "y": 635.17
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.060589,
+          "y": 0.258476
+        },
+        "topRight": {
+          "x": 0.978565,
+          "y": 0.282398
+        },
+        "bottomRight": {
+          "x": 0.953403,
+          "y": 0.650323
+        },
+        "bottomLeft": {
+          "x": 0.019875,
+          "y": 0.620286
+        }
+      }
+    },
+    "id_card_05.jpg": {
+      "width": 576,
+      "height": 1024,
+      "category": "id_card",
+      "conditions": [
+        "angled",
+        "id_card",
+        "low_contrast"
+      ],
+      "description": "ID card on low-contrast surface in mobile frame",
+      "corners": {
+        "topLeft": {
+          "x": 89.07,
+          "y": 284.8
+        },
+        "topRight": {
+          "x": 504.26,
+          "y": 281.63
+        },
+        "bottomRight": {
+          "x": 512.07,
+          "y": 534.01
+        },
+        "bottomLeft": {
+          "x": 68.67,
+          "y": 534.37
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.154628,
+          "y": 0.278123
+        },
+        "topRight": {
+          "x": 0.875443,
+          "y": 0.275031
+        },
+        "bottomRight": {
+          "x": 0.889002,
+          "y": 0.521498
+        },
+        "bottomLeft": {
+          "x": 0.119227,
+          "y": 0.521841
+        }
+      }
+    },
+    "id_card_06.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "id_card",
+      "conditions": [
+        "angled",
+        "id_card"
+      ],
+      "description": "Angled ID card with rounded corners",
+      "corners": {
+        "topLeft": {
+          "x": 76.16,
+          "y": 183.68
+        },
+        "topRight": {
+          "x": 531.84,
+          "y": 197.12
+        },
+        "bottomRight": {
+          "x": 526.08,
+          "y": 353.92
+        },
+        "bottomLeft": {
+          "x": 80.0,
+          "y": 362.24
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.119,
+          "y": 0.287
+        },
+        "topRight": {
+          "x": 0.831,
+          "y": 0.308
+        },
+        "bottomRight": {
+          "x": 0.822,
+          "y": 0.553
+        },
+        "bottomLeft": {
+          "x": 0.125,
+          "y": 0.566
+        }
+      }
+    },
+    "id_card_07.jpg": {
+      "width": 657,
+      "height": 369,
+      "category": "id_card",
+      "conditions": [
+        "flat",
+        "id_card",
+        "low_contrast"
+      ],
+      "description": "Close-up flat ID card with subtle background contrast",
+      "corners": {
+        "topLeft": {
+          "x": 149.8,
+          "y": 94.83
+        },
+        "topRight": {
+          "x": 464.5,
+          "y": 96.31
+        },
+        "bottomRight": {
+          "x": 464.5,
+          "y": 291.14
+        },
+        "bottomLeft": {
+          "x": 151.77,
+          "y": 292.99
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.228,
+          "y": 0.257
+        },
+        "topRight": {
+          "x": 0.707,
+          "y": 0.261
+        },
+        "bottomRight": {
+          "x": 0.707,
+          "y": 0.789
+        },
+        "bottomLeft": {
+          "x": 0.231,
+          "y": 0.794
+        }
+      }
+    },
+    "id_card_08.jpg": {
+      "width": 657,
+      "height": 493,
+      "category": "id_card",
+      "conditions": [
+        "angled",
+        "id_card",
+        "cluttered"
+      ],
+      "description": "ID card on textured background",
+      "corners": {
+        "topLeft": {
+          "x": 95.26,
+          "y": 84.8
+        },
+        "topRight": {
+          "x": 562.39,
+          "y": 94.66
+        },
+        "bottomRight": {
+          "x": 586.7,
+          "y": 387.0
+        },
+        "bottomLeft": {
+          "x": 85.41,
+          "y": 403.77
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.145,
+          "y": 0.172
+        },
+        "topRight": {
+          "x": 0.856,
+          "y": 0.192
+        },
+        "bottomRight": {
+          "x": 0.893,
+          "y": 0.785
+        },
+        "bottomLeft": {
+          "x": 0.13,
+          "y": 0.819
+        }
+      }
+    },
+    "id_card_09.jpg": {
+      "width": 640,
+      "height": 640,
+      "category": "id_card",
+      "conditions": [
+        "flat",
+        "id_card",
+        "yellow_paper"
+      ],
+      "description": "Warm-toned ID card on tabletop",
+      "corners": {
+        "topLeft": {
+          "x": 28.8,
+          "y": 125.44
+        },
+        "topRight": {
+          "x": 206.72,
+          "y": 115.84
+        },
+        "bottomRight": {
+          "x": 325.12,
+          "y": 574.72
+        },
+        "bottomLeft": {
+          "x": 151.04,
+          "y": 620.16
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.045,
+          "y": 0.196
+        },
+        "topRight": {
+          "x": 0.323,
+          "y": 0.181
+        },
+        "bottomRight": {
+          "x": 0.508,
+          "y": 0.898
+        },
+        "bottomLeft": {
+          "x": 0.236,
+          "y": 0.969
+        }
+      }
+    },
+    "id_card_10.jpg": {
+      "width": 657,
+      "height": 493,
+      "category": "id_card",
+      "conditions": [
+        "angled",
+        "id_card",
+        "cluttered",
+        "low_contrast"
+      ],
+      "description": "Challenging angled ID card on cluttered surface",
+      "corners": {
+        "topLeft": {
+          "x": 125.49,
+          "y": 121.77
+        },
+        "topRight": {
+          "x": 530.86,
+          "y": 129.66
+        },
+        "bottomRight": {
+          "x": 535.45,
+          "y": 378.13
+        },
+        "bottomLeft": {
+          "x": 130.09,
+          "y": 388.98
+        }
+      },
+      "normalizedCorners": {
+        "topLeft": {
+          "x": 0.191,
+          "y": 0.247
+        },
+        "topRight": {
+          "x": 0.808,
+          "y": 0.263
+        },
+        "bottomRight": {
+          "x": 0.815,
+          "y": 0.767
+        },
+        "bottomLeft": {
+          "x": 0.198,
+          "y": 0.789
+        }
+      }
+    }
+  }
+}
