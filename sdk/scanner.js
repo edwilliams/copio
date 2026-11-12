@@ -391,6 +391,10 @@ export class CopioScanner extends BaseElement {
             <video id="camera-video" autoplay playsinline webkit-playsinline muted style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;"></video>
             <svg class="copio-live-quad-overlay" id="live-quad-overlay" style="display:none;" aria-hidden="true">
               <polygon class="copio-live-quad-polygon" id="live-quad-polygon" points=""></polygon>
+              <circle class="copio-live-quad-corner" id="live-quad-c0" r="5"></circle>
+              <circle class="copio-live-quad-corner" id="live-quad-c1" r="5"></circle>
+              <circle class="copio-live-quad-corner" id="live-quad-c2" r="5"></circle>
+              <circle class="copio-live-quad-corner" id="live-quad-c3" r="5"></circle>
             </svg>
             <slot name="viewfinder">
               <div class="copio-framing-guide" id="framing-guide" data-aspect="${this.aspect}">
@@ -1332,6 +1336,13 @@ export class CopioScanner extends BaseElement {
     if (polygon) {
       polygon.setAttribute('points', '');
     }
+    for (let i = 0; i < 4; i++) {
+      const c = shadow?.getElementById(`live-quad-c${i}`);
+      if (c) {
+        c.removeAttribute('cx');
+        c.removeAttribute('cy');
+      }
+    }
     this.#smoothedQuad = null;
     this.#latestDetectionResult = null;
     this.#consecutiveMisses = 0;
@@ -1350,12 +1361,20 @@ export class CopioScanner extends BaseElement {
     const vW = v?.videoWidth || 640, vH = v?.videoHeight || 480;
     const s = Math.max(fW / vW, fH / vH), rW = vW * s, rH = vH * s;
     const ox = (fW - rW) / 2, oy = (fH - rH) / 2;
-    const pts = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft].map(
+    const corners = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
+    const pts = corners.map(
       (p) => `${(ox + p.x * rW).toFixed(1)},${(oy + p.y * rH).toFixed(1)}`
     );
     svg.setAttribute('viewBox', `0 0 ${fW} ${fH}`);
     svg.style.display = 'block';
     shadow.getElementById('live-quad-polygon')?.setAttribute('points', pts.join(' '));
+    for (let i = 0; i < 4; i++) {
+      const c = shadow.getElementById(`live-quad-c${i}`);
+      if (c) {
+        c.setAttribute('cx', (ox + corners[i].x * rW).toFixed(1));
+        c.setAttribute('cy', (oy + corners[i].y * rH).toFixed(1));
+      }
+    }
     feed.classList.add('is-tracking');
     feed.classList.toggle('is-detected', confidence >= 0.70);
   }

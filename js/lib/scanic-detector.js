@@ -96,7 +96,10 @@ async function detectEdgesFromRgba(rgbaData, width, height, options = {}) {
   let det;
   if (options.detector === "ml") {
     const { detectDocumentMl } = await EA();
-    det = await detectDocumentMl({ data: rgbaData, width, height }, options.ml || options);
+    const imgData = typeof ImageData !== "undefined"
+      ? new ImageData(rgbaData instanceof Uint8ClampedArray ? rgbaData : new Uint8ClampedArray(rgbaData), width, height)
+      : { data: rgbaData, width, height };
+    det = await detectDocumentMl(imgData, options.ml || options);
   } else {
     const prep = prepareScaleAndGrayscaleFromRgba(rgbaData, width, height, maxDim);
     det = await DA(

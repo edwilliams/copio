@@ -423,7 +423,10 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
       if (detectorOptions.detector === 'ml') {
         try {
           const mlMod = await import('../../lib/scanic-mlDetector.js');
-          const det = await mlMod.detectDocumentMl({ data, width, height }, detectorOptions.ml || detectorOptions);
+          const imgData = typeof ImageData !== 'undefined'
+            ? new ImageData(/** @type {any} */ (data instanceof Uint8ClampedArray ? data : new Uint8ClampedArray(data)), width, height)
+            : { data, width, height };
+          const det = await mlMod.detectDocumentMl(imgData, detectorOptions.ml || detectorOptions);
           const corners = det.success && det.corners ? det.corners : null;
           const normalizedCorners = corners ? mod.normalizeCornerQuad(corners, width, height) : null;
           rawResult = {

@@ -911,9 +911,6 @@
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="host-dims-pill" id="active-container-dims">360px × 640px (@container ≤400px)</span>
-            <button type="button" class="seg-btn" id="btn-toggle-camera" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-accent); color:var(--sandbox-accent);" title="Start/Stop live camera stream">
-              📹 Start Camera
-            </button>
             <button type="button" class="seg-btn" id="btn-load-sample" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-border);" title="Load a generated sample document into the scanner workbench">
               ✨ Sample
             </button>
@@ -1102,6 +1099,7 @@
   <script type="module">
     import { COPIO_EVENTS } from './dist/scanner.js';
     import { registerService } from './dist/core.js';
+    import { ScanicWasmEdgeAdapter } from './dist/adapters/edge/scanic-wasm-adapter.js';
     import * as ocrService from './dist/ocr.js';
     import * as exportService from './dist/export.js';
     import './dist/handoff.js';
@@ -1147,7 +1145,9 @@
     window.addEventListener('hashchange', checkMobileHandoffMode);
     const isInitialMobileHandoff = checkMobileHandoffMode();
 
-    // Register optional OCR & PDF/Export ports so workbench OCR and exports work out-of-the-box
+    // Register edge detection, OCR & PDF/Export ports so auto edge detection, workbench OCR, and exports work out-of-the-box
+    const edgeAdapter = new ScanicWasmEdgeAdapter({ detector: 'classical' });
+    registerService('edge', edgeAdapter);
     registerService('ocr', ocrService);
     registerService('pdf', exportService);
     registerService('export', exportService);
@@ -1733,39 +1733,10 @@
       }
     });
 
-    // Toggle Live Camera Stream Button
-    const btnToggleCamera = document.getElementById('btn-toggle-camera');
-    btnToggleCamera?.addEventListener('click', async () => {
-      if (scanner._isCameraActive()) {
-        scanner.stopCamera();
-        btnToggleCamera.textContent = '📹 Start Camera';
-        btnToggleCamera.style.borderColor = 'var(--sandbox-accent)';
-        btnToggleCamera.style.color = 'var(--sandbox-accent)';
-      } else {
-        scanner.stage = 'viewfinder';
-        btnToggleCamera.textContent = '⏳ Starting Camera...';
-        const stream = await scanner.startCamera();
-        if (stream) {
-          btnToggleCamera.textContent = '⏹️ Stop Camera';
-          btnToggleCamera.style.borderColor = '#ef4444';
-          btnToggleCamera.style.color = '#ef4444';
-        } else {
-          btnToggleCamera.textContent = '📹 Start Camera';
-          btnToggleCamera.style.borderColor = 'var(--sandbox-accent)';
-          btnToggleCamera.style.color = 'var(--sandbox-accent)';
-        }
-      }
-    });
-
     // Optional sample generator button in the sandbox header bar (leaves <copio-scanner> Shutter & Import 100% native for real photos/camera)
     document.getElementById('btn-load-sample')?.addEventListener('click', async () => {
       if (scanner._isCameraActive()) {
         scanner.stopCamera();
-        if (btnToggleCamera) {
-          btnToggleCamera.textContent = '📹 Start Camera';
-          btnToggleCamera.style.borderColor = 'var(--sandbox-accent)';
-          btnToggleCamera.style.color = 'var(--sandbox-accent)';
-        }
       }
 
       if (currentScenario === 'handoff') {
@@ -1885,6 +1856,19 @@
         });
         scanner.edgeModel = detectorKey;
         scanner.setAttribute('edge-model', detectorKey);
+        const mobileScannerEl = document.getElementById('mobile-standalone-scanner');
+        if (mobileScannerEl) {
+          mobileScannerEl.edgeModel = detectorKey;
+          mobileScannerEl.setAttribute('edge-model', detectorKey);
+        }
+        if (simulatedScanner) {
+          simulatedScanner.edgeModel = detectorKey;
+          simulatedScanner.setAttribute('edge-model', detectorKey);
+        }
+        edgeAdapter.detector = detectorKey;
+        if (detectorKey === 'ml') {
+          edgeAdapter.preloadMl().catch(() => {});
+        }
         logCustomEvent('edge-detector-backend', {
           backend: detectorKey,
           description: detectorKey === 'ml'

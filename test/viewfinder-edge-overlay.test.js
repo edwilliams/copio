@@ -87,6 +87,10 @@ describe('CPO-076: Auto edge detection — live viewfinder quad overlay & pre-fi
 
       expect(overlay).to.exist;
       expect(polygon).to.exist;
+      expect(shadow.querySelector('#live-quad-c0')).to.exist;
+      expect(shadow.querySelector('#live-quad-c1')).to.exist;
+      expect(shadow.querySelector('#live-quad-c2')).to.exist;
+      expect(shadow.querySelector('#live-quad-c3')).to.exist;
       expect(feed).to.exist;
       expect(overlay.getAttribute('aria-hidden')).to.equal('true');
       expect(scanner.edgeDetection).to.be.true;
@@ -163,6 +167,8 @@ describe('CPO-076: Auto edge detection — live viewfinder quad overlay & pre-fi
       expect(feed.classList.contains('is-tracking')).to.be.true;
       expect(feed.classList.contains('is-detected')).to.be.true;
       expect(polygon.getAttribute('points')).to.not.be.empty;
+      expect(shadow.querySelector('#live-quad-c0').getAttribute('cx')).to.not.be.null;
+      expect(shadow.querySelector('#live-quad-c0').getAttribute('cy')).to.not.be.null;
 
       const liveQuad = scanner.getLiveQuad();
       expect(liveQuad).to.exist;

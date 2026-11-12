@@ -201,6 +201,16 @@ describe('Auto Edge Detection — Worker & EdgeDetectorPort Adapter (CPO-074)', 
     }
   });
 
+  it('supports ML Neural detector backend option and switches cleanly', async () => {
+    const adapter = new ScanicWasmEdgeAdapter({ detector: 'ml' });
+    expect(adapter.detector).to.equal('ml');
+    adapter.detector = 'classical';
+    expect(adapter.detector).to.equal('classical');
+    adapter.detector = 'ml';
+    expect(adapter.detector).to.equal('ml');
+    expect(typeof adapter.preloadMl).to.equal('function');
+  });
+
   it('achieves >= 80% detection accuracy (IoU >= 0.70) across the 32-photo CPO-073 labelled scan test set', async function () {
     this.timeout(30000);
 
