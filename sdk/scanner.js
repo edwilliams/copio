@@ -46,6 +46,7 @@ export class CopioScanner extends BaseElement {
   #wasStreamingBeforeHide = false;
   #grabCanvas = null;
   #edgeDetection = true;
+  #edgeModel = 'classical';
   #autoCrop = true;
   #autoCapture = false;
   #liveEdgeRafId = null;
@@ -93,6 +94,7 @@ export class CopioScanner extends BaseElement {
       'signaling-url',
       'ice-transport-policy',
       'edge-detection',
+      'edge-model',
       'auto-crop',
       'auto-capture',
     ];
@@ -120,6 +122,7 @@ export class CopioScanner extends BaseElement {
       if (this.hasAttribute('ocr')) opts.ocr = this.getAttribute('ocr') !== 'false';
       if (this.hasAttribute('pdf')) opts.pdf = this.getAttribute('pdf') !== 'false';
       if (this.hasAttribute('edge-detection')) this.#edgeDetection = this.getAttribute('edge-detection') !== 'false';
+      if (this.hasAttribute('edge-model')) this.#edgeModel = this.getAttribute('edge-model') === 'ml' ? 'ml' : 'classical';
       if (this.hasAttribute('auto-crop')) this.#autoCrop = this.getAttribute('auto-crop') !== 'false';
       if (this.hasAttribute('auto-capture')) this.#autoCapture = this.getAttribute('auto-capture') !== 'false' && this.getAttribute('auto-capture') !== null;
       for (const k of ['relay-url', 'signaling-url', 'ice-transport-policy']) {
@@ -310,6 +313,9 @@ export class CopioScanner extends BaseElement {
         break;
       case 'edge-detection':
         this.edgeDetection = newValue !== 'false';
+        break;
+      case 'edge-model':
+        this.edgeModel = newValue === 'ml' ? 'ml' : 'classical';
         break;
       case 'auto-crop':
         this.autoCrop = newValue !== 'false';
@@ -595,6 +601,14 @@ export class CopioScanner extends BaseElement {
     // Shutter capture button
     shadow.getElementById('btn-shutter')?.addEventListener('click', async () => {
       await this.#handleShutterClick();
+    });
+
+    // Tap to start camera from placeholder or camera feed in standby
+    shadow.getElementById('camera-feed')?.addEventListener('click', async (e) => {
+      if (e.target && /** @type {HTMLElement} */ (e.target).closest('button, input, a, select')) return;
+      if (!this.#cameraStream && this.#stage === 'viewfinder') {
+        await this.startCamera().catch(() => {});
+      }
     });
 
     // Review pill
@@ -1138,7 +1152,12 @@ export class CopioScanner extends BaseElement {
       return this.#cameraStream;
     }
 
-    const isAutomatedTest = typeof navigator !== 'undefined' && navigator.webdriver === true && !options.force;
+    const isAutomatedTest =
+      typeof window !== 'undefined' &&
+      /** @type {any} */ (window).__WTR_CONFIG__ !== undefined &&
+      typeof navigator !== 'undefined' &&
+      navigator.webdriver === true &&
+      !options.force;
     if (isAutomatedTest) {
       return null;
     }
@@ -1152,14 +1171,20 @@ export class CopioScanner extends BaseElement {
       {
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
         audio: false,
       },
       {
         video: {
           facingMode: { ideal: 'environment' },
+        },
+        audio: false,
+      },
+      {
+        video: {
+          width: { ideal: 1280 },
         },
         audio: false,
       },
@@ -1348,16 +1373,18 @@ export class CopioScanner extends BaseElement {
       const edgeService = this.#engine?.getService('edge') || getRegisteredService('edge');
       if (!edgeService || typeof edgeService.detect !== 'function') return;
 
+      const minConfidence = this.#edgeModel === 'ml' ? 0.40 : 0.45;
       const result = await edgeService.detect(frame, {
         maxProcessingDimension: 480,
         enableDetectionCascade: false,
-        minConfidence: 0.45,
+        minConfidence,
         fallbackOnLowConfidence: false,
+        detector: this.#edgeModel,
       });
 
       if (!this.#cameraStream || this.#stage !== 'viewfinder' || !this.#edgeDetection) return;
 
-      if (result && result.quad && result.confidence >= 0.45 && !result.isFallback) {
+      if (result && result.quad && result.confidence >= minConfidence && !result.isFallback) {
         this.#consecutiveMisses = 0;
         const alpha = 0.35;
         if (!this.#smoothedQuad) {
@@ -1462,7 +1489,8 @@ export class CopioScanner extends BaseElement {
       }
 
       // Cache current live tracked quad at snapshot time
-      const captureQuad = this.#latestDetectionResult?.confidence >= 0.45
+      const minConfidence = this.#edgeModel === 'ml' ? 0.40 : 0.45;
+      const captureQuad = this.#latestDetectionResult?.confidence >= minConfidence
         ? cloneQuad(this.#latestDetectionResult.quad)
         : null;
 
@@ -2251,12 +2279,20 @@ export class CopioScanner extends BaseElement {
     const shadow = this.shadowRoot;
     const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
     if (videoEl) {
+      videoEl.muted = true;
+      videoEl.volume = 0;
+      videoEl.playsInline = true;
+      videoEl.setAttribute('playsinline', '');
+      videoEl.setAttribute('webkit-playsinline', '');
+      videoEl.setAttribute('muted', '');
       try {
         videoEl.srcObject = (typeof MediaStream !== 'undefined' && stream instanceof MediaStream) ? stream : null;
       } catch {}
       videoEl.style.display = stream ? 'block' : 'none';
       if (stream && videoEl.srcObject) {
-        videoEl.play().catch(() => {});
+        videoEl.play().catch((err) => {
+          console.warn('[CopioScanner] Live video element play() error:', err);
+        });
       }
     }
     const placeholder = shadow?.querySelector('.copio-camera-placeholder');
@@ -2692,6 +2728,25 @@ export class CopioScanner extends BaseElement {
         this.#hideLiveQuadOverlay();
       } else if (this.#cameraStream && this.#stage === 'viewfinder') {
         this.#startLiveEdgeDetection();
+      }
+    }
+  }
+
+  get edgeModel() {
+    return this.#edgeModel;
+  }
+
+  /** @param {'classical'|'ml'|string|null|undefined} val */
+  set edgeModel(val) {
+    const next = val === 'ml' ? 'ml' : 'classical';
+    if (this.#edgeModel !== next) {
+      this.#edgeModel = next;
+      this.#syncAttr('edge-model', next);
+      if (next === 'ml') {
+        const edgeService = this.#engine?.getService('edge') || getRegisteredService('edge');
+        if (edgeService && typeof edgeService.preloadMl === 'function') {
+          edgeService.preloadMl().catch(() => {});
+        }
       }
     }
   }

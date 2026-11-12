@@ -383,4 +383,55 @@ describe('CPO-076: Auto edge detection — live viewfinder quad overlay & pre-fi
       scanner.close();
     });
   });
+
+  describe('Edge Model Backend Configuration (Classical WASM vs ML Neural)', () => {
+    it('defaults edgeModel to "classical" and synchronizes "edge-model" attribute', async () => {
+      const scanner = document.createElement('copio-scanner');
+      container.appendChild(scanner);
+
+      expect(scanner.edgeModel).to.equal('classical');
+      scanner.edgeModel = 'ml';
+      expect(scanner.getAttribute('edge-model')).to.equal('ml');
+
+      scanner.setAttribute('edge-model', 'classical');
+      expect(scanner.edgeModel).to.equal('classical');
+
+      scanner.close();
+    });
+
+    it('passes configured detector backend ("ml") to the edge detector during frame processing', async () => {
+      const scanner = document.createElement('copio-scanner');
+      scanner.setAttribute('edge-model', 'ml');
+      container.appendChild(scanner);
+
+      let capturedDetectorOption = null;
+      const trackingAdapter = {
+        async detect(_image, options) {
+          capturedDetectorOption = options.detector;
+          return {
+            quad: {
+              topLeft: { x: 0.1, y: 0.1 },
+              topRight: { x: 0.9, y: 0.1 },
+              bottomRight: { x: 0.9, y: 0.9 },
+              bottomLeft: { x: 0.1, y: 0.9 },
+            },
+            confidence: 0.95,
+            isFallback: false,
+          };
+        },
+      };
+      scanner.engine.setService('edge', trackingAdapter);
+
+      const stream = createMockCameraStream(640, 480);
+      scanner.setCameraStream(stream);
+
+      // Wait for edge-detected event to confirm frame was processed with 'ml'
+      await new Promise((resolve) => {
+        scanner.addEventListener(COPIO_EVENTS.EDGE_DETECTED, resolve, { once: true });
+      });
+
+      expect(capturedDetectorOption).to.equal('ml');
+      scanner.close();
+    });
+  });
 });

@@ -868,6 +868,19 @@
           </div>
         </div>
 
+        <!-- Edge Detector Backend Switcher -->
+        <div class="control-group" role="group" aria-label="Edge Detector Backend">
+          <span class="control-label">Detector</span>
+          <div class="seg-group">
+            <button type="button" class="seg-btn" data-detector-btn="classical" aria-pressed="true" title="Fast classical WASM edge cascade">
+              Classical
+            </button>
+            <button type="button" class="seg-btn" data-detector-btn="ml" aria-pressed="false" title="Neural edge detector (DocCornerNet ~1.9MB ONNX model)">
+              🧠 ML Neural <span class="sandbox-brand-tag" style="font-size:9px; padding:1px 4px; margin-left:2px;">NEW</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Theme Switcher -->
         <div class="control-group" role="group" aria-label="Theme">
           <span class="control-label">Theme</span>
@@ -898,7 +911,10 @@
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="host-dims-pill" id="active-container-dims">360px × 640px (@container ≤400px)</span>
-            <button type="button" class="seg-btn" id="btn-load-sample" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-border);" title="Load a generated sample document into the scanner">
+            <button type="button" class="seg-btn" id="btn-toggle-camera" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-accent); color:var(--sandbox-accent);" title="Start/Stop live camera stream">
+              📹 Start Camera
+            </button>
+            <button type="button" class="seg-btn" id="btn-load-sample" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-border);" title="Load a generated sample document into the scanner workbench">
               ✨ Sample
             </button>
           </div>
@@ -1717,8 +1733,41 @@
       }
     });
 
+    // Toggle Live Camera Stream Button
+    const btnToggleCamera = document.getElementById('btn-toggle-camera');
+    btnToggleCamera?.addEventListener('click', async () => {
+      if (scanner._isCameraActive()) {
+        scanner.stopCamera();
+        btnToggleCamera.textContent = '📹 Start Camera';
+        btnToggleCamera.style.borderColor = 'var(--sandbox-accent)';
+        btnToggleCamera.style.color = 'var(--sandbox-accent)';
+      } else {
+        scanner.stage = 'viewfinder';
+        btnToggleCamera.textContent = '⏳ Starting Camera...';
+        const stream = await scanner.startCamera();
+        if (stream) {
+          btnToggleCamera.textContent = '⏹️ Stop Camera';
+          btnToggleCamera.style.borderColor = '#ef4444';
+          btnToggleCamera.style.color = '#ef4444';
+        } else {
+          btnToggleCamera.textContent = '📹 Start Camera';
+          btnToggleCamera.style.borderColor = 'var(--sandbox-accent)';
+          btnToggleCamera.style.color = 'var(--sandbox-accent)';
+        }
+      }
+    });
+
     // Optional sample generator button in the sandbox header bar (leaves <copio-scanner> Shutter & Import 100% native for real photos/camera)
     document.getElementById('btn-load-sample')?.addEventListener('click', async () => {
+      if (scanner._isCameraActive()) {
+        scanner.stopCamera();
+        if (btnToggleCamera) {
+          btnToggleCamera.textContent = '📹 Start Camera';
+          btnToggleCamera.style.borderColor = 'var(--sandbox-accent)';
+          btnToggleCamera.style.color = 'var(--sandbox-accent)';
+        }
+      }
+
       if (currentScenario === 'handoff') {
         if (!splitViewActive) {
           setSplitView(true);
@@ -1747,9 +1796,10 @@
       const dataUrl = generateDocumentDataUrl(kind);
       const file = await dataUrlToFile(dataUrl, filename);
       await scanner.addFiles([file]);
+      scanner.stage = 'workbench';
     });
 
-    async function loadScenario(scenarioKey) {
+    async function loadScenario(scenarioKey, options = {}) {
       currentScenario = scenarioKey;
       const cfg = SCENARIOS[scenarioKey];
 
@@ -1783,22 +1833,23 @@
 
       updateMountBarUi();
 
-      // Seed scenario with realistic sample document(s) and open workbench preview
-      if (scenarioKey === 'receipt') {
-        const file = await dataUrlToFile(generateDocumentDataUrl('receipt'), 'receipt.png');
-        await scanner.addFiles([file]);
-        scanner.stage = 'workbench';
-      } else if (scenarioKey === 'card') {
-        const front = await dataUrlToFile(generateDocumentDataUrl('card-front'), 'id-card-front.png');
-        const back = await dataUrlToFile(generateDocumentDataUrl('card-back'), 'id-card-back.png');
-        await scanner.addFiles([front, back]);
-        scanner.stage = 'workbench';
-      } else if (scenarioKey === 'invoice') {
-        const p1 = await dataUrlToFile(generateDocumentDataUrl('invoice-1'), 'invoice-page-1.png');
-        const p2 = await dataUrlToFile(generateDocumentDataUrl('invoice-2'), 'invoice-page-2.png');
-        const p3 = await dataUrlToFile(generateDocumentDataUrl('invoice-3'), 'invoice-page-3.png');
-        await scanner.addFiles([p1, p2, p3]);
-        scanner.stage = 'workbench';
+      if (options.seedSample) {
+        if (scenarioKey === 'receipt') {
+          const file = await dataUrlToFile(generateDocumentDataUrl('receipt'), 'receipt.png');
+          await scanner.addFiles([file]);
+          scanner.stage = 'workbench';
+        } else if (scenarioKey === 'card') {
+          const front = await dataUrlToFile(generateDocumentDataUrl('card-front'), 'id-card-front.png');
+          const back = await dataUrlToFile(generateDocumentDataUrl('card-back'), 'id-card-back.png');
+          await scanner.addFiles([front, back]);
+          scanner.stage = 'workbench';
+        } else if (scenarioKey === 'invoice') {
+          const p1 = await dataUrlToFile(generateDocumentDataUrl('invoice-1'), 'invoice-page-1.png');
+          const p2 = await dataUrlToFile(generateDocumentDataUrl('invoice-2'), 'invoice-page-2.png');
+          const p3 = await dataUrlToFile(generateDocumentDataUrl('invoice-3'), 'invoice-page-3.png');
+          await scanner.addFiles([p1, p2, p3]);
+          scanner.stage = 'workbench';
+        }
       }
     }
 
@@ -1821,7 +1872,25 @@
         document.querySelectorAll('[data-scenario-btn]').forEach((b) => {
           b.setAttribute('aria-pressed', String(b === btn));
         });
-        await loadScenario(scenarioKey);
+        await loadScenario(scenarioKey, { seedSample: true });
+      });
+    });
+
+    // Edge Detector Switcher (Classical vs ML Neural)
+    document.querySelectorAll('[data-detector-btn]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const detectorKey = btn.getAttribute('data-detector-btn');
+        document.querySelectorAll('[data-detector-btn]').forEach((b) => {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        scanner.edgeModel = detectorKey;
+        scanner.setAttribute('edge-model', detectorKey);
+        logCustomEvent('edge-detector-backend', {
+          backend: detectorKey,
+          description: detectorKey === 'ml'
+            ? 'DocCornerNet ONNX SimCC Neural Corner Detector'
+            : 'Scanic Classical Canny + Contour WASM Cascade',
+        });
       });
     });
 
@@ -1870,9 +1939,9 @@
       }).catch(() => {});
     }
 
-    // Initialize default scenario unless opened directly in standalone mobile handoff mode
+    // Initialize default scenario in live viewfinder mode unless opened directly in standalone mobile handoff mode
     if (!isInitialMobileHandoff) {
-      loadScenario('receipt');
+      loadScenario('receipt', { seedSample: false });
     }
   </script>
 </body>

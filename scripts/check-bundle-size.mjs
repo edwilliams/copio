@@ -38,7 +38,7 @@ const BUDGETS = {
   },
   cdn: {
     entry: path.join(distDir, 'cdn.js'),
-    maxGzipKb: 200,
+    maxGzipKb: 210,
     label: 'Standalone CDN Bundle',
   },
 };

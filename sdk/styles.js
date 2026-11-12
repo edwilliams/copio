@@ -483,6 +483,13 @@ export const scannerCss = `
   color: var(--copio-color-text-muted);
   font-size: 12px;
   font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--copio-transition-fast), transform var(--copio-transition-fast);
+}
+.copio-camera-placeholder:hover {
+  color: var(--copio-color-text);
+  transform: scale(1.02);
 }
 
 .copio-status-dot {

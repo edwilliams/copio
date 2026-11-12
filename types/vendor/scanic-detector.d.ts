@@ -19,6 +19,7 @@ export interface ScanicDetectResult {
   height: number;
   durationMs: number;
   message: string;
+  detector?: 'classical' | 'ml';
 }
 
 export function initialize(): Promise<unknown>;

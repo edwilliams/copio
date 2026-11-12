@@ -199,7 +199,7 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
   #pendingRequests = new Map();
 
   /**
-   * @param {import('./edge-detector-port.js').EdgeDetectOptions & { workerPath?: string, useWorker?: boolean }} [options]
+   * @param {import('./edge-detector-port.js').EdgeDetectOptions & { workerPath?: string, useWorker?: boolean, detector?: 'classical' | 'ml' }} [options]
    */
   constructor(options = {}) {
     super();
@@ -209,8 +209,34 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
       minConfidence: 0.55,
       fallbackOnLowConfidence: false,
       useWorker: true,
+      detector: 'classical',
       ...options,
     };
+  }
+
+  get detector() {
+    return this.#defaultOptions.detector || 'classical';
+  }
+
+  set detector(val) {
+    this.#defaultOptions.detector = val === 'ml' ? 'ml' : 'classical';
+  }
+
+  /**
+   * Warm up / preload the ML neural model (DocCornerNet) ahead of time.
+   * @param {Object} [mlOptions]
+   * @returns {Promise<void>}
+   */
+  async preloadMl(mlOptions = {}) {
+    const worker = await this.getEdgeWorker();
+    if (worker && !('isInlineFallback' in worker)) {
+      await this.#sendWorkerRequest({ type: 'init', preloadMl: true, mlOptions });
+    } else {
+      try {
+        const mlMod = await import('../../lib/scanic-mlDetector.js');
+        await mlMod.initializeMl(mlOptions);
+      } catch {}
+    }
   }
 
   /**
@@ -365,6 +391,7 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
     const { data, width, height } = await extractRgbaFromSource(image);
     const worker = await this.getEdgeWorker();
 
+    const detectorBackend = mergedOptions.detector || this.#defaultOptions.detector || 'classical';
     const detectorOptions = {
       maxProcessingDimension: mergedOptions.maxProcessingDimension ?? 800,
       enableDetectionCascade: mergedOptions.enableDetectionCascade ?? true,
@@ -372,6 +399,8 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
       highThreshold: mergedOptions.highThreshold,
       dilationKernelSize: mergedOptions.dilationKernelSize,
       applyDilation: mergedOptions.applyDilation,
+      detector: detectorBackend,
+      ml: mergedOptions.ml,
     };
 
     let rawResult;
@@ -391,7 +420,28 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
       rawResult = response.result;
     } else {
       const mod = await this.#getInlineModule();
-      rawResult = await mod.detectEdgesFromRgba(data, width, height, detectorOptions);
+      if (detectorOptions.detector === 'ml') {
+        try {
+          const mlMod = await import('../../lib/scanic-mlDetector.js');
+          const det = await mlMod.detectDocumentMl({ data, width, height }, detectorOptions.ml || detectorOptions);
+          const corners = det.success && det.corners ? det.corners : null;
+          const normalizedCorners = corners ? mod.normalizeCornerQuad(corners, width, height) : null;
+          rawResult = {
+            success: Boolean(det.success && corners),
+            corners,
+            normalizedCorners,
+            confidence: det.confidence ?? det.score ?? 0,
+            width,
+            height,
+            detector: 'ml',
+            durationMs: 0,
+          };
+        } catch {
+          rawResult = await mod.detectEdgesFromRgba(data, width, height, detectorOptions);
+        }
+      } else {
+        rawResult = await mod.detectEdgesFromRgba(data, width, height, detectorOptions);
+      }
     }
 
     const confidence = typeof rawResult?.confidence === 'number' ? rawResult.confidence : 0;

@@ -208,6 +208,8 @@ async function buildSdk() {
     'peerjs.min.js',
     'qrcode.js',
     'scanic-detector.js',
+    'scanic-mlDetector.js',
+    'scanic-ort.wasm.min.js',
     'tesseract-worker.min.js',
     'tesseract.min.js',
   ];
