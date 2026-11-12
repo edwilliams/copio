@@ -1848,6 +1848,8 @@
     });
 
     // Edge Detector Switcher (Classical vs ML Neural)
+    const mlBtnEl = document.querySelector('[data-detector-btn="ml"]');
+    const mlBtnDefaultHtml = mlBtnEl ? mlBtnEl.innerHTML : '';
     document.querySelectorAll('[data-detector-btn]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const detectorKey = btn.getAttribute('data-detector-btn');
@@ -1866,15 +1868,28 @@
           simulatedScanner.setAttribute('edge-model', detectorKey);
         }
         edgeAdapter.detector = detectorKey;
-        if (detectorKey === 'ml') {
-          edgeAdapter.preloadMl().catch(() => {});
-        }
         logCustomEvent('edge-detector-backend', {
           backend: detectorKey,
           description: detectorKey === 'ml'
             ? 'DocCornerNet ONNX SimCC Neural Corner Detector'
             : 'Scanic Classical Canny + Contour WASM Cascade',
         });
+        if (detectorKey === 'ml') {
+          if (mlBtnEl) mlBtnEl.textContent = '⏳ Loading ML…';
+          try {
+            await edgeAdapter.preloadMl();
+            if (mlBtnEl) mlBtnEl.innerHTML = mlBtnDefaultHtml;
+            logCustomEvent('ml-model-ready', { backend: 'ml' });
+          } catch (err) {
+            if (mlBtnEl) mlBtnEl.innerHTML = mlBtnDefaultHtml;
+            logCustomEvent('ml-model-error', {
+              error: err?.message || String(err),
+              fallback: 'classical',
+            });
+            // Fall back to classical so live detection keeps working
+            document.querySelector('[data-detector-btn="classical"]')?.click();
+          }
+        }
       });
     });
 

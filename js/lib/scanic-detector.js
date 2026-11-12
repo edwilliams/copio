@@ -141,14 +141,17 @@ if (isWorkerScope && typeof self.addEventListener === "function") {
       if (type === "init") {
         const wasm = await iA();
         let mlReady = false;
+        let mlError = null;
         if (msg.preloadMl) {
           try {
             const { initializeMl } = await EA();
             await initializeMl(msg.mlOptions || {});
             mlReady = true;
-          } catch {}
+          } catch (err) {
+            mlError = err && err.message ? err.message : String(err);
+          }
         }
-        self.postMessage({ id, type: "init-result", ok: true, wasmInitialized: Boolean(wasm), mlReady });
+        self.postMessage({ id, type: "init-result", ok: true, wasmInitialized: Boolean(wasm), mlReady, mlError });
         return;
       }
       if (type === "detect") {

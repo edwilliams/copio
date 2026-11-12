@@ -230,12 +230,13 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
   async preloadMl(mlOptions = {}) {
     const worker = await this.getEdgeWorker();
     if (worker && !('isInlineFallback' in worker)) {
-      await this.#sendWorkerRequest({ type: 'init', preloadMl: true, mlOptions });
+      const res = await this.#sendWorkerRequest({ type: 'init', preloadMl: true, mlOptions });
+      if (res && res.mlReady === false && res.mlError) {
+        throw new Error(res.mlError);
+      }
     } else {
-      try {
-        const mlMod = await import('../../lib/scanic-mlDetector.js');
-        await mlMod.initializeMl(mlOptions);
-      } catch {}
+      const mlMod = await import('../../lib/scanic-mlDetector.js');
+      await mlMod.initializeMl(mlOptions);
     }
   }
 

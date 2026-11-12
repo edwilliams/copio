@@ -1399,6 +1399,7 @@ export class CopioScanner extends BaseElement {
         minConfidence,
         fallbackOnLowConfidence: false,
         detector: this.#edgeModel,
+        ml: { minScore: minConfidence },
       });
 
       if (!this.#cameraStream || this.#stage !== 'viewfinder' || !this.#edgeDetection) return;
@@ -1442,8 +1443,10 @@ export class CopioScanner extends BaseElement {
           this.#hideLiveQuadOverlay();
         }
       }
-    } catch {
-      // Ignore background detection errors
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[CopioScanner] Live edge detection error:', err);
+      }
     } finally {
       this.#isDetectingEdge = false;
     }
@@ -2761,11 +2764,28 @@ export class CopioScanner extends BaseElement {
     if (this.#edgeModel !== next) {
       this.#edgeModel = next;
       this.#syncAttr('edge-model', next);
-      if (next === 'ml') {
-        const edgeService = this.#engine?.getService('edge') || getRegisteredService('edge');
-        if (edgeService && typeof edgeService.preloadMl === 'function') {
-          edgeService.preloadMl().catch(() => {});
+      const edgeService = this.#engine?.getService('edge') || getRegisteredService('edge');
+      if (edgeService && 'detector' in edgeService) {
+        edgeService.detector = next;
+      }
+      if (next === 'ml' && edgeService && typeof edgeService.preloadMl === 'function') {
+        const stepPillText = this.shadowRoot?.getElementById('step-pill-text');
+        const prevText = stepPillText?.textContent;
+        if (stepPillText && this.#cameraStream && this.#stage === 'viewfinder') {
+          stepPillText.textContent = 'Loading ML Neural model…';
         }
+        edgeService.preloadMl().then(() => {
+          if (stepPillText && this.#cameraStream && this.#stage === 'viewfinder' && this.#edgeModel === 'ml') {
+            stepPillText.textContent = this.mode === 'batch'
+              ? `Batch Capture · Page ${this.#pageCount + 1}`
+              : 'Camera Active · Tap Shutter to Snap';
+          }
+        }).catch((err) => {
+          console.warn('[CopioScanner] Failed to load ML Neural edge detector:', err);
+          if (stepPillText && prevText && this.#stage === 'viewfinder') {
+            stepPillText.textContent = prevText;
+          }
+        });
       }
     }
   }
