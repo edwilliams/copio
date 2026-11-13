@@ -23,7 +23,7 @@ const BUDGETS = {
   },
   scanner: {
     entry: path.join(distDir, 'scanner.js'),
-    maxGzipKb: 65,
+    maxGzipKb: 70,
     label: 'Scanner (UI elements)',
   },
   sync: {
@@ -38,7 +38,7 @@ const BUDGETS = {
   },
   cdn: {
     entry: path.join(distDir, 'cdn.js'),
-    maxGzipKb: 200,
+    maxGzipKb: 210,
     label: 'Standalone CDN Bundle',
   },
 };

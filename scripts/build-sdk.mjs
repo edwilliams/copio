@@ -208,6 +208,8 @@ async function buildSdk() {
     'peerjs.min.js',
     'qrcode.js',
     'scanic-detector.js',
+    'scanic-mlDetector.js',
+    'scanic-ort.wasm.min.js',
     'tesseract-worker.min.js',
     'tesseract.min.js',
   ];
@@ -220,6 +222,7 @@ async function buildSdk() {
     }
   }
   await cp(path.join(rootDir, 'js/lib/tesseract-core'), path.join(distJsLib, 'tesseract-core'), { recursive: true });
+  await cp(path.join(rootDir, 'js/lib/scanic-ml'), path.join(distJsLib, 'scanic-ml'), { recursive: true });
 
   // 5. Build TypeScript declarations & Custom Elements Manifest
   console.log('\n📝 Building TypeScript types and Custom Elements Manifest...');

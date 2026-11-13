@@ -448,6 +448,44 @@ export const scannerCss = `
   z-index: 1;
 }
 
+/* Live Viewfinder SVG Quad Overlay (CPO-076) */
+.copio-live-quad-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  overflow: visible;
+}
+.copio-live-quad-polygon {
+  fill: rgba(56, 189, 248, 0.18);
+  stroke: var(--copio-color-primary, #38bdf8);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.45));
+}
+.copio-live-quad-corner {
+  fill: #ffffff;
+  stroke: var(--copio-color-primary, #38bdf8);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.4));
+}
+.copio-camera-feed.is-detected .copio-live-quad-polygon {
+  fill: rgba(34, 197, 94, 0.22);
+  stroke: #22c55e;
+  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6));
+}
+.copio-camera-feed.is-detected .copio-live-quad-corner {
+  stroke: #22c55e;
+}
+.copio-camera-feed.is-tracking .copio-edge-quad {
+  opacity: 0.1;
+  transition: opacity var(--copio-transition-fast);
+}
+
 .copio-camera-placeholder {
   position: relative;
   z-index: 2;
@@ -461,6 +499,13 @@ export const scannerCss = `
   color: var(--copio-color-text-muted);
   font-size: 12px;
   font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--copio-transition-fast), transform var(--copio-transition-fast);
+}
+.copio-camera-placeholder:hover {
+  color: var(--copio-color-text);
+  transform: scale(1.02);
 }
 
 .copio-status-dot {

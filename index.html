@@ -868,6 +868,19 @@
           </div>
         </div>
 
+        <!-- Auto Edge Detection Feature Toggle -->
+        <div class="control-group" role="group" aria-label="Auto Edge Detection">
+          <span class="control-label">Auto Edge</span>
+          <div class="seg-group">
+            <button type="button" class="seg-btn" data-edge-toggle="on" aria-pressed="true" title="Enable live ML Neural document edge tracking">
+              On
+            </button>
+            <button type="button" class="seg-btn" data-edge-toggle="off" aria-pressed="false" title="Disable live edge detection">
+              Off
+            </button>
+          </div>
+        </div>
+
         <!-- Theme Switcher -->
         <div class="control-group" role="group" aria-label="Theme">
           <span class="control-label">Theme</span>
@@ -898,7 +911,7 @@
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="host-dims-pill" id="active-container-dims">360px × 640px (@container ≤400px)</span>
-            <button type="button" class="seg-btn" id="btn-load-sample" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-border);" title="Load a generated sample document into the scanner">
+            <button type="button" class="seg-btn" id="btn-load-sample" style="font-size:11px; padding:3px 8px; border:1px solid var(--sandbox-border);" title="Load a generated sample document into the scanner workbench">
               ✨ Sample
             </button>
           </div>
@@ -1086,6 +1099,7 @@
   <script type="module">
     import { COPIO_EVENTS } from './dist/scanner.js';
     import { registerService } from './dist/core.js';
+    import { ScanicWasmEdgeAdapter } from './dist/adapters/edge/scanic-wasm-adapter.js';
     import * as ocrService from './dist/ocr.js';
     import * as exportService from './dist/export.js';
     import './dist/handoff.js';
@@ -1131,7 +1145,12 @@
     window.addEventListener('hashchange', checkMobileHandoffMode);
     const isInitialMobileHandoff = checkMobileHandoffMode();
 
-    // Register optional OCR & PDF/Export ports so workbench OCR and exports work out-of-the-box
+    // Register edge detection (ML Neural), OCR & PDF/Export ports so auto edge detection, workbench OCR, and exports work out-of-the-box
+    const edgeAdapter = new ScanicWasmEdgeAdapter({ detector: 'ml' });
+    registerService('edge', edgeAdapter);
+    edgeAdapter.preloadMl().catch((err) => {
+      console.warn('[CopioSandbox] ML edge detector preload warning:', err);
+    });
     registerService('ocr', ocrService);
     registerService('pdf', exportService);
     registerService('export', exportService);
@@ -1719,6 +1738,10 @@
 
     // Optional sample generator button in the sandbox header bar (leaves <copio-scanner> Shutter & Import 100% native for real photos/camera)
     document.getElementById('btn-load-sample')?.addEventListener('click', async () => {
+      if (scanner._isCameraActive()) {
+        scanner.stopCamera();
+      }
+
       if (currentScenario === 'handoff') {
         if (!splitViewActive) {
           setSplitView(true);
@@ -1747,9 +1770,10 @@
       const dataUrl = generateDocumentDataUrl(kind);
       const file = await dataUrlToFile(dataUrl, filename);
       await scanner.addFiles([file]);
+      scanner.stage = 'workbench';
     });
 
-    async function loadScenario(scenarioKey) {
+    async function loadScenario(scenarioKey, options = {}) {
       currentScenario = scenarioKey;
       const cfg = SCENARIOS[scenarioKey];
 
@@ -1783,22 +1807,23 @@
 
       updateMountBarUi();
 
-      // Seed scenario with realistic sample document(s) and open workbench preview
-      if (scenarioKey === 'receipt') {
-        const file = await dataUrlToFile(generateDocumentDataUrl('receipt'), 'receipt.png');
-        await scanner.addFiles([file]);
-        scanner.stage = 'workbench';
-      } else if (scenarioKey === 'card') {
-        const front = await dataUrlToFile(generateDocumentDataUrl('card-front'), 'id-card-front.png');
-        const back = await dataUrlToFile(generateDocumentDataUrl('card-back'), 'id-card-back.png');
-        await scanner.addFiles([front, back]);
-        scanner.stage = 'workbench';
-      } else if (scenarioKey === 'invoice') {
-        const p1 = await dataUrlToFile(generateDocumentDataUrl('invoice-1'), 'invoice-page-1.png');
-        const p2 = await dataUrlToFile(generateDocumentDataUrl('invoice-2'), 'invoice-page-2.png');
-        const p3 = await dataUrlToFile(generateDocumentDataUrl('invoice-3'), 'invoice-page-3.png');
-        await scanner.addFiles([p1, p2, p3]);
-        scanner.stage = 'workbench';
+      if (options.seedSample) {
+        if (scenarioKey === 'receipt') {
+          const file = await dataUrlToFile(generateDocumentDataUrl('receipt'), 'receipt.png');
+          await scanner.addFiles([file]);
+          scanner.stage = 'workbench';
+        } else if (scenarioKey === 'card') {
+          const front = await dataUrlToFile(generateDocumentDataUrl('card-front'), 'id-card-front.png');
+          const back = await dataUrlToFile(generateDocumentDataUrl('card-back'), 'id-card-back.png');
+          await scanner.addFiles([front, back]);
+          scanner.stage = 'workbench';
+        } else if (scenarioKey === 'invoice') {
+          const p1 = await dataUrlToFile(generateDocumentDataUrl('invoice-1'), 'invoice-page-1.png');
+          const p2 = await dataUrlToFile(generateDocumentDataUrl('invoice-2'), 'invoice-page-2.png');
+          const p3 = await dataUrlToFile(generateDocumentDataUrl('invoice-3'), 'invoice-page-3.png');
+          await scanner.addFiles([p1, p2, p3]);
+          scanner.stage = 'workbench';
+        }
       }
     }
 
@@ -1821,7 +1846,34 @@
         document.querySelectorAll('[data-scenario-btn]').forEach((b) => {
           b.setAttribute('aria-pressed', String(b === btn));
         });
-        await loadScenario(scenarioKey);
+        await loadScenario(scenarioKey, { seedSample: true });
+      });
+    });
+
+    // Auto Edge Detection Feature Switcher (On vs Off)
+    document.querySelectorAll('[data-edge-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const enabled = btn.getAttribute('data-edge-toggle') === 'on';
+        document.querySelectorAll('[data-edge-toggle]').forEach((b) => {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        scanner.edgeDetection = enabled;
+        scanner.autoCrop = enabled;
+        scanner.setAttribute('edge-detection', String(enabled));
+        scanner.setAttribute('auto-crop', String(enabled));
+        const mobileScannerEl = document.getElementById('mobile-standalone-scanner');
+        if (mobileScannerEl) {
+          mobileScannerEl.edgeDetection = enabled;
+          mobileScannerEl.autoCrop = enabled;
+        }
+        if (simulatedScanner) {
+          simulatedScanner.edgeDetection = enabled;
+          simulatedScanner.autoCrop = enabled;
+        }
+        logCustomEvent('auto-edge-detection', {
+          enabled,
+          backend: 'ml',
+        });
       });
     });
 
@@ -1870,9 +1922,9 @@
       }).catch(() => {});
     }
 
-    // Initialize default scenario unless opened directly in standalone mobile handoff mode
+    // Initialize default scenario in live viewfinder mode unless opened directly in standalone mobile handoff mode
     if (!isInitialMobileHandoff) {
-      loadScenario('receipt');
+      loadScenario('receipt', { seedSample: false });
     }
   </script>
 </body>

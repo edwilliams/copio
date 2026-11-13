@@ -158,6 +158,11 @@ describe('Auto Edge Detection — Worker & EdgeDetectorPort Adapter (CPO-074)', 
       ctx.lineTo(50, 420);
       ctx.closePath();
       ctx.fill();
+      // Add subtle document text lines so ML DocCornerNet recognizes it as a document
+      ctx.fillStyle = '#334155';
+      for (let y = 120; y <= 360; y += 36) {
+        ctx.fillRect(95, y, 200, 10);
+      }
 
       const imgData = ctx.getImageData(0, 0, 400, 500);
       const res = await adapter.detect(imgData);
@@ -199,6 +204,16 @@ describe('Auto Edge Detection — Worker & EdgeDetectorPort Adapter (CPO-074)', 
     } finally {
       await adapter.terminateEdgeWorker();
     }
+  });
+
+  it('supports ML Neural detector backend option and switches cleanly', async () => {
+    const adapter = new ScanicWasmEdgeAdapter({ detector: 'ml' });
+    expect(adapter.detector).to.equal('ml');
+    adapter.detector = 'classical';
+    expect(adapter.detector).to.equal('classical');
+    adapter.detector = 'ml';
+    expect(adapter.detector).to.equal('ml');
+    expect(typeof adapter.preloadMl).to.equal('function');
   });
 
   it('achieves >= 80% detection accuracy (IoU >= 0.70) across the 32-photo CPO-073 labelled scan test set', async function () {

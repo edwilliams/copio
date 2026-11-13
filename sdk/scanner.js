@@ -5,7 +5,14 @@
  * Embeddable, zero-config two-stage (viewfinder ↔ workbench) document scanner
  * acting as the primary Driving UI Adapter over the headless CopioEngine.
  */
-import { CopioEngine, cropRotatedToOriginal, cropOriginalToRotated } from './core.js';
+import {
+  CopioEngine,
+  cropRotatedToOriginal,
+  cropOriginalToRotated,
+  quadToCropRect,
+  cloneQuad,
+  getRegisteredService,
+} from './core.js';
 import { COPIO_EVENTS, dispatchCopioEvent } from './events.js';
 import { setAssetBase } from '../js/utils/module-loader.js';
 import { notify, setContainer, getContainer } from '../js/services/notify.js';
@@ -38,6 +45,18 @@ export class CopioScanner extends BaseElement {
   #cameraStream = null;
   #wasStreamingBeforeHide = false;
   #grabCanvas = null;
+  #edgeDetection = true;
+  #edgeModel = 'ml';
+  #autoCrop = true;
+  #autoCapture = false;
+  #liveEdgeRafId = null;
+  #isDetectingEdge = false;
+  #lastEdgeDetectTime = 0;
+  #smoothedQuad = null;
+  #latestDetectionResult = null;
+  #consecutiveMisses = 0;
+  #stableQuadStartTime = 0;
+  #lastStableQuad = null;
   #handoffSession = null;
   #handoffToken = null;
   #handoffState = 'idle'; // 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'sending' | 'complete' | 'error'
@@ -74,6 +93,10 @@ export class CopioScanner extends BaseElement {
       'ice-servers',
       'signaling-url',
       'ice-transport-policy',
+      'edge-detection',
+      'edge-model',
+      'auto-crop',
+      'auto-capture',
     ];
   }
 
@@ -98,6 +121,10 @@ export class CopioScanner extends BaseElement {
       if (this.hasAttribute('license-key')) opts.licenseKey = this.getAttribute('license-key');
       if (this.hasAttribute('ocr')) opts.ocr = this.getAttribute('ocr') !== 'false';
       if (this.hasAttribute('pdf')) opts.pdf = this.getAttribute('pdf') !== 'false';
+      if (this.hasAttribute('edge-detection')) this.#edgeDetection = this.getAttribute('edge-detection') !== 'false';
+      if (this.hasAttribute('edge-model')) this.#edgeModel = this.getAttribute('edge-model') === 'classical' ? 'classical' : 'ml';
+      if (this.hasAttribute('auto-crop')) this.#autoCrop = this.getAttribute('auto-crop') !== 'false';
+      if (this.hasAttribute('auto-capture')) this.#autoCapture = this.getAttribute('auto-capture') !== 'false' && this.getAttribute('auto-capture') !== null;
       for (const k of ['relay-url', 'signaling-url', 'ice-transport-policy']) {
         if (this.hasAttribute(k)) opts[k.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = this.getAttribute(k);
       }
@@ -284,6 +311,18 @@ export class CopioScanner extends BaseElement {
           this.#cleanupHandoff();
         }
         break;
+      case 'edge-detection':
+        this.edgeDetection = newValue !== 'false';
+        break;
+      case 'edge-model':
+        this.edgeModel = newValue === 'classical' ? 'classical' : 'ml';
+        break;
+      case 'auto-crop':
+        this.autoCrop = newValue !== 'false';
+        break;
+      case 'auto-capture':
+        this.autoCapture = newValue !== 'false' && newValue !== null;
+        break;
     }
   }
 
@@ -350,6 +389,13 @@ export class CopioScanner extends BaseElement {
 
           <div class="copio-camera-feed" id="camera-feed">
             <video id="camera-video" autoplay playsinline webkit-playsinline muted style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;"></video>
+            <svg class="copio-live-quad-overlay" id="live-quad-overlay" style="display:none;" aria-hidden="true">
+              <polygon class="copio-live-quad-polygon" id="live-quad-polygon" points=""></polygon>
+              <circle class="copio-live-quad-corner" id="live-quad-c0" r="5"></circle>
+              <circle class="copio-live-quad-corner" id="live-quad-c1" r="5"></circle>
+              <circle class="copio-live-quad-corner" id="live-quad-c2" r="5"></circle>
+              <circle class="copio-live-quad-corner" id="live-quad-c3" r="5"></circle>
+            </svg>
             <slot name="viewfinder">
               <div class="copio-framing-guide" id="framing-guide" data-aspect="${this.aspect}">
                 <span class="copio-corner tl"></span>
@@ -559,6 +605,14 @@ export class CopioScanner extends BaseElement {
     // Shutter capture button
     shadow.getElementById('btn-shutter')?.addEventListener('click', async () => {
       await this.#handleShutterClick();
+    });
+
+    // Tap to start camera from placeholder or camera feed in standby
+    shadow.getElementById('camera-feed')?.addEventListener('click', async (e) => {
+      if (e.target && /** @type {HTMLElement} */ (e.target).closest('button, input, a, select')) return;
+      if (!this.#cameraStream && this.#stage === 'viewfinder') {
+        await this.startCamera().catch(() => {});
+      }
     });
 
     // Review pill
@@ -899,7 +953,7 @@ export class CopioScanner extends BaseElement {
         }
         cropLayer.style.display = 'block';
         const rot = activePage.edits?.rotate || 0;
-        const priorCrop = activePage.edits?.crop;
+        const priorCrop = activePage.edits?.crop || (activePage.edits?.quad ? quadToCropRect(activePage.edits.quad) : null);
         this.#draftCrop = priorCrop
           ? cropOriginalToRotated(priorCrop, rot)
           : { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
@@ -1061,6 +1115,8 @@ export class CopioScanner extends BaseElement {
   }
 
   #stopCameraStream() {
+    this.#stopLiveEdgeDetection();
+    this.#hideLiveQuadOverlay();
     if (this.#cameraStream) {
       try {
         const tracks = this.#cameraStream.getTracks();
@@ -1100,7 +1156,12 @@ export class CopioScanner extends BaseElement {
       return this.#cameraStream;
     }
 
-    const isAutomatedTest = typeof navigator !== 'undefined' && navigator.webdriver === true && !options.force;
+    const isAutomatedTest =
+      typeof window !== 'undefined' &&
+      /** @type {any} */ (window).__WTR_CONFIG__ !== undefined &&
+      typeof navigator !== 'undefined' &&
+      navigator.webdriver === true &&
+      !options.force;
     if (isAutomatedTest) {
       return null;
     }
@@ -1114,14 +1175,20 @@ export class CopioScanner extends BaseElement {
       {
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
         audio: false,
       },
       {
         video: {
           facingMode: { ideal: 'environment' },
+        },
+        audio: false,
+      },
+      {
+        video: {
+          width: { ideal: 1280 },
         },
         audio: false,
       },
@@ -1221,6 +1288,210 @@ export class CopioScanner extends BaseElement {
     return Boolean(this.#cameraStream);
   }
 
+  #startLiveEdgeDetection() {
+    this.#stopLiveEdgeDetection();
+    if (!this.#edgeDetection || !this.#cameraStream || this.#stage !== 'viewfinder') {
+      return;
+    }
+
+    const loop = async (timestamp) => {
+      if (!this.#cameraStream || this.#stage !== 'viewfinder' || !this.#edgeDetection) {
+        this.#stopLiveEdgeDetection();
+        return;
+      }
+
+      const elapsed = timestamp - this.#lastEdgeDetectTime;
+      if (!this.#isDetectingEdge && elapsed >= 35) {
+        this.#lastEdgeDetectTime = timestamp;
+        await this.#processLiveViewfinderFrame(timestamp);
+      }
+
+      if (this.#cameraStream && this.#stage === 'viewfinder' && this.#edgeDetection) {
+        this.#liveEdgeRafId = requestAnimationFrame(loop);
+      }
+    };
+
+    this.#liveEdgeRafId = requestAnimationFrame(loop);
+  }
+
+  #stopLiveEdgeDetection() {
+    if (this.#liveEdgeRafId !== null) {
+      cancelAnimationFrame(this.#liveEdgeRafId);
+      this.#liveEdgeRafId = null;
+    }
+    this.#isDetectingEdge = false;
+  }
+
+  #hideLiveQuadOverlay() {
+    const shadow = this.shadowRoot;
+    const svg = shadow?.getElementById('live-quad-overlay');
+    if (svg) {
+      svg.style.display = 'none';
+    }
+    const feed = shadow?.getElementById('camera-feed');
+    if (feed) {
+      feed.classList.remove('is-detected', 'is-tracking');
+    }
+    const polygon = shadow?.getElementById('live-quad-polygon');
+    if (polygon) {
+      polygon.setAttribute('points', '');
+    }
+    for (let i = 0; i < 4; i++) {
+      const c = shadow?.getElementById(`live-quad-c${i}`);
+      if (c) {
+        c.removeAttribute('cx');
+        c.removeAttribute('cy');
+      }
+    }
+    this.#smoothedQuad = null;
+    this.#latestDetectionResult = null;
+    this.#consecutiveMisses = 0;
+    this.#stableQuadStartTime = 0;
+    this.#lastStableQuad = null;
+  }
+
+  #renderLiveQuadOverlay(quad, confidence) {
+    const shadow = this.shadowRoot;
+    const svg = shadow?.getElementById('live-quad-overlay');
+    const feed = shadow?.getElementById('camera-feed');
+    const v = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
+    if (!svg || !feed || !quad) return;
+    const fW = feed.clientWidth, fH = feed.clientHeight;
+    if (fW <= 0 || fH <= 0) return;
+    const vW = v?.videoWidth || 640, vH = v?.videoHeight || 480;
+    const s = Math.max(fW / vW, fH / vH), rW = vW * s, rH = vH * s;
+    const ox = (fW - rW) / 2, oy = (fH - rH) / 2;
+    const corners = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
+    const pts = corners.map(
+      (p) => `${(ox + p.x * rW).toFixed(1)},${(oy + p.y * rH).toFixed(1)}`
+    );
+    svg.setAttribute('viewBox', `0 0 ${fW} ${fH}`);
+    svg.style.display = 'block';
+    shadow.getElementById('live-quad-polygon')?.setAttribute('points', pts.join(' '));
+    for (let i = 0; i < 4; i++) {
+      const c = shadow.getElementById(`live-quad-c${i}`);
+      if (c) {
+        c.setAttribute('cx', (ox + corners[i].x * rW).toFixed(1));
+        c.setAttribute('cy', (oy + corners[i].y * rH).toFixed(1));
+      }
+    }
+    feed.classList.add('is-tracking');
+    feed.classList.toggle('is-detected', confidence >= 0.70);
+  }
+
+  async #processLiveViewfinderFrame(timestamp) {
+    const shadow = this.shadowRoot;
+    const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
+    if (!videoEl || videoEl.videoWidth === 0 || videoEl.videoHeight === 0) return;
+
+    const frame = this._grabFrame({ maxWidth: 480, maxHeight: 480 });
+    if (!frame) return;
+
+    this.#isDetectingEdge = true;
+    try {
+      const edgeService = this.#engine?.getService('edge') || getRegisteredService('edge');
+      if (!edgeService || typeof edgeService.detect !== 'function') return;
+
+      const minConfidence = this.#edgeModel === 'ml' ? 0.40 : 0.45;
+      const result = await edgeService.detect(frame, {
+        maxProcessingDimension: 480,
+        enableDetectionCascade: false,
+        minConfidence,
+        fallbackOnLowConfidence: false,
+        detector: this.#edgeModel,
+        ml: { minScore: minConfidence },
+      });
+
+      if (!this.#cameraStream || this.#stage !== 'viewfinder' || !this.#edgeDetection) return;
+
+      if (result && result.quad && result.confidence >= minConfidence && !result.isFallback) {
+        this.#consecutiveMisses = 0;
+        const alpha = 0.35;
+        if (!this.#smoothedQuad) {
+          this.#smoothedQuad = cloneQuad(result.quad);
+        } else {
+          for (const k of ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']) {
+            this.#smoothedQuad[k].x = alpha * result.quad[k].x + (1 - alpha) * this.#smoothedQuad[k].x;
+            this.#smoothedQuad[k].y = alpha * result.quad[k].y + (1 - alpha) * this.#smoothedQuad[k].y;
+          }
+        }
+
+        this.#latestDetectionResult = {
+          quad: cloneQuad(this.#smoothedQuad),
+          confidence: result.confidence,
+          durationMs: result.durationMs,
+          isFallback: false,
+        };
+
+        this.#renderLiveQuadOverlay(this.#smoothedQuad, result.confidence);
+
+        this.dispatch(COPIO_EVENTS.EDGE_DETECTED, {
+          quad: cloneQuad(this.#smoothedQuad),
+          confidence: result.confidence,
+          durationMs: result.durationMs,
+        });
+
+        if (this.#autoCapture && result.confidence >= 0.65) {
+          this.#checkSmartShutter(this.#smoothedQuad, timestamp);
+        }
+      } else {
+        this.#consecutiveMisses++;
+        if (this.#consecutiveMisses > 4) {
+          this.#smoothedQuad = null;
+          this.#latestDetectionResult = null;
+          this.#stableQuadStartTime = 0;
+          this.#hideLiveQuadOverlay();
+        }
+      }
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[CopioScanner] Live edge detection error:', err);
+      }
+    } finally {
+      this.#isDetectingEdge = false;
+    }
+  }
+
+  #checkSmartShutter(quad, timestamp) {
+    if (!this.#autoCapture || !quad) return;
+    const pts = [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
+    let area = 0;
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4;
+      area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+    }
+    area = Math.abs(area) / 2;
+    if (area < 0.15) {
+      this.#stableQuadStartTime = 0;
+      this.#lastStableQuad = null;
+      return;
+    }
+
+    if (!this.#lastStableQuad) {
+      this.#lastStableQuad = cloneQuad(quad);
+      this.#stableQuadStartTime = timestamp;
+      return;
+    }
+
+    let sumSq = 0;
+    for (const k of ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']) {
+      const dx = quad[k].x - this.#lastStableQuad[k].x;
+      const dy = quad[k].y - this.#lastStableQuad[k].y;
+      sumSq += dx * dx + dy * dy;
+    }
+    const rmsJitter = Math.sqrt(sumSq / 4);
+    this.#lastStableQuad = cloneQuad(quad);
+
+    if (rmsJitter < 0.015) {
+      if (timestamp - this.#stableQuadStartTime >= 600) {
+        this.#stableQuadStartTime = timestamp + 10000; // Cooldown
+        this.#handleShutterClick();
+      }
+    } else {
+      this.#stableQuadStartTime = timestamp;
+    }
+  }
+
   async #handleShutterClick() {
     if (typeof this.onShutter === 'function') {
       const handled = await this.onShutter();
@@ -1238,6 +1509,12 @@ export class CopioScanner extends BaseElement {
         void cameraFeed.offsetWidth;
         cameraFeed.classList.add('is-shutter-flash');
       }
+
+      // Cache current live tracked quad at snapshot time
+      const minConfidence = this.#edgeModel === 'ml' ? 0.40 : 0.45;
+      const captureQuad = this.#latestDetectionResult?.confidence >= minConfidence
+        ? cloneQuad(this.#latestDetectionResult.quad)
+        : null;
 
       const canvas = document.createElement('canvas');
       canvas.width = videoEl.videoWidth || 1280;
@@ -1261,7 +1538,7 @@ export class CopioScanner extends BaseElement {
           }
 
           const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-          await this.addFiles([file]);
+          await this.addFiles([file], { prefilledQuad: captureQuad });
 
           if (isBatch && this.maxPages > 0 && this.#pageCount >= this.maxPages) {
             this.#stopCameraStream();
@@ -2024,12 +2301,20 @@ export class CopioScanner extends BaseElement {
     const shadow = this.shadowRoot;
     const videoEl = /** @type {HTMLVideoElement|null} */ (shadow?.getElementById('camera-video'));
     if (videoEl) {
+      videoEl.muted = true;
+      videoEl.volume = 0;
+      videoEl.playsInline = true;
+      videoEl.setAttribute('playsinline', '');
+      videoEl.setAttribute('webkit-playsinline', '');
+      videoEl.setAttribute('muted', '');
       try {
         videoEl.srcObject = (typeof MediaStream !== 'undefined' && stream instanceof MediaStream) ? stream : null;
       } catch {}
       videoEl.style.display = stream ? 'block' : 'none';
       if (stream && videoEl.srcObject) {
-        videoEl.play().catch(() => {});
+        videoEl.play().catch((err) => {
+          console.warn('[CopioScanner] Live video element play() error:', err);
+        });
       }
     }
     const placeholder = shadow?.querySelector('.copio-camera-placeholder');
@@ -2042,6 +2327,9 @@ export class CopioScanner extends BaseElement {
         ? `Batch Capture · Page ${this.#pageCount + 1}`
         : 'Camera Active · Tap Shutter to Snap';
     }
+    if (stream && this.#stage === 'viewfinder' && this.#edgeDetection) {
+      this.#startLiveEdgeDetection();
+    }
   }
 
   get features() {
@@ -2049,13 +2337,8 @@ export class CopioScanner extends BaseElement {
   }
 
   set features(val) {
-    if (typeof this.setAttribute === 'function') {
-      const str = Array.isArray(val) ? val.join(' ') : String(val || '');
-      this.setAttribute('features', str);
-    }
-    if (this.#engine) {
-      this.#engine.setFeatures(val);
-    }
+    this.#syncAttr('features', Array.isArray(val) ? val.join(' ') : String(val || ''));
+    if (this.#engine) this.#engine.setFeatures(val);
   }
 
   hasFeature(featureName) {
@@ -2068,12 +2351,8 @@ export class CopioScanner extends BaseElement {
 
   set ocrEnabled(val) {
     const enabled = Boolean(val);
-    if (typeof this.setAttribute === 'function') {
-      this.setAttribute('ocr', enabled ? 'true' : 'false');
-    }
-    if (this.#engine) {
-      this.#engine.ocr = enabled;
-    }
+    this.#syncAttr('ocr', enabled ? 'true' : 'false');
+    if (this.#engine) this.#engine.ocr = enabled;
     this.#updateChildViews();
   }
 
@@ -2083,12 +2362,8 @@ export class CopioScanner extends BaseElement {
 
   set pdf(val) {
     const enabled = Boolean(val);
-    if (typeof this.setAttribute === 'function') {
-      this.setAttribute('pdf', enabled ? 'true' : 'false');
-    }
-    if (this.#engine) {
-      this.#engine.pdf = enabled;
-    }
+    this.#syncAttr('pdf', enabled ? 'true' : 'false');
+    if (this.#engine) this.#engine.pdf = enabled;
     this.#updateChildViews();
   }
 
@@ -2097,13 +2372,8 @@ export class CopioScanner extends BaseElement {
   }
 
   set exportFormats(val) {
-    if (typeof this.setAttribute === 'function') {
-      const str = Array.isArray(val) ? val.join(',') : String(val || '');
-      this.setAttribute('export-formats', str);
-    }
-    if (this.#engine) {
-      this.#engine.exportFormats = val;
-    }
+    this.#syncAttr('export-formats', Array.isArray(val) ? val.join(',') : String(val || ''));
+    if (this.#engine) this.#engine.exportFormats = val;
   }
 
   get ocrLanguages() {
@@ -2111,13 +2381,8 @@ export class CopioScanner extends BaseElement {
   }
 
   set ocrLanguages(val) {
-    if (typeof this.setAttribute === 'function') {
-      const str = Array.isArray(val) ? val.join(',') : String(val || '');
-      this.setAttribute('ocr-languages', str);
-    }
-    if (this.#engine) {
-      this.#engine.ocrLanguages = val;
-    }
+    this.#syncAttr('ocr-languages', Array.isArray(val) ? val.join(',') : String(val || ''));
+    if (this.#engine) this.#engine.ocrLanguages = val;
   }
 
   get maxPages() {
@@ -2125,12 +2390,8 @@ export class CopioScanner extends BaseElement {
   }
 
   set maxPages(val) {
-    if (typeof this.setAttribute === 'function') {
-      this.setAttribute('max-pages', String(val));
-    }
-    if (this.#engine) {
-      this.#engine.maxPages = val;
-    }
+    this.#syncAttr('max-pages', String(val));
+    if (this.#engine) this.#engine.maxPages = val;
   }
 
   get assetBase() {
@@ -2138,12 +2399,8 @@ export class CopioScanner extends BaseElement {
   }
 
   set assetBase(val) {
-    if (typeof this.setAttribute === 'function') {
-      this.setAttribute('asset-base', String(val || ''));
-    }
-    if (this.#engine) {
-      this.#engine.assetBase = val;
-    }
+    this.#syncAttr('asset-base', String(val || ''));
+    if (this.#engine) this.#engine.assetBase = val;
   }
 
   get licenseKey() {
@@ -2151,12 +2408,8 @@ export class CopioScanner extends BaseElement {
   }
 
   set licenseKey(val) {
-    if (typeof this.setAttribute === 'function') {
-      this.setAttribute('license-key', String(val || ''));
-    }
-    if (this.#engine) {
-      this.#engine.licenseKey = val;
-    }
+    this.#syncAttr('license-key', String(val || ''));
+    if (this.#engine) this.#engine.licenseKey = val;
   }
 
   #syncAttr(name, val) {
@@ -2286,7 +2539,7 @@ export class CopioScanner extends BaseElement {
     });
   }
 
-  async addFiles(files) {
+  async addFiles(files, options = {}) {
     try {
       const existingPages = await this.getPages();
       let replaceIndex = null;
@@ -2307,7 +2560,12 @@ export class CopioScanner extends BaseElement {
       }
       this.#retaking = false;
 
-      const newPages = await this.#engine.addFiles(files, this.#targetDocId);
+      const engineOpts = {
+        autoCrop: this.#autoCrop,
+        prefilledQuad: options?.prefilledQuad || null,
+        ...options,
+      };
+      const newPages = await this.#engine.addFiles(files, this.#targetDocId, engineOpts);
       for (let i = 0; i < newPages.length; i++) {
         this.dispatch(COPIO_EVENTS.PAGE_ADDED, {
           page: newPages[i],
@@ -2475,6 +2733,126 @@ export class CopioScanner extends BaseElement {
       });
       throw err;
     }
+  }
+
+  get edgeDetection() {
+    return this.#edgeDetection;
+  }
+
+  /** @param {boolean|string|null|undefined} val */
+  set edgeDetection(val) {
+    const next = val !== false && val !== 'false' && val !== null && val !== undefined;
+    if (this.#edgeDetection !== next) {
+      this.#edgeDetection = next;
+      this.#syncAttr('edge-detection', String(next));
+      if (!this.#edgeDetection) {
+        this.#stopLiveEdgeDetection();
+        this.#hideLiveQuadOverlay();
+      } else if (this.#cameraStream && this.#stage === 'viewfinder') {
+        this.#startLiveEdgeDetection();
+      }
+    }
+  }
+
+  get edgeModel() {
+    return this.#edgeModel;
+  }
+
+  /** @param {'classical'|'ml'|string|null|undefined} val */
+  set edgeModel(val) {
+    const next = val === 'classical' ? 'classical' : 'ml';
+    if (this.#edgeModel !== next) {
+      this.#edgeModel = next;
+      this.#syncAttr('edge-model', next);
+      const edgeService = this.#engine?.getService('edge') || getRegisteredService('edge');
+      if (edgeService && 'detector' in edgeService) {
+        edgeService.detector = next;
+      }
+      if (next === 'ml' && edgeService && typeof edgeService.preloadMl === 'function') {
+        const stepPillText = this.shadowRoot?.getElementById('step-pill-text');
+        const prevText = stepPillText?.textContent;
+        if (stepPillText && this.#cameraStream && this.#stage === 'viewfinder') {
+          stepPillText.textContent = 'Loading ML Neural model…';
+        }
+        edgeService.preloadMl().then(() => {
+          if (stepPillText && this.#cameraStream && this.#stage === 'viewfinder' && this.#edgeModel === 'ml') {
+            stepPillText.textContent = this.mode === 'batch'
+              ? `Batch Capture · Page ${this.#pageCount + 1}`
+              : 'Camera Active · Tap Shutter to Snap';
+          }
+        }).catch((err) => {
+          console.warn('[CopioScanner] Failed to load ML Neural edge detector:', err);
+          if (stepPillText && prevText && this.#stage === 'viewfinder') {
+            stepPillText.textContent = prevText;
+          }
+        });
+      }
+    }
+  }
+
+  get autoCrop() {
+    return this.#autoCrop;
+  }
+
+  /** @param {boolean|string|null|undefined} val */
+  set autoCrop(val) {
+    const next = val !== false && val !== 'false' && val !== null && val !== undefined;
+    if (this.#autoCrop !== next) {
+      this.#autoCrop = next;
+      this.#syncAttr('auto-crop', String(next));
+    }
+  }
+
+  get autoCapture() {
+    return this.#autoCapture;
+  }
+
+  /** @param {boolean|string|null|undefined} val */
+  set autoCapture(val) {
+    const next = Boolean(val && val !== 'false');
+    if (this.#autoCapture !== next) {
+      this.#autoCapture = next;
+      this.#syncAttr('auto-capture', String(next));
+    }
+  }
+
+  /**
+   * Returns the current normalized quadrilateral tracked by live edge detection, or null.
+   * @returns {import('./core.js').EdgeQuad|null}
+   */
+  getLiveQuad() {
+    return this.#smoothedQuad ? cloneQuad(this.#smoothedQuad) : null;
+  }
+
+  /**
+   * Returns the latest edge detection result payload, or null.
+   * @returns {{ quad: import('./core.js').EdgeQuad, confidence: number, durationMs?: number, isFallback: boolean }|null}
+   */
+  getLatestDetection() {
+    return this.#latestDetectionResult
+      ? {
+          quad: cloneQuad(this.#latestDetectionResult.quad),
+          confidence: this.#latestDetectionResult.confidence,
+          durationMs: this.#latestDetectionResult.durationMs,
+          isFallback: this.#latestDetectionResult.isFallback,
+        }
+      : null;
+  }
+
+  /**
+   * Run edge detection on the current camera video frame.
+   * @param {import('../js/adapters/edge/edge-detector-port.js').EdgeDetectOptions} [options]
+   * @returns {Promise<import('../js/adapters/edge/edge-detector-port.js').EdgeDetectionResult|null>}
+   */
+  async detectCurrentFrame(options = {}) {
+    const frame = this._grabFrame({
+      maxWidth: options.maxProcessingDimension || 480,
+      maxHeight: options.maxProcessingDimension || 480,
+    });
+    if (!frame) return null;
+    const edgeService = this.#engine?.getService('edge') || getRegisteredService('edge');
+    if (!edgeService || typeof edgeService.detect !== 'function') return null;
+    return edgeService.detect(frame, options);
   }
 }
 
