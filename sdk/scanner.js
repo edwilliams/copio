@@ -56,6 +56,7 @@ export class CopioScanner extends BaseElement {
   #smoothedQuad = null;
   #latestDetectionResult = null;
   #consecutiveMisses = 0;
+  #lastValidDetectionTime = 0;
   #stableQuadStartTime = 0;
   #lastStableQuad = null;
   #handoffSession = null;
@@ -1412,7 +1413,7 @@ export class CopioScanner extends BaseElement {
       }
 
       const elapsed = timestamp - this.#lastEdgeDetectTime;
-      if (!this.#isDetectingEdge && elapsed >= 35) {
+      if (!this.#isDetectingEdge && elapsed >= 100) {
         this.#lastEdgeDetectTime = timestamp;
         await this.#processLiveViewfinderFrame(timestamp);
       }
@@ -1457,6 +1458,7 @@ export class CopioScanner extends BaseElement {
     this.#smoothedQuad = null;
     this.#latestDetectionResult = null;
     this.#consecutiveMisses = 0;
+    this.#lastValidDetectionTime = 0;
     this.#stableQuadStartTime = 0;
     this.#lastStableQuad = null;
   }
@@ -1517,6 +1519,7 @@ export class CopioScanner extends BaseElement {
 
       if (result && result.quad && result.confidence >= minConfidence && !result.isFallback) {
         this.#consecutiveMisses = 0;
+        this.#lastValidDetectionTime = timestamp;
         const alpha = 0.35;
         if (!this.#smoothedQuad) {
           this.#smoothedQuad = cloneQuad(result.quad);
@@ -1547,7 +1550,7 @@ export class CopioScanner extends BaseElement {
         }
       } else {
         this.#consecutiveMisses++;
-        if (this.#consecutiveMisses > 4) {
+        if (this.#consecutiveMisses > 4 && timestamp - this.#lastValidDetectionTime > 1200) {
           this.#smoothedQuad = null;
           this.#latestDetectionResult = null;
           this.#stableQuadStartTime = 0;
