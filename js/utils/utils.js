@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 import exifr from '../lib/exifr.js';
+import { normalizeQuad } from '../../sdk/models.js';
+import { warpPerspectiveToCanvas } from './perspective.js';
 
 export async function extractExif(file) {
   try {
@@ -182,11 +184,11 @@ export function getCroppedSrc(cropper, originalSrc = '') {
 /**
  * Normalizes an edit stack object.
  * @param {Object} [edits]
- * @returns {{ crop: { x: number, y: number, width?: number, height?: number, w?: number, h?: number } | null, rotation: number, filter: string }}
+ * @returns {{ crop: { x: number, y: number, width?: number, height?: number, w?: number, h?: number } | null, quad: { topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null, rotation: number, filter: string }}
  */
 export function normalizeEdits(edits) {
   if (!edits || typeof edits !== 'object') {
-    return { crop: null, rotation: 0, filter: 'none' };
+    return { crop: null, quad: null, rotation: 0, filter: 'none' };
   }
   let crop = null;
   if (edits.crop && typeof edits.crop === 'object') {
@@ -206,10 +208,11 @@ export function normalizeEdits(edits) {
       };
     }
   }
+  const quad = normalizeQuad(edits.quad);
   const rawRot = edits.rotation !== undefined ? edits.rotation : edits.rotate;
   const rotation = ((Math.round(Number(rawRot) || 0) % 360) + 360) % 360;
   const filter = (edits.filter === 'bw') ? 'bw' : 'none';
-  return { crop, rotation, filter };
+  return { crop, quad, rotation, filter };
 }
 
 /**
@@ -220,7 +223,7 @@ export function normalizeEdits(edits) {
 export function hasActiveEdits(edits) {
   if (!edits) return false;
   const n = normalizeEdits(edits);
-  return !!(n.crop || n.rotation !== 0 || n.filter !== 'none');
+  return !!(n.crop || n.quad || n.rotation !== 0 || n.filter !== 'none');
 }
 
 /**
@@ -234,32 +237,37 @@ export function renderEditsToCanvas(imgOrCanvas, edits) {
   const srcWidth = /** @type {any} */ (imgOrCanvas).naturalWidth || imgOrCanvas.width || 0;
   const srcHeight = /** @type {any} */ (imgOrCanvas).naturalHeight || imgOrCanvas.height || 0;
 
-  // 1. Crop
-  let cropCanvas = document.createElement('canvas');
-  let cWidth = srcWidth;
-  let cHeight = srcHeight;
-  let cropX = 0;
-  let cropY = 0;
+  // 1. Perspective Warp (quad) or Rectangular Crop
+  let cropCanvas;
+  if (norm.quad) {
+    cropCanvas = warpPerspectiveToCanvas(imgOrCanvas, norm.quad);
+  } else {
+    cropCanvas = document.createElement('canvas');
+    let cWidth = srcWidth;
+    let cHeight = srcHeight;
+    let cropX = 0;
+    let cropY = 0;
 
-  if (norm.crop) {
-    const cropObj = /** @type {any} */ (norm.crop);
-    if ('w' in cropObj && !('width' in cropObj)) {
-      cropX = Math.max(0, Math.min(Math.round(cropObj.x * srcWidth), srcWidth));
-      cropY = Math.max(0, Math.min(Math.round(cropObj.y * srcHeight), srcHeight));
-      cWidth = Math.max(1, Math.min(Math.round(cropObj.w * srcWidth), srcWidth - cropX));
-      cHeight = Math.max(1, Math.min(Math.round(cropObj.h * srcHeight), srcHeight - cropY));
-    } else {
-      cropX = Math.max(0, Math.min(cropObj.x, srcWidth));
-      cropY = Math.max(0, Math.min(cropObj.y, srcHeight));
-      cWidth = Math.max(1, Math.min(cropObj.width, srcWidth - cropX));
-      cHeight = Math.max(1, Math.min(cropObj.height, srcHeight - cropY));
+    if (norm.crop) {
+      const cropObj = /** @type {any} */ (norm.crop);
+      if ('w' in cropObj && !('width' in cropObj)) {
+        cropX = Math.max(0, Math.min(Math.round(cropObj.x * srcWidth), srcWidth));
+        cropY = Math.max(0, Math.min(Math.round(cropObj.y * srcHeight), srcHeight));
+        cWidth = Math.max(1, Math.min(Math.round(cropObj.w * srcWidth), srcWidth - cropX));
+        cHeight = Math.max(1, Math.min(Math.round(cropObj.h * srcHeight), srcHeight - cropY));
+      } else {
+        cropX = Math.max(0, Math.min(cropObj.x, srcWidth));
+        cropY = Math.max(0, Math.min(cropObj.y, srcHeight));
+        cWidth = Math.max(1, Math.min(cropObj.width, srcWidth - cropX));
+        cHeight = Math.max(1, Math.min(cropObj.height, srcHeight - cropY));
+      }
     }
-  }
 
-  cropCanvas.width = cWidth;
-  cropCanvas.height = cHeight;
-  const cropCtx = cropCanvas.getContext('2d');
-  cropCtx.drawImage(imgOrCanvas, cropX, cropY, cWidth, cHeight, 0, 0, cWidth, cHeight);
+    cropCanvas.width = cWidth;
+    cropCanvas.height = cHeight;
+    const cropCtx = cropCanvas.getContext('2d');
+    cropCtx.drawImage(imgOrCanvas, cropX, cropY, cWidth, cHeight, 0, 0, cWidth, cHeight);
+  }
 
   // 2. Rotate
   let workingCanvas = cropCanvas;

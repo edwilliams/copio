@@ -5,10 +5,54 @@
  * Pure JavaScript domain models with zero DOM and zero Lit dependencies.
  */
 
+const roundCoord = (n) => Math.round(n * 1e6) / 1e6;
+const clamp01 = (n) => Math.max(0, Math.min(1, Number(n) || 0));
+
+/**
+ * Normalizes a 4-corner quadrilateral to clamped [0, 1] coordinates.
+ * @param {Object|null|undefined} quad
+ * @returns {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null}
+ */
+export function normalizeQuad(quad) {
+  if (!quad || typeof quad !== 'object') return null;
+  const keys = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'];
+  const out = {};
+  for (const k of keys) {
+    const pt = quad[k];
+    if (!pt || typeof pt !== 'object' || !Number.isFinite(Number(pt.x)) || !Number.isFinite(Number(pt.y))) {
+      return null;
+    }
+    out[k] = {
+      x: roundCoord(clamp01(pt.x)),
+      y: roundCoord(clamp01(pt.y)),
+    };
+  }
+  return /** @type {any} */ (out);
+}
+
+/**
+ * Converts a normalized { x, y, w, h } rectangle to a 4-corner quadrilateral.
+ * @param {{ x: number, y: number, w: number, h: number } | null} crop
+ * @returns {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null}
+ */
+export function cropRectToQuad(crop) {
+  if (!crop || typeof crop !== 'object') return null;
+  const x0 = clamp01(crop.x);
+  const y0 = clamp01(crop.y);
+  const x1 = clamp01(x0 + (Number(crop.w) || 0));
+  const y1 = clamp01(y0 + (Number(crop.h) || 0));
+  return {
+    topLeft: { x: roundCoord(x0), y: roundCoord(y0) },
+    topRight: { x: roundCoord(x1), y: roundCoord(y0) },
+    bottomRight: { x: roundCoord(x1), y: roundCoord(y1) },
+    bottomLeft: { x: roundCoord(x0), y: roundCoord(y1) },
+  };
+}
+
 /**
  * Normalizes an edit stack object with safe defaults.
  * @param {Object} [edits]
- * @returns {{ crop: { x: number, y: number, w: number, h: number } | null, rotate: 0|90|180|270, filter: 'none'|'bw' }}
+ * @returns {{ crop: { x: number, y: number, w: number, h: number } | null, quad: { topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null, rotate: 0|90|180|270, filter: 'none'|'bw' }}
  */
 export function normalizeEditStack(edits = {}) {
   const crop = (edits && edits.crop && typeof edits.crop === 'object')
@@ -19,6 +63,8 @@ export function normalizeEditStack(edits = {}) {
         h: Math.max(0, Math.min(1, Number(edits.crop.h) || 1)),
       }
     : null;
+
+  const quad = normalizeQuad(edits?.quad);
 
   /** @type {0|90|180|270} */
   let rotate = 0;
@@ -32,7 +78,7 @@ export function normalizeEditStack(edits = {}) {
 
   const filter = (edits && edits.filter === 'bw') ? 'bw' : 'none';
 
-  return { crop, rotate, filter };
+  return { crop, quad, rotate, filter };
 }
 
 /**
@@ -45,12 +91,11 @@ export function hasActiveEdits(edits) {
   const rot = edits.rotate !== undefined ? edits.rotate : edits.rotation;
   return Boolean(
     edits.crop ||
+    normalizeQuad(edits.quad) ||
     (rot && rot !== 0) ||
     (edits.filter && edits.filter !== 'none')
   );
 }
-
-const roundCoord = (n) => Math.round(n * 1e6) / 1e6;
 
 /**
  * Transforms normalized crop coordinates through a clockwise rotation angle (0, 90, 180, 270).
@@ -112,6 +157,73 @@ export function cropOriginalToRotated(crop, rotation = 0) {
  */
 export function cropRotatedToOriginal(crop, rotation = 0) {
   return rotateCrop(crop, -rotation);
+}
+
+function rotatePointCW(pt, rot) {
+  const x = clamp01(pt.x);
+  const y = clamp01(pt.y);
+  if (rot === 90) return { x: roundCoord(1 - y), y: roundCoord(x) };
+  if (rot === 180) return { x: roundCoord(1 - x), y: roundCoord(1 - y) };
+  if (rot === 270) return { x: roundCoord(y), y: roundCoord(1 - x) };
+  return { x: roundCoord(x), y: roundCoord(y) };
+}
+
+/**
+ * Transforms normalized quadrilateral coordinates through a clockwise rotation angle (0, 90, 180, 270),
+ * remapping corner keys so topLeft/topRight/bottomRight/bottomLeft stay in canonical order.
+ * @param {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null} quad
+ * @param {number} [rotation=0]
+ * @returns {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null}
+ */
+export function rotateQuad(quad, rotation = 0) {
+  const norm = normalizeQuad(quad);
+  if (!norm) return null;
+  const rot = ((Math.round(Number(rotation) / 90) * 90) % 360 + 360) % 360;
+  if (rot === 90) {
+    return {
+      topLeft: rotatePointCW(norm.bottomLeft, 90),
+      topRight: rotatePointCW(norm.topLeft, 90),
+      bottomRight: rotatePointCW(norm.topRight, 90),
+      bottomLeft: rotatePointCW(norm.bottomRight, 90),
+    };
+  }
+  if (rot === 180) {
+    return {
+      topLeft: rotatePointCW(norm.bottomRight, 180),
+      topRight: rotatePointCW(norm.bottomLeft, 180),
+      bottomRight: rotatePointCW(norm.topLeft, 180),
+      bottomLeft: rotatePointCW(norm.topRight, 180),
+    };
+  }
+  if (rot === 270) {
+    return {
+      topLeft: rotatePointCW(norm.topRight, 270),
+      topRight: rotatePointCW(norm.bottomRight, 270),
+      bottomRight: rotatePointCW(norm.bottomLeft, 270),
+      bottomLeft: rotatePointCW(norm.topLeft, 270),
+    };
+  }
+  return norm;
+}
+
+/**
+ * Maps normalized quad coordinates on an original unrotated image to a rotated canvas coordinate frame.
+ * @param {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null} quad
+ * @param {number} [rotation=0]
+ * @returns {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null}
+ */
+export function quadOriginalToRotated(quad, rotation = 0) {
+  return rotateQuad(quad, rotation);
+}
+
+/**
+ * Maps normalized quad coordinates on a rotated canvas back to original unrotated image coordinates.
+ * @param {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null} quad
+ * @param {number} [rotation=0]
+ * @returns {{ topLeft: { x: number, y: number }, topRight: { x: number, y: number }, bottomRight: { x: number, y: number }, bottomLeft: { x: number, y: number } } | null}
+ */
+export function quadRotatedToOriginal(quad, rotation = 0) {
+  return rotateQuad(quad, -rotation);
 }
 
 /**

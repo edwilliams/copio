@@ -16,7 +16,7 @@
  *   For destructive steps, keep previous records until new ones are committed.
  */
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /**
  * @typedef {Object} MigrationContext
@@ -55,6 +55,45 @@ export const DEFAULT_MIGRATIONS = [
             doc.pages = '[]';
             await storage.saveDoc(doc.id, doc);
           }
+        }
+      }
+    },
+  },
+  {
+    version: 3,
+    name: 'v2-to-v3-quad-edits',
+    description: 'Normalizes page edit stacks to include edits.quad for perspective correction (CPO-075).',
+    async up(storage) {
+      const docs = await storage.listDocs();
+      for (const doc of docs) {
+        if (!doc || !doc.id) continue;
+        let pages = doc.pages;
+        let wasString = false;
+        if (typeof pages === 'string') {
+          wasString = true;
+          try {
+            pages = JSON.parse(pages);
+          } catch {
+            continue;
+          }
+        }
+        if (!Array.isArray(pages)) continue;
+
+        let changed = false;
+        for (const page of pages) {
+          if (!page || typeof page !== 'object') continue;
+          if (!page.edits || typeof page.edits !== 'object') {
+            page.edits = { crop: null, quad: null, rotate: 0, filter: 'none' };
+            changed = true;
+          } else if (!('quad' in page.edits)) {
+            page.edits = { ...page.edits, quad: null };
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          doc.pages = wasString ? JSON.stringify(pages) : pages;
+          await storage.saveDoc(doc.id, doc);
         }
       }
     },

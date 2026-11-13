@@ -142,6 +142,11 @@ export {
   Page,
   ScanSession,
   normalizeEditStack,
+  normalizeQuad,
+  cropRectToQuad,
+  rotateQuad,
+  quadOriginalToRotated,
+  quadRotatedToOriginal,
   hasActiveEdits,
 } from './models.js';
 
