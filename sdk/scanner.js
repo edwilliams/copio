@@ -46,7 +46,7 @@ export class CopioScanner extends BaseElement {
   #wasStreamingBeforeHide = false;
   #grabCanvas = null;
   #edgeDetection = true;
-  #edgeModel = 'classical';
+  #edgeModel = 'ml';
   #autoCrop = true;
   #autoCapture = false;
   #liveEdgeRafId = null;
@@ -122,7 +122,7 @@ export class CopioScanner extends BaseElement {
       if (this.hasAttribute('ocr')) opts.ocr = this.getAttribute('ocr') !== 'false';
       if (this.hasAttribute('pdf')) opts.pdf = this.getAttribute('pdf') !== 'false';
       if (this.hasAttribute('edge-detection')) this.#edgeDetection = this.getAttribute('edge-detection') !== 'false';
-      if (this.hasAttribute('edge-model')) this.#edgeModel = this.getAttribute('edge-model') === 'ml' ? 'ml' : 'classical';
+      if (this.hasAttribute('edge-model')) this.#edgeModel = this.getAttribute('edge-model') === 'classical' ? 'classical' : 'ml';
       if (this.hasAttribute('auto-crop')) this.#autoCrop = this.getAttribute('auto-crop') !== 'false';
       if (this.hasAttribute('auto-capture')) this.#autoCapture = this.getAttribute('auto-capture') !== 'false' && this.getAttribute('auto-capture') !== null;
       for (const k of ['relay-url', 'signaling-url', 'ice-transport-policy']) {
@@ -315,7 +315,7 @@ export class CopioScanner extends BaseElement {
         this.edgeDetection = newValue !== 'false';
         break;
       case 'edge-model':
-        this.edgeModel = newValue === 'ml' ? 'ml' : 'classical';
+        this.edgeModel = newValue === 'classical' ? 'classical' : 'ml';
         break;
       case 'auto-crop':
         this.autoCrop = newValue !== 'false';
@@ -2760,7 +2760,7 @@ export class CopioScanner extends BaseElement {
 
   /** @param {'classical'|'ml'|string|null|undefined} val */
   set edgeModel(val) {
-    const next = val === 'ml' ? 'ml' : 'classical';
+    const next = val === 'classical' ? 'classical' : 'ml';
     if (this.#edgeModel !== next) {
       this.#edgeModel = next;
       this.#syncAttr('edge-model', next);

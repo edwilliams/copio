@@ -203,13 +203,14 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
    */
   constructor(options = {}) {
     super();
+    const isNode = typeof window === 'undefined' && typeof Worker === 'undefined';
     this.#defaultOptions = {
       maxProcessingDimension: 800,
       enableDetectionCascade: true,
       minConfidence: 0.55,
       fallbackOnLowConfidence: false,
       useWorker: true,
-      detector: 'classical',
+      detector: isNode ? 'classical' : 'ml',
       ...options,
     };
   }

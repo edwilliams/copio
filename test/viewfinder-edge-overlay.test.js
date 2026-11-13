@@ -391,16 +391,16 @@ describe('CPO-076: Auto edge detection — live viewfinder quad overlay & pre-fi
   });
 
   describe('Edge Model Backend Configuration (Classical WASM vs ML Neural)', () => {
-    it('defaults edgeModel to "classical" and synchronizes "edge-model" attribute', async () => {
+    it('defaults edgeModel to "ml" and synchronizes "edge-model" attribute', async () => {
       const scanner = document.createElement('copio-scanner');
       container.appendChild(scanner);
 
-      expect(scanner.edgeModel).to.equal('classical');
-      scanner.edgeModel = 'ml';
-      expect(scanner.getAttribute('edge-model')).to.equal('ml');
+      expect(scanner.edgeModel).to.equal('ml');
+      scanner.edgeModel = 'classical';
+      expect(scanner.getAttribute('edge-model')).to.equal('classical');
 
-      scanner.setAttribute('edge-model', 'classical');
-      expect(scanner.edgeModel).to.equal('classical');
+      scanner.setAttribute('edge-model', 'ml');
+      expect(scanner.edgeModel).to.equal('ml');
 
       scanner.close();
     });

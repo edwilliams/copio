@@ -158,6 +158,11 @@ describe('Auto Edge Detection — Worker & EdgeDetectorPort Adapter (CPO-074)', 
       ctx.lineTo(50, 420);
       ctx.closePath();
       ctx.fill();
+      // Add subtle document text lines so ML DocCornerNet recognizes it as a document
+      ctx.fillStyle = '#334155';
+      for (let y = 120; y <= 360; y += 36) {
+        ctx.fillRect(95, y, 200, 10);
+      }
 
       const imgData = ctx.getImageData(0, 0, 400, 500);
       const res = await adapter.detect(imgData);

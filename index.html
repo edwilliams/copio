@@ -868,15 +868,15 @@
           </div>
         </div>
 
-        <!-- Edge Detector Backend Switcher -->
-        <div class="control-group" role="group" aria-label="Edge Detector Backend">
-          <span class="control-label">Detector</span>
+        <!-- Auto Edge Detection Feature Toggle -->
+        <div class="control-group" role="group" aria-label="Auto Edge Detection">
+          <span class="control-label">Auto Edge</span>
           <div class="seg-group">
-            <button type="button" class="seg-btn" data-detector-btn="classical" aria-pressed="true" title="Fast classical WASM edge cascade">
-              Classical
+            <button type="button" class="seg-btn" data-edge-toggle="on" aria-pressed="true" title="Enable live ML Neural document edge tracking">
+              On
             </button>
-            <button type="button" class="seg-btn" data-detector-btn="ml" aria-pressed="false" title="Neural edge detector (DocCornerNet ~1.9MB ONNX model)">
-              🧠 ML Neural <span class="sandbox-brand-tag" style="font-size:9px; padding:1px 4px; margin-left:2px;">NEW</span>
+            <button type="button" class="seg-btn" data-edge-toggle="off" aria-pressed="false" title="Disable live edge detection">
+              Off
             </button>
           </div>
         </div>
@@ -1145,9 +1145,12 @@
     window.addEventListener('hashchange', checkMobileHandoffMode);
     const isInitialMobileHandoff = checkMobileHandoffMode();
 
-    // Register edge detection, OCR & PDF/Export ports so auto edge detection, workbench OCR, and exports work out-of-the-box
-    const edgeAdapter = new ScanicWasmEdgeAdapter({ detector: 'classical' });
+    // Register edge detection (ML Neural), OCR & PDF/Export ports so auto edge detection, workbench OCR, and exports work out-of-the-box
+    const edgeAdapter = new ScanicWasmEdgeAdapter({ detector: 'ml' });
     registerService('edge', edgeAdapter);
+    edgeAdapter.preloadMl().catch((err) => {
+      console.warn('[CopioSandbox] ML edge detector preload warning:', err);
+    });
     registerService('ocr', ocrService);
     registerService('pdf', exportService);
     registerService('export', exportService);
@@ -1847,49 +1850,30 @@
       });
     });
 
-    // Edge Detector Switcher (Classical vs ML Neural)
-    const mlBtnEl = document.querySelector('[data-detector-btn="ml"]');
-    const mlBtnDefaultHtml = mlBtnEl ? mlBtnEl.innerHTML : '';
-    document.querySelectorAll('[data-detector-btn]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const detectorKey = btn.getAttribute('data-detector-btn');
-        document.querySelectorAll('[data-detector-btn]').forEach((b) => {
+    // Auto Edge Detection Feature Switcher (On vs Off)
+    document.querySelectorAll('[data-edge-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const enabled = btn.getAttribute('data-edge-toggle') === 'on';
+        document.querySelectorAll('[data-edge-toggle]').forEach((b) => {
           b.setAttribute('aria-pressed', String(b === btn));
         });
-        scanner.edgeModel = detectorKey;
-        scanner.setAttribute('edge-model', detectorKey);
+        scanner.edgeDetection = enabled;
+        scanner.autoCrop = enabled;
+        scanner.setAttribute('edge-detection', String(enabled));
+        scanner.setAttribute('auto-crop', String(enabled));
         const mobileScannerEl = document.getElementById('mobile-standalone-scanner');
         if (mobileScannerEl) {
-          mobileScannerEl.edgeModel = detectorKey;
-          mobileScannerEl.setAttribute('edge-model', detectorKey);
+          mobileScannerEl.edgeDetection = enabled;
+          mobileScannerEl.autoCrop = enabled;
         }
         if (simulatedScanner) {
-          simulatedScanner.edgeModel = detectorKey;
-          simulatedScanner.setAttribute('edge-model', detectorKey);
+          simulatedScanner.edgeDetection = enabled;
+          simulatedScanner.autoCrop = enabled;
         }
-        edgeAdapter.detector = detectorKey;
-        logCustomEvent('edge-detector-backend', {
-          backend: detectorKey,
-          description: detectorKey === 'ml'
-            ? 'DocCornerNet ONNX SimCC Neural Corner Detector'
-            : 'Scanic Classical Canny + Contour WASM Cascade',
+        logCustomEvent('auto-edge-detection', {
+          enabled,
+          backend: 'ml',
         });
-        if (detectorKey === 'ml') {
-          if (mlBtnEl) mlBtnEl.textContent = '⏳ Loading ML…';
-          try {
-            await edgeAdapter.preloadMl();
-            if (mlBtnEl) mlBtnEl.innerHTML = mlBtnDefaultHtml;
-            logCustomEvent('ml-model-ready', { backend: 'ml' });
-          } catch (err) {
-            if (mlBtnEl) mlBtnEl.innerHTML = mlBtnDefaultHtml;
-            logCustomEvent('ml-model-error', {
-              error: err?.message || String(err),
-              fallback: 'classical',
-            });
-            // Fall back to classical so live detection keeps working
-            document.querySelector('[data-detector-btn="classical"]')?.click();
-          }
-        }
       });
     });
 
