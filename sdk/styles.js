@@ -684,12 +684,12 @@ export const scannerCss = `
   min-height: 180px;
 }
 
-.copio-canvas-viewport.has-card-switcher {
-  padding-top: 66px;
+.copio-canvas-viewport.is-cropping {
+  padding: 24px;
 }
 
-.copio-canvas-viewport.is-cropping {
-  padding: 74px 26px 26px 26px;
+.copio-canvas-viewport.has-card-switcher {
+  padding-top: 66px;
 }
 
 /* Card Side Switcher */
@@ -760,7 +760,7 @@ export const scannerCss = `
   inset: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
   z-index: 8;
   touch-action: none;
 }
@@ -1240,7 +1240,10 @@ export const scannerCss = `
   .copio-stage-canvas,
   .copio-canvas-viewport {
     min-height: 120px;
-    padding: 10px 12px 24px 12px;
+    padding: 12px;
+  }
+  .copio-canvas-viewport.is-cropping {
+    padding: 20px;
   }
   .copio-filmstrip,
   .copio-filmstrip-bar {
