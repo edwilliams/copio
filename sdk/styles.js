@@ -827,6 +827,59 @@ export const scannerCss = `
 .copio-crop-handle.w, .copio-crop-handle.edge-w { left: -24px; top: calc(50% - 24px); cursor: ew-resize; }
 .copio-crop-handle.e, .copio-crop-handle.edge-e { right: -24px; top: calc(50% - 24px); cursor: ew-resize; }
 
+/* 4-Corner Perspective Quad Crop (CPO-075) */
+.copio-crop-quad-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.copio-crop-mask {
+  fill: rgba(5, 8, 14, 0.68);
+}
+
+.copio-crop-quad-outline {
+  fill: rgba(56, 189, 248, 0.06);
+  stroke: var(--copio-color-primary);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: auto;
+  cursor: move;
+}
+
+.copio-crop-quad-grid {
+  stroke: rgba(56, 189, 248, 0.35);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.copio-quad-handle {
+  transform: translate(-50%, -50%);
+  cursor: grab;
+}
+
+.copio-quad-handle:active {
+  cursor: grabbing;
+}
+
+.copio-crop-magnifier {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 2.5px solid var(--copio-color-primary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  z-index: 20;
+  display: none;
+  background: #0b0f17;
+  transform: translate(-50%, -125%);
+}
+
 /* Filmstrip & Reorder Tray */
 .copio-filmstrip,
 .copio-filmstrip-bar {

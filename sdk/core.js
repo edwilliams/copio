@@ -54,10 +54,15 @@ import {
   Page,
   ScanSession,
   normalizeEditStack,
+  normalizeQuad,
+  cropRectToQuad,
   hasActiveEdits,
   rotateCrop,
   cropRotatedToOriginal,
   cropOriginalToRotated,
+  rotateQuad,
+  quadRotatedToOriginal,
+  quadOriginalToRotated,
 } from './models.js';
 
 /** @typedef {import('../js/adapters/edge/edge-detector-port.js').EdgePoint} EdgePoint */
@@ -734,7 +739,7 @@ export class CopioEngine extends EventTarget {
       throw new Error(`Page with ID "${pageId}" not found in document "${targetDocId}"`);
     }
 
-    const priorEdits = { ...(page.edits || { crop: null, rotate: 0, filter: 'none' }) };
+    const priorEdits = normalizeEditStack(page.edits || { crop: null, quad: null, rotate: 0, filter: 'none' });
     const priorSrc = page.src;
     const mergedEdits = normalizeEditStack({ ...priorEdits, ...edits });
     const originalSrc = page.originalSrc || page.src;
@@ -744,11 +749,21 @@ export class CopioEngine extends EventTarget {
       derivedSrc = await this.#imageProcessor.renderEdits(originalSrc, mergedEdits);
     }
 
-    await this.updatePage(targetDocId, pageId, {
+    const geometryChanged =
+      priorEdits.rotate !== mergedEdits.rotate ||
+      JSON.stringify(priorEdits.crop) !== JSON.stringify(mergedEdits.crop) ||
+      JSON.stringify(priorEdits.quad) !== JSON.stringify(mergedEdits.quad);
+
+    const pageUpdates = {
       originalSrc,
       src: derivedSrc,
       edits: mergedEdits,
-    });
+      ...(geometryChanged
+        ? { ocrText: null, ocrConfidence: null, ocrWords: null, ocrWidth: null, ocrHeight: null }
+        : {}),
+    };
+
+    await this.updatePage(targetDocId, pageId, pageUpdates);
 
     this.#pushUndo(targetDocId, {
       type: 'edit',
@@ -761,9 +776,7 @@ export class CopioEngine extends EventTarget {
 
     return {
       ...page,
-      originalSrc,
-      src: derivedSrc,
-      edits: mergedEdits,
+      ...pageUpdates,
     };
   }
 
@@ -1190,10 +1203,15 @@ export {
   Page,
   ScanSession,
   normalizeEditStack,
+  normalizeQuad,
+  cropRectToQuad,
   hasActiveEdits,
   rotateCrop,
   cropRotatedToOriginal,
   cropOriginalToRotated,
+  rotateQuad,
+  quadRotatedToOriginal,
+  quadOriginalToRotated,
   randomId,
   fileToBase64,
   thresholdSrc,

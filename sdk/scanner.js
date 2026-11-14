@@ -7,9 +7,10 @@
  */
 import {
   CopioEngine,
-  cropRotatedToOriginal,
-  cropOriginalToRotated,
+  cropRectToQuad,
   quadToCropRect,
+  quadRotatedToOriginal,
+  quadOriginalToRotated,
   cloneQuad,
   getRegisteredService,
 } from './core.js';
@@ -37,7 +38,7 @@ export class CopioScanner extends BaseElement {
   #pageCount = 0;
   #retaking = false;
   #cropMode = false;
-  #draftCrop = null;
+  #draftQuad = null;
   #undoTimer = null;
   #undoRemaining = 0;
   #renderPromise = null;
@@ -55,6 +56,7 @@ export class CopioScanner extends BaseElement {
   #smoothedQuad = null;
   #latestDetectionResult = null;
   #consecutiveMisses = 0;
+  #lastValidDetectionTime = 0;
   #stableQuadStartTime = 0;
   #lastStableQuad = null;
   #handoffSession = null;
@@ -684,24 +686,77 @@ export class CopioScanner extends BaseElement {
     const shadow = this.shadowRoot;
     if (!shadow) return;
 
-    const cropBox = shadow.getElementById('crop-box');
+    const quadOutline = shadow.getElementById('crop-quad-outline');
     const handles = shadow.querySelectorAll('.copio-crop-handle');
-    if (!cropBox || handles.length === 0) return;
+    if (!quadOutline || handles.length === 0) return;
 
-    let activeHandle = null;
-    let isDraggingBox = false;
+    let activeCorner = null;
+    let isDraggingQuad = false;
     let startX = 0;
     let startY = 0;
-    let initialCrop = null;
+    let initialQuad = null;
+
+    const updateMagnifier = (normX, normY) => {
+      const mag = /** @type {HTMLCanvasElement|null} */ (shadow.getElementById('crop-magnifier'));
+      const stageImg = /** @type {HTMLImageElement|null} */ (shadow.getElementById('stage-img'));
+      if (!mag || !stageImg || !stageImg.complete || !stageImg.naturalWidth) return;
+
+      mag.style.display = 'block';
+      mag.style.left = `${(normX * 100).toFixed(2)}%`;
+      mag.style.top = `${(normY * 100).toFixed(2)}%`;
+      mag.style.transform = normY < 0.25 ? 'translate(-50%, 35%)' : 'translate(-50%, -125%)';
+
+      const mCtx = mag.getContext('2d');
+      if (!mCtx) return;
+      const zoom = 2;
+      const w = mag.width;
+      const h = mag.height;
+      const srcW = stageImg.naturalWidth;
+      const srcH = stageImg.naturalHeight;
+      const sampleW = w / zoom;
+      const sampleH = h / zoom;
+      const cx = normX * srcW;
+      const cy = normY * srcH;
+
+      mCtx.clearRect(0, 0, w, h);
+      mCtx.fillStyle = '#0b0f17';
+      mCtx.fillRect(0, 0, w, h);
+      mCtx.drawImage(
+        stageImg,
+        cx - sampleW / 2,
+        cy - sampleH / 2,
+        sampleW,
+        sampleH,
+        0,
+        0,
+        w,
+        h,
+      );
+
+      // Crosshair
+      mCtx.strokeStyle = 'rgba(56, 189, 248, 0.9)';
+      mCtx.lineWidth = 1.5;
+      mCtx.beginPath();
+      mCtx.moveTo(w / 2 - 10, h / 2);
+      mCtx.lineTo(w / 2 + 10, h / 2);
+      mCtx.moveTo(w / 2, h / 2 - 10);
+      mCtx.lineTo(w / 2, h / 2 + 10);
+      mCtx.stroke();
+    };
+
+    const hideMagnifier = () => {
+      const mag = shadow.getElementById('crop-magnifier');
+      if (mag) mag.style.display = 'none';
+    };
 
     const onPointerDown = (e) => {
       const handleEl = e.target.closest('.copio-crop-handle');
       if (handleEl) {
-        activeHandle = handleEl.getAttribute('data-handle');
-        isDraggingBox = false;
-      } else if (e.target === cropBox || e.target.classList.contains('copio-crop-grid')) {
-        activeHandle = null;
-        isDraggingBox = true;
+        activeCorner = handleEl.getAttribute('data-corner');
+        isDraggingQuad = false;
+      } else if (e.target === quadOutline) {
+        activeCorner = null;
+        isDraggingQuad = true;
       } else {
         return;
       }
@@ -711,57 +766,73 @@ export class CopioScanner extends BaseElement {
 
       startX = e.clientX;
       startY = e.clientY;
-      initialCrop = this.#draftCrop ? { ...this.#draftCrop } : { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
+      initialQuad = this.#draftQuad
+        ? cloneQuad(this.#draftQuad)
+        : {
+            topLeft: { x: 0.05, y: 0.05 },
+            topRight: { x: 0.95, y: 0.05 },
+            bottomRight: { x: 0.95, y: 0.95 },
+            bottomLeft: { x: 0.05, y: 0.95 },
+          };
+
+      if (activeCorner && initialQuad[activeCorner]) {
+        updateMagnifier(initialQuad[activeCorner].x, initialQuad[activeCorner].y);
+      }
 
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
     };
 
     const onPointerMove = (e) => {
-      if ((!activeHandle && !isDraggingBox) || !initialCrop) return;
+      if ((!activeCorner && !isDraggingQuad) || !initialQuad) return;
       const wrapper = shadow.getElementById('canvas-wrapper') || shadow.getElementById('canvas-viewport');
       const rect = wrapper?.getBoundingClientRect() || { width: 300, height: 400 };
 
       const dx = (e.clientX - startX) / Math.max(rect.width, 1);
       const dy = (e.clientY - startY) / Math.max(rect.height, 1);
 
-      let { x, y, w, h } = initialCrop;
+      const nextQuad = cloneQuad(initialQuad);
+      const keys = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'];
 
-      if (isDraggingBox) {
-        x = Math.min(Math.max(0, x + dx), 1 - w);
-        y = Math.min(Math.max(0, y + dy), 1 - h);
-      } else if (activeHandle) {
-        if (activeHandle.includes('w')) {
-          const nextX = Math.min(Math.max(0, x + dx), x + w - 0.1);
-          w += x - nextX;
-          x = nextX;
+      if (isDraggingQuad) {
+        let minDx = -Infinity;
+        let maxDx = Infinity;
+        let minDy = -Infinity;
+        let maxDy = Infinity;
+        for (const k of keys) {
+          minDx = Math.max(minDx, -initialQuad[k].x);
+          maxDx = Math.min(maxDx, 1 - initialQuad[k].x);
+          minDy = Math.max(minDy, -initialQuad[k].y);
+          maxDy = Math.min(maxDy, 1 - initialQuad[k].y);
         }
-        if (activeHandle.includes('e')) {
-          w = Math.min(Math.max(0.1, w + dx), 1 - x);
+        const clampedDx = Math.min(Math.max(dx, minDx), maxDx);
+        const clampedDy = Math.min(Math.max(dy, minDy), maxDy);
+        for (const k of keys) {
+          nextQuad[k].x = initialQuad[k].x + clampedDx;
+          nextQuad[k].y = initialQuad[k].y + clampedDy;
         }
-        if (activeHandle.includes('n')) {
-          const nextY = Math.min(Math.max(0, y + dy), y + h - 0.1);
-          h += y - nextY;
-          y = nextY;
-        }
-        if (activeHandle.includes('s')) {
-          h = Math.min(Math.max(0.1, h + dy), 1 - y);
-        }
+      } else if (activeCorner && nextQuad[activeCorner]) {
+        const nx = Math.min(Math.max(0, initialQuad[activeCorner].x + dx), 1);
+        const ny = Math.min(Math.max(0, initialQuad[activeCorner].y + dy), 1);
+        nextQuad[activeCorner].x = nx;
+        nextQuad[activeCorner].y = ny;
+        updateMagnifier(nx, ny);
       }
 
-      this.#draftCrop = { x, y, w, h };
+      this.#draftQuad = nextQuad;
       this.#updateCropBoxUi();
     };
 
     const onPointerUp = () => {
-      activeHandle = null;
-      isDraggingBox = false;
-      initialCrop = null;
+      activeCorner = null;
+      isDraggingQuad = false;
+      initialQuad = null;
+      hideMagnifier();
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
 
-    cropBox.addEventListener('pointerdown', onPointerDown);
+    quadOutline.addEventListener('pointerdown', onPointerDown);
     handles.forEach((handle) => {
       handle.addEventListener('pointerdown', onPointerDown);
     });
@@ -769,14 +840,48 @@ export class CopioScanner extends BaseElement {
 
   #updateCropBoxUi() {
     const shadow = this.shadowRoot;
-    if (!shadow || !this.#draftCrop) return;
-    const cropBox = shadow.getElementById('crop-box');
-    if (!cropBox) return;
+    if (!shadow || !this.#draftQuad) return;
 
-    cropBox.style.left = `${(this.#draftCrop.x * 100).toFixed(1)}%`;
-    cropBox.style.top = `${(this.#draftCrop.y * 100).toFixed(1)}%`;
-    cropBox.style.width = `${(this.#draftCrop.w * 100).toFixed(1)}%`;
-    cropBox.style.height = `${(this.#draftCrop.h * 100).toFixed(1)}%`;
+    const { topLeft: tl, topRight: tr, bottomRight: br, bottomLeft: bl } = this.#draftQuad;
+    const p = (pt) => `${(pt.x * 100).toFixed(2)},${(pt.y * 100).toFixed(2)}`;
+    const ptsStr = `${p(tl)} ${p(tr)} ${p(br)} ${p(bl)}`;
+
+    const mask = shadow.getElementById('crop-quad-mask');
+    if (mask) {
+      mask.setAttribute(
+        'd',
+        `M0,0 H100 V100 H0 Z M${(tl.x * 100).toFixed(2)},${(tl.y * 100).toFixed(2)} L${(tr.x * 100).toFixed(2)},${(tr.y * 100).toFixed(2)} L${(br.x * 100).toFixed(2)},${(br.y * 100).toFixed(2)} L${(bl.x * 100).toFixed(2)},${(bl.y * 100).toFixed(2)} Z`,
+      );
+    }
+
+    const outline = shadow.getElementById('crop-quad-outline');
+    if (outline) {
+      outline.setAttribute('points', ptsStr);
+    }
+
+    // Perspective rule-of-thirds grid lines
+    const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    const setLine = (id, a, b) => {
+      const el = shadow.getElementById(id);
+      if (!el) return;
+      el.setAttribute('x1', (a.x * 100).toFixed(2));
+      el.setAttribute('y1', (a.y * 100).toFixed(2));
+      el.setAttribute('x2', (b.x * 100).toFixed(2));
+      el.setAttribute('y2', (b.y * 100).toFixed(2));
+    };
+    setLine('crop-grid-v1', lerp(tl, tr, 1 / 3), lerp(bl, br, 1 / 3));
+    setLine('crop-grid-v2', lerp(tl, tr, 2 / 3), lerp(bl, br, 2 / 3));
+    setLine('crop-grid-h1', lerp(tl, bl, 1 / 3), lerp(tr, br, 1 / 3));
+    setLine('crop-grid-h2', lerp(tl, bl, 2 / 3), lerp(tr, br, 2 / 3));
+
+    const corners = { topLeft: tl, topRight: tr, bottomRight: br, bottomLeft: bl };
+    for (const [corner, pt] of Object.entries(corners)) {
+      const handle = shadow.querySelector(`.copio-quad-handle[data-corner="${corner}"]`);
+      if (handle) {
+        /** @type {HTMLElement} */ (handle).style.left = `${(pt.x * 100).toFixed(2)}%`;
+        /** @type {HTMLElement} */ (handle).style.top = `${(pt.y * 100).toFixed(2)}%`;
+      }
+    }
   }
 
   async #syncView() {
@@ -936,27 +1041,34 @@ export class CopioScanner extends BaseElement {
           cropLayer.className = 'copio-crop-layer';
           cropLayer.id = 'crop-layer';
           cropLayer.innerHTML = `
-            <div class="copio-crop-box" id="crop-box">
-              <div class="copio-crop-grid"></div>
-              <span class="copio-crop-handle nw" data-handle="nw"></span>
-              <span class="copio-crop-handle ne" data-handle="ne"></span>
-              <span class="copio-crop-handle se" data-handle="se"></span>
-              <span class="copio-crop-handle sw" data-handle="sw"></span>
-              <span class="copio-crop-handle n edge-n" data-handle="n"></span>
-              <span class="copio-crop-handle e edge-e" data-handle="e"></span>
-              <span class="copio-crop-handle s edge-s" data-handle="s"></span>
-              <span class="copio-crop-handle w edge-w" data-handle="w"></span>
-            </div>
+            <svg class="copio-crop-quad-svg" id="crop-quad-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path class="copio-crop-mask" id="crop-quad-mask" fill-rule="evenodd" d=""></path>
+              <line class="copio-crop-quad-grid" id="crop-grid-v1"></line>
+              <line class="copio-crop-quad-grid" id="crop-grid-v2"></line>
+              <line class="copio-crop-quad-grid" id="crop-grid-h1"></line>
+              <line class="copio-crop-quad-grid" id="crop-grid-h2"></line>
+              <polygon class="copio-crop-quad-outline" id="crop-quad-outline" points=""></polygon>
+            </svg>
+            <span class="copio-crop-handle copio-quad-handle" data-corner="topLeft" data-handle="nw"></span>
+            <span class="copio-crop-handle copio-quad-handle" data-corner="topRight" data-handle="ne"></span>
+            <span class="copio-crop-handle copio-quad-handle" data-corner="bottomRight" data-handle="se"></span>
+            <span class="copio-crop-handle copio-quad-handle" data-corner="bottomLeft" data-handle="sw"></span>
+            <canvas class="copio-crop-magnifier" id="crop-magnifier" width="96" height="96"></canvas>
           `;
           wrapper?.appendChild(cropLayer);
           this.#bindCropHandles();
         }
         cropLayer.style.display = 'block';
         const rot = activePage.edits?.rotate || 0;
-        const priorCrop = activePage.edits?.crop || (activePage.edits?.quad ? quadToCropRect(activePage.edits.quad) : null);
-        this.#draftCrop = priorCrop
-          ? cropOriginalToRotated(priorCrop, rot)
-          : { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };
+        const priorQuad =
+          activePage.edits?.quad ||
+          (activePage.edits?.crop ? cropRectToQuad(activePage.edits.crop) : null) || {
+            topLeft: { x: 0.05, y: 0.05 },
+            topRight: { x: 0.95, y: 0.05 },
+            bottomRight: { x: 0.95, y: 0.95 },
+            bottomLeft: { x: 0.05, y: 0.95 },
+          };
+        this.#draftQuad = quadOriginalToRotated(priorQuad, rot);
         this.#updateCropBoxUi();
       } else if (cropLayer) {
         cropLayer.remove();
@@ -1301,7 +1413,7 @@ export class CopioScanner extends BaseElement {
       }
 
       const elapsed = timestamp - this.#lastEdgeDetectTime;
-      if (!this.#isDetectingEdge && elapsed >= 35) {
+      if (!this.#isDetectingEdge && elapsed >= 100) {
         this.#lastEdgeDetectTime = timestamp;
         await this.#processLiveViewfinderFrame(timestamp);
       }
@@ -1346,6 +1458,7 @@ export class CopioScanner extends BaseElement {
     this.#smoothedQuad = null;
     this.#latestDetectionResult = null;
     this.#consecutiveMisses = 0;
+    this.#lastValidDetectionTime = 0;
     this.#stableQuadStartTime = 0;
     this.#lastStableQuad = null;
   }
@@ -1406,6 +1519,7 @@ export class CopioScanner extends BaseElement {
 
       if (result && result.quad && result.confidence >= minConfidence && !result.isFallback) {
         this.#consecutiveMisses = 0;
+        this.#lastValidDetectionTime = timestamp;
         const alpha = 0.35;
         if (!this.#smoothedQuad) {
           this.#smoothedQuad = cloneQuad(result.quad);
@@ -1436,7 +1550,7 @@ export class CopioScanner extends BaseElement {
         }
       } else {
         this.#consecutiveMisses++;
-        if (this.#consecutiveMisses > 4) {
+        if (this.#consecutiveMisses > 4 && timestamp - this.#lastValidDetectionTime > 1200) {
           this.#smoothedQuad = null;
           this.#latestDetectionResult = null;
           this.#stableQuadStartTime = 0;
@@ -1540,6 +1654,11 @@ export class CopioScanner extends BaseElement {
           const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
           await this.addFiles([file], { prefilledQuad: captureQuad });
 
+          if (!isBatch && captureQuad && this.#autoCrop && this.features.includes('crop')) {
+            this.#cropMode = true;
+            await this.#syncView();
+          }
+
           if (isBatch && this.maxPages > 0 && this.#pageCount >= this.maxPages) {
             this.#stopCameraStream();
             this.stage = 'workbench';
@@ -1568,7 +1687,7 @@ export class CopioScanner extends BaseElement {
 
     if (this.#cropMode) {
       this.#cropMode = false;
-      this.#draftCrop = null;
+      this.#draftQuad = null;
     }
 
     const currentRotate = activePage.edits?.rotate || 0;
@@ -1587,7 +1706,7 @@ export class CopioScanner extends BaseElement {
 
     if (this.#cropMode) {
       this.#cropMode = false;
-      this.#draftCrop = null;
+      this.#draftQuad = null;
     }
 
     const currentFilter = activePage.edits?.filter || 'none';
@@ -1606,12 +1725,14 @@ export class CopioScanner extends BaseElement {
 
     if (this.#cropMode) {
       this.#cropMode = false;
-      const draft = this.#draftCrop;
-      this.#draftCrop = null;
-      if (draft) {
+      const draftQuad = this.#draftQuad;
+      this.#draftQuad = null;
+      if (draftQuad) {
         const rot = activePage.edits?.rotate || 0;
-        const originalCrop = cropRotatedToOriginal(draft, rot);
+        const originalQuad = quadRotatedToOriginal(draftQuad, rot);
+        const originalCrop = quadToCropRect(originalQuad);
         await this.#engine.applyEdit(this.#targetDocId, activePage.id, {
+          quad: originalQuad,
           crop: originalCrop,
         });
       }
@@ -1724,6 +1845,10 @@ export class CopioScanner extends BaseElement {
   }
 
   async #handlePrimaryCtaClick() {
+    if (this.#cropMode) {
+      await this.#toggleCropMode();
+    }
+
     if (this.aspect === 'card' && this.maxPages === 2 && this.#pageCount === 1) {
       this.stage = 'viewfinder';
       return;
