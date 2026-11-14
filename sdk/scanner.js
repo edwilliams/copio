@@ -1654,6 +1654,11 @@ export class CopioScanner extends BaseElement {
           const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
           await this.addFiles([file], { prefilledQuad: captureQuad });
 
+          if (!isBatch && captureQuad && this.#autoCrop && this.features.includes('crop')) {
+            this.#cropMode = true;
+            await this.#syncView();
+          }
+
           if (isBatch && this.maxPages > 0 && this.#pageCount >= this.maxPages) {
             this.#stopCameraStream();
             this.stage = 'workbench';
@@ -1840,6 +1845,10 @@ export class CopioScanner extends BaseElement {
   }
 
   async #handlePrimaryCtaClick() {
+    if (this.#cropMode) {
+      await this.#toggleCropMode();
+    }
+
     if (this.aspect === 'card' && this.maxPages === 2 && this.#pageCount === 1) {
       this.stage = 'viewfinder';
       return;
