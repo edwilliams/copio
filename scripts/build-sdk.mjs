@@ -10,7 +10,7 @@
  * 4. Injects build date constant for version/licensing checks
  */
 
-import { rm, mkdir, cp, stat } from 'fs/promises';
+import { rm, mkdir, cp, stat, readFile, writeFile } from 'fs/promises';
 import fs from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';
@@ -21,6 +21,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.resolve(rootDir, 'dist');
 const buildDate = new Date().toISOString();
+
+async function syncVersionFile(version) {
+  const versionPath = path.join(rootDir, 'sdk/version.js');
+  const current = await readFile(versionPath, 'utf8');
+  const updated = current.replace(
+    /(\?\s*__VERSION__\s*\n\s*:\s*')[^']*(')/,
+    `$1${version}$2`,
+  );
+  if (updated !== current) {
+    await writeFile(versionPath, updated, 'utf8');
+    console.log(`🔄 Synced sdk/version.js to ${version}`);
+  }
+}
 
 function minifyCss(css) {
   return css
@@ -78,7 +91,11 @@ const browserShimPlugin = {
 };
 
 async function buildSdk() {
-  console.log('📦 Building Copio SDK...\n');
+  const pkg = JSON.parse(await readFile(path.join(rootDir, 'package.json'), 'utf8'));
+  const sdkVersion = pkg.version;
+  await syncVersionFile(sdkVersion);
+
+  console.log(`📦 Building Copio SDK v${sdkVersion}...\n`);
   console.log(`Build Date: ${buildDate}`);
 
   // 1. Clean dist/
@@ -128,6 +145,7 @@ async function buildSdk() {
     plugins: [browserShimPlugin, cssMinifyPlugin],
     define: {
       __BUILD_DATE__: JSON.stringify(buildDate),
+      __VERSION__: JSON.stringify(sdkVersion),
     },
     metafile: true,
   });
@@ -150,6 +168,7 @@ async function buildSdk() {
     plugins: [browserShimPlugin, cssMinifyPlugin],
     define: {
       __BUILD_DATE__: JSON.stringify(buildDate),
+      __VERSION__: JSON.stringify(sdkVersion),
     },
   });
 
@@ -168,6 +187,7 @@ async function buildSdk() {
     plugins: [browserShimPlugin, cssMinifyPlugin],
     define: {
       __BUILD_DATE__: JSON.stringify(buildDate),
+      __VERSION__: JSON.stringify(sdkVersion),
     },
   });
 
