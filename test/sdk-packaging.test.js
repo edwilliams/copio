@@ -3,16 +3,15 @@ import * as SDK from '../sdk/index.js';
 import * as Core from '../sdk/core.js';
 import * as Scanner from '../sdk/scanner.js';
 import * as Sync from '../sdk/sync.js';
-import { LicenseManager } from '../sdk/license.js';
 import { BUILD_DATE, VERSION } from '../sdk/version.js';
 
 describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
-  it('exports CopioScanner and LicenseManager named exports from SDK root', async () => {
+  it('exports CopioScanner and CopioEngine named exports from SDK root without LicenseManager', async () => {
     expect(SDK.CopioScanner).to.be.a('function');
-    expect(SDK.LicenseManager).to.be.a('function');
+    expect(SDK.LicenseManager).to.be.undefined;
+    expect(SDK.BUILD_DATE).to.be.undefined;
     expect(SDK.CopioEngine).to.be.a('function');
     expect(SDK.MemoryStorageAdapter).to.be.a('function');
-    expect(SDK.BUILD_DATE).to.be.a('string');
     const pkg = await fetch('/package.json').then((r) => r.json());
     expect(SDK.VERSION).to.equal(pkg.version);
   });
@@ -47,18 +46,8 @@ describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
     expect(afterDelete.length).to.equal(0);
   });
 
-  it('provides LicenseManager with tier resolution', () => {
-    const defaultManager = new LicenseManager();
-    expect(defaultManager.isValid()).to.be.false;
-    expect(defaultManager.getTier()).to.equal('community');
-
-    const proManager = new LicenseManager('pro_test_12345');
-    expect(proManager.isValid()).to.be.true;
-    expect(proManager.getTier()).to.equal('pro');
-
-    const enterpriseManager = new LicenseManager('ent_enterprise_key');
-    expect(enterpriseManager.isValid()).to.be.true;
-    expect(enterpriseManager.getTier()).to.equal('enterprise');
+  it('keeps LicenseManager internal until CPO-053', () => {
+    expect(SDK.LicenseManager).to.be.undefined;
   });
 
   it('defines <copio-scanner> custom element and mounts cleanly', () => {
@@ -79,10 +68,10 @@ describe('CPO-060 & CPO-061: SDK Packaging & Exports', () => {
     expect(Scanner.CopioScanner).to.be.a('function');
   });
 
-  it('exports sync manager and dialog from @copio/sdk/sync', () => {
+  it('exports sync manager and ICE helper from @copio/sdk/sync without app-only dialogs', () => {
     expect(Sync.SyncManager).to.be.a('function');
-    expect(Sync.CopioSyncDialog).to.be.a('function');
     expect(Sync.getIceServers).to.be.a('function');
+    expect(Sync.CopioSyncDialog).to.be.undefined;
   });
 
   it('injects build date and version', async () => {

@@ -2,6 +2,7 @@ import { expect } from '@esm-bundle/chai';
 import '../js/lib/shoelace.js';
 import '../js/core/register-components.js';
 import * as SDK from '../sdk/index.js';
+import { dispatchCopioEvent } from '../sdk/core.js';
 
 describe('CPO-039: Lifecycle Hygiene - Cleanup on Disconnect', () => {
   it('mounts and unmounts <copio-scanner> 50 times without error or resource leakage', async () => {
@@ -57,14 +58,13 @@ describe('CPO-039: Lifecycle Hygiene - Cleanup on Disconnect', () => {
 describe('CPO-040: Remove Router Dependency from SDK Components', () => {
   it('SDK entrypoint exports expected components and headless services', () => {
     expect(SDK.CopioScanner).to.exist;
-    expect(SDK.CopioDocOcrDialog).to.exist;
-    expect(SDK.CopioSyncDialog).to.exist;
+    expect(SDK.CopioHandoff).to.exist;
     expect(SDK.CopioEngine).to.exist;
     expect(SDK.COPIO_EVENTS).to.exist;
     expect(SDK.recognizeImageText).to.be.a('function');
-    expect(SDK.SyncManager).to.exist;
     expect(SDK.exportDocumentAsPdf).to.be.a('function');
-    expect(SDK.notify).to.exist;
+    expect(SDK.CopioDocOcrDialog).to.be.undefined;
+    expect(SDK.CopioSyncDialog).to.be.undefined;
   });
 
   it('<copio-scanner> emits events without importing or mutating router', async () => {
@@ -76,7 +76,7 @@ describe('CPO-040: Remove Router Dependency from SDK Components', () => {
       eventFired = true;
     });
 
-    SDK.dispatchCopioEvent(scanner, SDK.COPIO_EVENTS.PAGES_CHANGED, { count: 1 });
+    dispatchCopioEvent(scanner, SDK.COPIO_EVENTS.PAGES_CHANGED, { count: 1 });
     expect(eventFired).to.be.true;
     expect(window.location.hash).to.equal('');
     scanner.remove();

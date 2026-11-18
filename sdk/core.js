@@ -28,7 +28,7 @@ import {
   applySauvolaToImageData,
 } from '../js/utils/utils.js';
 import { setAssetBase, getAssetBase } from '../js/utils/module-loader.js';
-import { BUILD_DATE, VERSION } from './version.js';
+import { VERSION } from './version.js';
 import { COPIO_EVENTS } from './events.js';
 import {
   MigrationRunner,
@@ -519,7 +519,7 @@ export class CopioEngine extends EventTarget {
   }
 
   /**
-   * License key.
+   * License key (currently a no-op reserved for future commercial licensing).
    * @returns {string}
    */
   get licenseKey() {
@@ -527,7 +527,7 @@ export class CopioEngine extends EventTarget {
   }
 
   /**
-   * Set license key.
+   * Set license key (currently a no-op reserved for future commercial licensing).
    * @param {string} key
    */
   set licenseKey(key) {
@@ -1228,7 +1228,6 @@ export {
   normalizeEdits,
   renderEditsToCanvas,
   applySauvolaToImageData,
-  BUILD_DATE,
   VERSION,
 };
 export { COPIO_EVENTS, dispatchCopioEvent } from './events.js';

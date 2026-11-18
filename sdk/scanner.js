@@ -2528,10 +2528,18 @@ export class CopioScanner extends BaseElement {
     if (this.#engine) this.#engine.assetBase = val;
   }
 
+  /**
+   * License key (currently a documented no-op reserved for future commercial licensing).
+   * @returns {string}
+   */
   get licenseKey() {
     return this.#engine ? this.#engine.licenseKey : '';
   }
 
+  /**
+   * Set license key (currently a documented no-op reserved for future commercial licensing).
+   * @param {string} val
+   */
   set licenseKey(val) {
     this.#syncAttr('license-key', String(val || ''));
     if (this.#engine) this.#engine.licenseKey = val;

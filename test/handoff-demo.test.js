@@ -4,8 +4,8 @@ import '../sdk/index.js';
 import {
   LoopbackTransport,
   COPIO_EVENTS,
-  renderPdfPagesToDataUrls,
 } from '../sdk/index.js';
+import { renderPdfPagesToDataUrls } from '../js/utils/pdf-utils.js';
 import { exportDocumentAsPdf } from '../js/services/export-utils.js';
 
 function wait(ms = 30) {

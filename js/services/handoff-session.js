@@ -119,6 +119,7 @@ export function parseHandoffUrl(urlOrHash) {
 
 /**
  * In-memory bi-directional transport for testing and local split-screen simulation.
+ * @experimental
  */
 export class LoopbackTransport {
   #peer = null;
@@ -336,6 +337,7 @@ async function toUint8Array(blobOrBytes) {
 
 /**
  * Headless Phone-to-Desktop Handoff Session Manager.
+ * @experimental
  */
 export class HandoffSession {
   #role; // 'host' | 'sender'

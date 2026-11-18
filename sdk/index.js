@@ -3,107 +3,35 @@
  * Copio SDK
  * Embeddable Web Components and Headless Services for Document Scanning,
  * OCR, Editing, and P2P Sync.
- * 
+ *
  * Free of navigation side-effects and offline precaching side-effects.
  */
 
-// Driving UI Adapters & Web Components
-export {
-  CopioScanner,
-  scannerCss,
-  getScannerStyleSheet,
-  adoptScannerStyles,
-} from './scanner.js';
-export {
-  CopioHandoff,
-  handoffCss,
-  getHandoffStyleSheet,
-  adoptHandoffStyles,
-} from './handoff.js';
-export { CopioDocOcrDialog } from '../js/routes/ocr/copio-doc-ocr-dialog.js';
-export { CopioSyncDialog } from '../js/routes/sync/copio-sync-dialog.js';
+// ── Public: Web Components ───────────────────────────────────────────────────
+export { CopioScanner } from './scanner.js';
+export { CopioHandoff } from './handoff.js';
 
-// Hexagonal Core & Licensing (CPO-045, CPO-053, CPO-061)
+// ── Public: Headless Engine, Events & Domain Models ──────────────────────────
 export { CopioEngine } from './core.js';
-export { COPIO_EVENTS, dispatchCopioEvent } from './events.js';
-export { LicenseManager } from './license.js';
-export { BUILD_DATE, VERSION } from './version.js';
+export { COPIO_EVENTS } from './events.js';
+export { VERSION } from './version.js';
+export { Document, Page, ScanSession } from './models.js';
 
-// Headless Services & Utilities
-export {
-  recognizeImageText,
-  recognizeDocumentPages,
-  getOcrWorker,
-  terminateOcrWorker,
-  SUPPORTED_LANGUAGES,
-} from '../js/services/ocr-service.js';
+// ── Public: Asset Base Configuration & Headless Helpers ──────────────────────
+export { getAssetBase, setAssetBase } from '../js/utils/module-loader.js';
+export { recognizeImageText, recognizeDocumentPages } from '../js/services/ocr-service.js';
+export { exportDocumentAsPdf, exportDocumentAsImages } from '../js/services/export-utils.js';
 
-export { SyncManager } from '../js/services/sync-service.js';
-
-export {
-  HandoffSession,
-  LoopbackTransport,
-  randomHandoffId,
-  encodeSessionToken,
-  decodeSessionToken,
-  buildHandoffUrl,
-  parseHandoffUrl,
-} from './handoff-session.js';
-
-export {
-  exportDocumentAsPdf,
-  exportDocumentAsImages,
-} from '../js/services/export-utils.js';
-
-export {
-  notify,
-  setContainer,
-  getContainer,
-  clear as clearNotifications,
-} from '../js/services/notify.js';
-
-export {
-  randomId,
-  fileToBase64,
-  thresholdSrc,
-  rotateSrc,
-  getCroppedSrc,
-  extractExif,
-} from '../js/utils/utils.js';
-
-export { renderPdfPagesToDataUrls } from '../js/utils/pdf-utils.js';
-
-// Module & Asset Loaders (CPO-031)
-export {
-  getAssetBase,
-  setAssetBase,
-  resolveAssetUrl,
-  loadScript,
-  loadCropper,
-  loadPdfKit,
-  loadJsZip,
-  loadPeerJs,
-  loadQrCode,
-  loadTesseract,
-} from '../js/utils/module-loader.js';
-
-// Data Layer, StoragePort & Migrations (CPO-014, CPO-033, CPO-012, CPO-013)
-export { DocRepository, docRepository } from '../js/services/doc-repository.js';
-export {
-  MigrationRunner,
-  CURRENT_SCHEMA_VERSION,
-  DEFAULT_MIGRATIONS,
-} from '../js/services/migration-runner.js';
+// ── Public / Advanced: Storage Port & Shipped Adapters ───────────────────────
 export {
   StoragePort,
   MemoryStorageAdapter,
   IndexedDbStorageAdapter,
   OpfsStorageAdapter,
-  probeOpfs,
   createDefaultAdapter,
 } from '../js/adapters/storage/index.js';
 
-// Driven Ports & Adapters (Hexagonal Architecture CPO-042, CPO-045)
+// ── Advanced: Driven Ports & Shipped Adapters ────────────────────────────────
 export {
   OcrPort,
   NullOcrAdapter,
@@ -130,28 +58,20 @@ export {
 
 export {
   EdgeDetectorPort,
-  DEFAULT_FALLBACK_QUAD,
-  cloneQuad,
-  quadToCropRect,
   NullEdgeDetectorAdapter,
   ScanicWasmEdgeAdapter,
 } from '../js/adapters/edge/index.js';
 
-export {
-  Document,
-  Page,
-  ScanSession,
-  normalizeEditStack,
-  normalizeQuad,
-  cropRectToQuad,
-  rotateQuad,
-  quadOriginalToRotated,
-  quadRotatedToOriginal,
-  hasActiveEdits,
-} from './models.js';
+// ── Advanced / Experimental: Handoff Session & Schema Migrations ─────────────
+export { HandoffSession, LoopbackTransport } from './handoff-session.js';
+export { MigrationRunner, CURRENT_SCHEMA_VERSION } from '../js/services/migration-runner.js';
 
-// Register Default Driven Ports (Hexagonal Architecture)
-import { registerService } from './core.js';
+// ── Default Driven Service Registration (batteries-included root entry) ──────
+// Registers default OCR, PDF, Image, Edge, Sync, and Export services so
+// `<copio-scanner>` and `CopioEngine` work out of the box when importing `@copio/sdk`.
+// Consumers wanting zero-side-effect tree-shaking should import `@copio/sdk/core`
+// or `@copio/sdk/scanner` and register only the adapters they need.
+import { registerService, getRegisteredService } from './core.js';
 import * as exportService from '../js/services/export-utils.js';
 import { SyncManager } from '../js/services/sync-service.js';
 import { TesseractWasmAdapter } from '../js/adapters/ocr/tesseract-wasm-adapter.js';
@@ -166,4 +86,4 @@ registerService('pdf', new PdfKitAdapter());
 registerService('imageProcessor', new Canvas2DAdapter());
 registerService('edge', new ScanicWasmEdgeAdapter());
 
-export { registerService, getRegisteredService } from './core.js';
+export { registerService, getRegisteredService };
