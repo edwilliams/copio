@@ -1,6 +1,6 @@
 {
   "name": "@copio/sdk",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "description": "Embeddable Web Components and Headless Services for Document Scanning, OCR, Editing, and P2P Sync.",
   "type": "module",
   "main": "./dist/index.js",
