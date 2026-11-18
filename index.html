@@ -1496,7 +1496,7 @@
     let currentScenario = 'receipt';
     let currentTheme = 'dark';
     let eventCounter = 0;
-    let inspectorOpen = true;
+    let inspectorOpen = !window.matchMedia('(max-width: 768px)').matches;
 
     function updateMountBarUi() {
       if (currentScenario === 'handoff') {
@@ -1893,6 +1893,8 @@
 
     // Inspector Drawer Toggle & Clear
     const toggleInspectorBtn = document.getElementById('toggle-inspector-btn');
+    toggleInspectorBtn.setAttribute('aria-pressed', String(inspectorOpen));
+    inspectorDrawer.classList.toggle('collapsed', !inspectorOpen);
     toggleInspectorBtn.addEventListener('click', () => {
       inspectorOpen = !inspectorOpen;
       toggleInspectorBtn.setAttribute('aria-pressed', String(inspectorOpen));

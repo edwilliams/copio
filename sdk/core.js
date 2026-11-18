@@ -907,11 +907,17 @@ export class CopioEngine extends EventTarget {
           } catch {}
         }
 
+        const normalizedInitialEdits = normalizeEditStack(initialEdits);
+        let initialSrc = base64;
+        if ((normalizedInitialEdits.quad || normalizedInitialEdits.crop) && this.#imageProcessor) {
+          initialSrc = await this.#imageProcessor.renderEdits(base64, normalizedInitialEdits);
+        }
+
         newPages.push({
           id: randomId(),
-          src: base64,
+          src: initialSrc,
           originalSrc: base64,
-          edits: initialEdits,
+          edits: normalizedInitialEdits,
           type: 'image',
           name: /** @type {any} */ (file).name || 'Captured Image',
           orientation,

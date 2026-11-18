@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Copio Scanner — Test Harness</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100dvh;
+      background: #070a0f;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+    .harness {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100dvh;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: #0f1620;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    .bar-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #38bdf8;
+      margin-right: 4px;
+    }
+    .ctrl {
+      appearance: none;
+      background: #1c2736;
+      color: #f1f5f9;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 12px;
+      min-height: 32px;
+      cursor: pointer;
+    }
+    .ctrl[aria-pressed="true"] {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #7dd3fc;
+    }
+    .spacer { flex: 1 1 auto; }
+    .stage-host {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      padding: 0;
+    }
+    .stage-host.size-full {
+      padding: 0;
+    }
+    .stage-host.size-modal {
+      padding: 12px;
+    }
+    .stage-host.size-compact {
+      padding: 12px;
+    }
+    .scanner-box {
+      width: 100%;
+      height: 100%;
+      display: flex;
+    }
+    .stage-host.size-modal .scanner-box {
+      max-width: 540px;
+      height: 78dvh;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .stage-host.size-compact .scanner-box {
+      width: 360px;
+      max-width: 100%;
+      height: 520px;
+      max-height: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    copio-scanner {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .log-drawer {
+      position: fixed;
+      inset: 44px 0 0 0;
+      background: rgba(7, 10, 15, 0.96);
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+      padding: 12px;
+      gap: 10px;
+      overflow-y: auto;
+    }
+    .log-drawer.open { display: flex; }
+    .log-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .log-head h2 {
+      margin: 0;
+      font-size: 14px;
+      color: #f1f5f9;
+    }
+    .result-thumbs {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    .result-thumbs img {
+      max-width: 100%;
+      max-height: 72dvh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: #0b0f17;
+    }
+    .log-list {
+      display: none;
+      margin: 0;
+      padding: 8px 0 0;
+      list-style: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      line-height: 1.45;
+      color: #cbd5e1;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .log-list.open { display: block; }
+    .log-list li {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      word-break: break-word;
+    }
+    .log-time { color: #64748b; margin-right: 6px; }
+    .log-name { color: #38bdf8; font-weight: 600; margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <div class="harness">
+    <header class="bar">
+      <span class="bar-title">Scanner Harness</span>
+      <select id="sel-mode" class="ctrl" aria-label="Scan mode">
+        <option value="single">Single</option>
+        <option value="batch">Batch</option>
+        <option value="card">Card</option>
+      </select>
+      <select id="sel-size" class="ctrl" aria-label="Container size">
+        <option value="full">Full</option>
+        <option value="modal">Modal</option>
+        <option value="compact">360×520</option>
+      </select>
+      <button id="btn-edge" class="ctrl" type="button" aria-pressed="true">Edge: On</button>
+      <span class="spacer"></span>
+      <button id="btn-reset" class="ctrl" type="button">Reset</button>
+      <button id="btn-log" class="ctrl" type="button" aria-expanded="false">Log (0)</button>
+    </header>
+
+    <main id="stage-host" class="stage-host size-full">
+      <div id="scanner-box" class="scanner-box"></div>
+    </main>
+
+    <aside id="log-drawer" class="log-drawer" aria-label="Captured Output">
+      <div class="log-head">
+        <h2>Captured Output</h2>
+        <div>
+          <button id="btn-toggle-json" class="ctrl" type="button" aria-expanded="false">Show Output</button>
+          <button id="btn-clear-log" class="ctrl" type="button">Clear</button>
+          <button id="btn-close-log" class="ctrl" type="button">Close</button>
+        </div>
+      </div>
+      <div id="result-thumbs" class="result-thumbs"></div>
+      <ul id="log-list" class="log-list"></ul>
+    </aside>
+  </div>
+
+  <script type="module" src="./dist/index.js"></script>
+  <script type="module">
+    const params = new URLSearchParams(location.search);
+    const state = {
+      mode: ['single', 'batch', 'card'].includes(params.get('mode')) ? params.get('mode') : 'single',
+      size: ['full', 'modal', 'compact'].includes(params.get('size')) ? params.get('size') : 'full',
+      edge: params.get('edge') !== 'off',
+      logs: 0,
+    };
+
+    const selMode = document.getElementById('sel-mode');
+    const selSize = document.getElementById('sel-size');
+    const btnEdge = document.getElementById('btn-edge');
+    const btnReset = document.getElementById('btn-reset');
+    const btnLog = document.getElementById('btn-log');
+    const btnClearLog = document.getElementById('btn-clear-log');
+    const btnCloseLog = document.getElementById('btn-close-log');
+    const stageHost = document.getElementById('stage-host');
+    const scannerBox = document.getElementById('scanner-box');
+    const logDrawer = document.getElementById('log-drawer');
+    const logList = document.getElementById('log-list');
+    const resultThumbs = document.getElementById('result-thumbs');
+
+    const EVENTS = [
+      'copio:page-added',
+      'copio:page-removed',
+      'copio:pages-changed',
+      'copio:scan-complete',
+      'copio:export-complete',
+      'copio:ocr-complete',
+      'copio:error',
+    ];
+
+    function syncUrl() {
+      const next = new URLSearchParams();
+      next.set('mode', state.mode);
+      next.set('size', state.size);
+      next.set('edge', state.edge ? 'on' : 'off');
+      history.replaceState(null, '', `?${next.toString()}`);
+    }
+
+    function addLog(name, detail) {
+      state.logs += 1;
+      btnLog.textContent = `Log (${state.logs})`;
+      const li = document.createElement('li');
+      const time = new Date().toLocaleTimeString([], { hour12: false });
+      const summary = detail ? JSON.stringify(detail, (k, v) => (
+        typeof v === 'string' && v.startsWith('data:') ? `[data-url ${v.length} chars]` : v
+      )) : '';
+      const tSpan = document.createElement('span');
+      tSpan.className = 'log-time';
+      tSpan.textContent = time;
+      const nSpan = document.createElement('span');
+      nSpan.className = 'log-name';
+      nSpan.textContent = name;
+      const sSpan = document.createElement('span');
+      sSpan.textContent = summary;
+      li.append(tSpan, nSpan, sSpan);
+      logList.prepend(li);
+    }
+
+    function renderThumbs(pages) {
+      resultThumbs.innerHTML = '';
+      if (!Array.isArray(pages)) return;
+      for (const page of pages) {
+        const src = page?.src || page?.originalSrc;
+        if (!src) continue;
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'Captured page';
+        resultThumbs.appendChild(img);
+      }
+    }
+
+    function mountScanner() {
+      scannerBox.innerHTML = '';
+      const el = document.createElement('copio-scanner');
+      el.setAttribute('asset-base', './dist');
+      el.setAttribute('mode', state.mode);
+      el.setAttribute('edge-detection', state.edge ? 'true' : 'false');
+      el.setAttribute('auto-crop', 'true');
+      el.setAttribute('ocr', 'true');
+
+      for (const evtName of EVENTS) {
+        el.addEventListener(evtName, (ev) => {
+          const detail = ev instanceof CustomEvent ? ev.detail : undefined;
+          addLog(evtName, detail);
+          if (evtName === 'copio:scan-complete' && detail?.pages) {
+            renderThumbs(detail.pages);
+            const isCropping = Boolean(el.shadowRoot?.querySelector('#canvas-viewport.is-cropping'));
+            if (!isCropping) {
+              logDrawer.classList.add('open');
+              btnLog.setAttribute('aria-expanded', 'true');
+            }
+          }
+        });
+      }
+      scannerBox.appendChild(el);
+    }
+
+    function applySize() {
+      stageHost.className = `stage-host size-${state.size}`;
+    }
+
+    selMode.value = state.mode;
+    selSize.value = state.size;
+    btnEdge.setAttribute('aria-pressed', String(state.edge));
+    btnEdge.textContent = `Edge: ${state.edge ? 'On' : 'Off'}`;
+    applySize();
+    mountScanner();
+
+    selMode.addEventListener('change', () => {
+      state.mode = selMode.value;
+      syncUrl();
+      const el = scannerBox.querySelector('copio-scanner');
+      if (el) el.setAttribute('mode', state.mode);
+    });
+
+    selSize.addEventListener('change', () => {
+      state.size = selSize.value;
+      syncUrl();
+      applySize();
+    });
+
+    btnEdge.addEventListener('click', () => {
+      state.edge = !state.edge;
+      btnEdge.setAttribute('aria-pressed', String(state.edge));
+      btnEdge.textContent = `Edge: ${state.edge ? 'On' : 'Off'}`;
+      syncUrl();
+      const el = scannerBox.querySelector('copio-scanner');
+      if (el) el.setAttribute('edge-detection', state.edge ? 'true' : 'false');
+    });
+
+    btnReset.addEventListener('click', () => {
+      resultThumbs.innerHTML = '';
+      mountScanner();
+      addLog('harness:reset', { mode: state.mode, size: state.size, edge: state.edge });
+    });
+
+    btnLog.addEventListener('click', () => {
+      const open = logDrawer.classList.toggle('open');
+      btnLog.setAttribute('aria-expanded', String(open));
+    });
+
+    btnCloseLog.addEventListener('click', () => {
+      logDrawer.classList.remove('open');
+      btnLog.setAttribute('aria-expanded', 'false');
+    });
+
+    document.getElementById('btn-toggle-json').addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      const open = logList.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(open));
+      btn.textContent = open ? 'Hide Output' : 'Show Output';
+    });
+
+    btnClearLog.addEventListener('click', () => {
+      state.logs = 0;
+      btnLog.textContent = 'Log (0)';
+      logList.innerHTML = '';
+      resultThumbs.innerHTML = '';
+    });
+  </script>
+</body>
+</html>
