@@ -190,6 +190,10 @@ async function extractRgbaFromSource(source) {
   };
 }
 
+/**
+ * Scanic WASM edge detection adapter.
+ * @experimental
+ */
 export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
   #defaultOptions;
   #worker = null;

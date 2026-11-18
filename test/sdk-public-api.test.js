@@ -1,11 +1,16 @@
 import { expect } from '@esm-bundle/chai';
 import '../js/lib/shoelace.js';
+import * as RootEntry from '../sdk/index.js';
+import * as CoreEntry from '../sdk/core.js';
+import * as ScannerEntry from '../sdk/scanner.js';
+import * as SyncEntry from '../sdk/sync.js';
+import * as HandoffEntry from '../sdk/handoff.js';
 import {
   CopioEngine,
   COPIO_EVENTS,
-  dispatchCopioEvent,
   MemoryStorageAdapter,
 } from '../sdk/index.js';
+import { dispatchCopioEvent } from '../sdk/core.js';
 import '../sdk/scanner.js';
 import '../js/routes/sync/copio-sync-dialog.js';
 import '../js/routes/ocr/copio-doc-ocr-dialog.js';
@@ -319,6 +324,158 @@ describe('SDK Public API Surface (Group D: CPO-035, CPO-036, CPO-037)', () => {
 
       await engine.clear();
       expect((await engine.getPages()).length).to.equal(0);
+    });
+  });
+
+  describe('CPO-067: Public API v1 Export Surface Snapshot', () => {
+    it('locks the exact root (@copio/sdk) export surface', () => {
+      const actual = Object.keys(RootEntry).sort();
+      expect(actual).to.deep.equal([
+        'COPIO_EVENTS',
+        'CURRENT_SCHEMA_VERSION',
+        'Canvas2DAdapter',
+        'CopioEngine',
+        'CopioHandoff',
+        'CopioScanner',
+        'Document',
+        'EdgeDetectorPort',
+        'HandoffSession',
+        'ImageProcessorPort',
+        'IndexedDbStorageAdapter',
+        'LoopbackTransport',
+        'MemoryStorageAdapter',
+        'MigrationRunner',
+        'NullEdgeDetectorAdapter',
+        'NullImageProcessorAdapter',
+        'NullOcrAdapter',
+        'NullPdfAdapter',
+        'NullSyncAdapter',
+        'OcrPort',
+        'OpfsStorageAdapter',
+        'Page',
+        'PdfKitAdapter',
+        'PdfPort',
+        'PeerJsAdapter',
+        'ScanSession',
+        'ScanicWasmEdgeAdapter',
+        'StoragePort',
+        'SyncPort',
+        'TesseractWasmAdapter',
+        'VERSION',
+        'createDefaultAdapter',
+        'exportDocumentAsImages',
+        'exportDocumentAsPdf',
+        'getAssetBase',
+        'getRegisteredService',
+        'recognizeDocumentPages',
+        'recognizeImageText',
+        'registerService',
+        'setAssetBase',
+      ]);
+    });
+
+    it('locks the exact @copio/sdk/scanner export surface', () => {
+      const actual = Object.keys(ScannerEntry).sort();
+      expect(actual).to.deep.equal([
+        'COPIO_EVENTS',
+        'CopioScanner',
+        'adoptScannerStyles',
+        'dispatchCopioEvent',
+        'getScannerStyleSheet',
+        'scannerCss',
+      ]);
+    });
+
+    it('locks the exact @copio/sdk/sync export surface', () => {
+      const actual = Object.keys(SyncEntry).sort();
+      expect(actual).to.deep.equal([
+        'SyncManager',
+        'getIceServers',
+      ]);
+    });
+
+    it('locks the exact @copio/sdk/handoff export surface', () => {
+      const actual = Object.keys(HandoffEntry).sort();
+      expect(actual).to.deep.equal([
+        'COPIO_EVENTS',
+        'CopioHandoff',
+        'HANDOFF_DEFAULT_CHUNK_SIZE',
+        'HANDOFF_DEFAULT_TTL_MS',
+        'HandoffSession',
+        'LoopbackTransport',
+        'adoptHandoffStyles',
+        'buildHandoffUrl',
+        'decodeSessionToken',
+        'decryptPayload',
+        'deriveSharedKey',
+        'dispatchCopioEvent',
+        'encodeSessionToken',
+        'encryptPayload',
+        'exportPublicKey',
+        'generateEcdhKeyPair',
+        'getHandoffStyleSheet',
+        'handoffCss',
+        'importPublicKey',
+        'parseHandoffUrl',
+        'randomHandoffId',
+      ]);
+    });
+
+    it('locks the exact @copio/sdk/core export surface', () => {
+      const actual = Object.keys(CoreEntry).sort();
+      expect(actual).to.deep.equal([
+        'COPIO_EVENTS',
+        'CURRENT_SCHEMA_VERSION',
+        'Canvas2DAdapter',
+        'CopioEngine',
+        'DEFAULT_EXPORT_FORMATS',
+        'DEFAULT_FALLBACK_QUAD',
+        'DEFAULT_FEATURES',
+        'DEFAULT_MIGRATIONS',
+        'DEFAULT_OCR_LANGUAGES',
+        'DocRepository',
+        'Document',
+        'EdgeDetectorPort',
+        'ImageProcessorPort',
+        'IndexedDbStorageAdapter',
+        'MemoryStorageAdapter',
+        'MigrationRunner',
+        'NullEdgeDetectorAdapter',
+        'NullImageProcessorAdapter',
+        'NullOcrAdapter',
+        'NullPdfAdapter',
+        'Page',
+        'ScanSession',
+        'StoragePort',
+        'VERSION',
+        'applyEdits',
+        'applySauvolaToImageData',
+        'cloneQuad',
+        'createDefaultAdapter',
+        'cropOriginalToRotated',
+        'cropRectToQuad',
+        'cropRotatedToOriginal',
+        'dispatchCopioEvent',
+        'docRepository',
+        'extractExif',
+        'fileToBase64',
+        'getCroppedSrc',
+        'getRegisteredService',
+        'hasActiveEdits',
+        'normalizeEditStack',
+        'normalizeEdits',
+        'normalizeQuad',
+        'quadOriginalToRotated',
+        'quadRotatedToOriginal',
+        'quadToCropRect',
+        'randomId',
+        'registerService',
+        'renderEditsToCanvas',
+        'rotateCrop',
+        'rotateQuad',
+        'rotateSrc',
+        'thresholdSrc',
+      ]);
     });
   });
 });

@@ -3,8 +3,7 @@ import {
   getScannerStyleSheet,
   adoptScannerStyles,
   scannerCss,
-} from '../sdk/index.js';
-import '../sdk/scanner.js';
+} from '../sdk/scanner.js';
 
 describe('CPO-032: Style Encapsulation & Host Isolation', () => {
   let fixtureContainer;

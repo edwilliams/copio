@@ -2,10 +2,8 @@ import {
   CopioScanner,
   CopioEngine,
   COPIO_EVENTS,
-  dispatchCopioEvent,
   MigrationRunner,
   CURRENT_SCHEMA_VERSION,
-  DEFAULT_MIGRATIONS,
   MemoryStorageAdapter,
   IndexedDbStorageAdapter,
   NullOcrAdapter,
@@ -18,12 +16,9 @@ import {
   EdgeDetectorPort,
   NullEdgeDetectorAdapter,
   ScanicWasmEdgeAdapter,
-  DEFAULT_FALLBACK_QUAD,
   Document as CopioDocument,
   Page as CopioPage,
   ScanSession,
-  LicenseManager,
-  BUILD_DATE,
   VERSION,
   HandoffSession,
   LoopbackTransport,
@@ -104,7 +99,7 @@ async function testEngine() {
 
 // 6. Test Data Migration Framework (CPO-013)
 const schemaVer: number = CURRENT_SCHEMA_VERSION;
-const defaultMigrations = DEFAULT_MIGRATIONS;
+const sdkVersion: string = VERSION;
 const migrationEventName: string = COPIO_EVENTS.MIGRATION;
 async function testMigrationRunner() {
   const migStorage = new MemoryStorageAdapter();
@@ -119,7 +114,6 @@ const imgProcessor: ImageProcessorPort = new NullImageProcessorAdapter();
 const syncPort: SyncPort = new NullSyncAdapter();
 const edgePort: EdgeDetectorPort = new NullEdgeDetectorAdapter();
 const scanicEdge: EdgeDetectorPort = new ScanicWasmEdgeAdapter();
-const fallbackTlX: number = DEFAULT_FALLBACK_QUAD.topLeft.x;
 const domainPage = new CopioPage({ id: 'p1', src: 'data:image/png;base64,...' });
 const domainDoc = new CopioDocument({ id: 'd1', name: 'Receipt', pages: [domainPage] });
 const session = new ScanSession({ mode: 'single', aspect: 'receipt' });

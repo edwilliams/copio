@@ -72,6 +72,10 @@ async function generateQrSvg(url) {
   </svg>`;
 }
 
+/**
+ * Desktop Phone-to-Desktop Handoff QR widget (`<copio-handoff>`).
+ * @experimental
+ */
 export class CopioHandoff extends BaseElement {
   #session = null;
   #state = 'waiting'; // 'waiting' | 'connected' | 'receiving' | 'complete' | 'error' | 'expired'

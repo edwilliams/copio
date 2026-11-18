@@ -3,10 +3,12 @@ import {
   EdgeDetectorPort,
   NullEdgeDetectorAdapter,
   ScanicWasmEdgeAdapter,
-  DEFAULT_FALLBACK_QUAD,
-  cloneQuad,
   getRegisteredService,
 } from '../sdk/index.js';
+import {
+  DEFAULT_FALLBACK_QUAD,
+  cloneQuad,
+} from '../sdk/core.js';
 
 /**
  * Compute unsigned area of a polygon.

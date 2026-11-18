@@ -2,9 +2,9 @@ import { expect } from '@esm-bundle/chai';
 import '../sdk/index.js';
 import {
   COPIO_EVENTS,
-  quadToCropRect,
   EdgeDetectorPort,
 } from '../sdk/index.js';
+import { quadToCropRect } from '../sdk/core.js';
 
 function createMockCameraStream(width = 640, height = 480) {
   const canvas = document.createElement('canvas');
