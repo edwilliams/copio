@@ -104,5 +104,33 @@ describe('CPO-025: Non-Destructive Touch Crop UX & Re-editable Crop', function (
       expect(Math.abs(restoredCrop.w - originalCrop.w)).to.be.below(1e-5);
       expect(Math.abs(restoredCrop.h - originalCrop.h)).to.be.below(1e-5);
     });
+
+    it('keeps #crop-layer overflow visible and uses compact viewport padding in mobile crop mode', async () => {
+      const hostBox = document.createElement('div');
+      hostBox.style.width = '360px';
+      hostBox.style.height = '640px';
+      fixtureContainer.appendChild(hostBox);
+
+      const scanner = document.createElement('copio-scanner');
+      hostBox.appendChild(scanner);
+
+      const file = await createTestImageFile('mobile-crop.png', 900, 1600);
+      await scanner.addFiles([file]);
+
+      scanner.stage = 'workbench';
+      scanner.shadowRoot.querySelector('#btn-crop').click();
+      await new Promise((r) => setTimeout(r, 80));
+
+      const viewport = scanner.shadowRoot.querySelector('#canvas-viewport');
+      const cropLayer = scanner.shadowRoot.querySelector('#crop-layer');
+      expect(viewport.classList.contains('is-cropping')).to.be.true;
+      expect(cropLayer).to.exist;
+
+      const viewportStyle = window.getComputedStyle(viewport);
+      const cropLayerStyle = window.getComputedStyle(cropLayer);
+      expect(cropLayerStyle.overflow).to.equal('visible');
+      expect(parseFloat(viewportStyle.paddingTop)).to.be.at.most(24);
+      expect(parseFloat(viewportStyle.paddingBottom)).to.be.at.most(24);
+    });
   });
 });
