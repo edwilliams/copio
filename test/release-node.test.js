@@ -106,3 +106,25 @@ describe('CPO-065: Release script & version consistency', () => {
     }
   });
 });
+
+describe('CPO-062: dist/ runtime asset deduplication', () => {
+  it('ships runtime worker/WASM/ML assets once in dist/js/lib/ without duplicating in dist/assets/', async () => {
+    const { existsSync } = await import('node:fs');
+    const distDir = path.join(rootDir, 'dist');
+    if (!existsSync(distDir)) {
+      return;
+    }
+
+    assert.equal(existsSync(path.join(distDir, 'cdn.js')), true);
+    assert.equal(existsSync(path.join(distDir, 'assets/tessdata')), true);
+    assert.equal(existsSync(path.join(distDir, 'js/lib/tesseract-core')), true);
+    assert.equal(existsSync(path.join(distDir, 'js/lib/scanic-ml')), true);
+    assert.equal(existsSync(path.join(distDir, 'js/lib/scanic-detector.js')), true);
+    assert.equal(existsSync(path.join(distDir, 'js/lib/pdf.worker.min.mjs')), true);
+
+    assert.equal(existsSync(path.join(distDir, 'assets/tesseract-core')), false);
+    assert.equal(existsSync(path.join(distDir, 'assets/scanic-ml')), false);
+    assert.equal(existsSync(path.join(distDir, 'assets/scanic-detector.js')), false);
+    assert.equal(existsSync(path.join(distDir, 'assets/pdf.worker.min.mjs')), false);
+  });
+});
