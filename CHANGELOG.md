@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-18
+
+### Added
+- Standalone mobile scanner test harness for verifying capture, crop, and export flows on real devices.
+
 ### Changed (Breaking — Pre-1.0 Public API Audit, CPO-067)
 - Audited and locked the v1.0 public API surface across `.`, `./core`, `./scanner`, `./sync`, and `./handoff` (documented in [ADR 0004](docs/adr/0004-public-api-v1.md) and enforced by snapshot tests in `test/sdk-public-api.test.js`).
 - Marked `CopioHandoff`, `HandoffSession`, `LoopbackTransport`, and `ScanicWasmEdgeAdapter` with `@experimental` JSDoc.
@@ -22,9 +27,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `dispatchCopioEvent`, `DocRepository`, `docRepository`, `DEFAULT_MIGRATIONS`, `DEFAULT_FALLBACK_QUAD`, `cloneQuad`, `quadToCropRect`, `normalizeEditStack`, `normalizeQuad`, `cropRectToQuad`, `rotateQuad`, `quadOriginalToRotated`, `quadRotatedToOriginal`, `hasActiveEdits`, `randomId`, `fileToBase64`, `thresholdSrc`, `rotateSrc`, `getCroppedSrc`, `extractExif` (available on `@copio/sdk/core`)
   - `getOcrWorker`, `terminateOcrWorker`, `SUPPORTED_LANGUAGES`, `notify`, `setContainer`, `getContainer`, `clearNotifications`, `renderPdfPagesToDataUrls`, `resolveAssetUrl`, `loadScript`, `loadCropper`, `loadPdfKit`, `loadJsZip`, `loadPeerJs`, `loadQrCode`, `loadTesseract`, `probeOpfs`
 
-## [0.1.6] - 2026-11-06
-- Legacy app cleanup and `<copio-scanner>` bundle size reduction (CPO-068).
-- Phone-to-desktop handoff, Copio Relay, and edge detection / perspective correction milestones.
+## [0.1.6] - 2026-11-14
+
+### Added
+- Phone-to-Desktop Handoff (`<copio-handoff>`, E2EE WebRTC streaming, mobile sender mode, Copio Relay kit, and interactive sandbox demo; CPO-090–CPO-094).
+- Auto edge detection (Scanic WASM worker + `EdgeDetectorPort` adapter, live viewfinder quad overlay, pre-filled crop) and 4-corner perspective correction (CPO-073–CPO-076).
+- Data migration framework with `MigrationRunner` and schema versioning (CPO-013).
+- Batch capture device verification & hardening (CPO-072).
+
+### Changed
+- Removed legacy full-app SPA leftovers from `copio` and reduced `<copio-scanner>` gzip bundle size (CPO-068).
+- Dual-licensed repository under AGPL-3.0 / commercial terms with CLA (CPO-050, CPO-051).
+
+## [0.1.2] - 2026-11-01
+
+### Added
+- Self-contained `<copio-scanner>` bundle (`dist/scanner.js`) for zero-config drop-in consumption (CPO-049).
+- `prepare` script (`scripts/sync-vendor-types.mjs`) for automatic vendor type syncing on install.
+
+### Changed
+- Cleaned up `package.json` dependencies for downstream npm consumers.
+
+## [0.1.1] - 2026-11-01
+
+### Changed
+- Adjusted `@copio/sdk` package exports map, `files` whitelist, and `sideEffects` metadata for npm distribution.
 
 ## [0.1.0] - 2026-10-20
-- Initial `@copio/sdk` release (`<copio-scanner>`, `CopioEngine`, Ports & Adapters, OCR/PDF/Sync).
+
+### Added
+- Initial `@copio/sdk` release (`<copio-scanner>`, `CopioEngine`, Ports & Adapters, Tesseract WASM OCR, PDFKit / Searchable PDF export, and P2P Sync).
+
+[Unreleased]: https://github.com/edwilliams/copio/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/edwilliams/copio/releases/tag/v0.1.7
+[0.1.6]: https://github.com/edwilliams/copio/releases/tag/v0.1.6
+[0.1.2]: https://github.com/edwilliams/copio/releases/tag/v0.1.2
+[0.1.1]: https://github.com/edwilliams/copio/releases/tag/v0.1.1
+[0.1.0]: https://github.com/edwilliams/copio/releases/tag/v0.1.0
