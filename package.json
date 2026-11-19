@@ -47,6 +47,8 @@
     "dist/*.d.ts",
     "dist/*.json",
     "dist/adapters",
+    "dist/assets",
+    "dist/js",
     "dist/types",
     "sdk",
     "css"

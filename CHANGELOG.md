@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Included `dist/assets/` and `dist/js/` in `package.json` `"files"` so worker, WASM, and ML runtime assets (Scanic edge detection, Tesseract OCR, PDF.js) are published in the `@copio/sdk` npm tarball.
+- Copied Scanic ML detector and ONNX Runtime WASM assets (`scanic-mlDetector.js`, `scanic-ort.wasm.min.js`, `scanic-ml/`) into `dist/assets/` alongside `scanic-detector.js` in `scripts/build-sdk.mjs`.
+
 ## [0.1.7] - 2026-11-18
 
 ### Added
