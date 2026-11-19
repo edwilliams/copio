@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-19
+
+### Fixed
+- Included `dist/assets/` and `dist/js/` in `package.json` `"files"` so worker, WASM, and ML runtime assets (Scanic edge detection, Tesseract OCR, PDF.js) are published in the `@copio/sdk` npm tarball.
+- Copied Scanic ML detector and ONNX Runtime WASM assets (`scanic-mlDetector.js`, `scanic-ort.wasm.min.js`, `scanic-ml/`) into `dist/assets/` alongside `scanic-detector.js` in `scripts/build-sdk.mjs`.
 ## [0.1.7] - 2026-11-18
 
 ### Added
@@ -58,7 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial `@copio/sdk` release (`<copio-scanner>`, `CopioEngine`, Ports & Adapters, Tesseract WASM OCR, PDFKit / Searchable PDF export, and P2P Sync).
 
-[Unreleased]: https://github.com/edwilliams/copio/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/edwilliams/copio/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/edwilliams/copio/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/edwilliams/copio/releases/tag/v0.1.7
 [0.1.6]: https://github.com/edwilliams/copio/releases/tag/v0.1.6
 [0.1.2]: https://github.com/edwilliams/copio/releases/tag/v0.1.2

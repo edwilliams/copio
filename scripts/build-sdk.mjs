@@ -205,6 +205,9 @@ async function buildSdk() {
     { src: path.join(rootDir, 'js/lib/pdf.worker.min.mjs'), dest: path.join(distAssets, 'pdf.worker.min.mjs') },
     { src: path.join(rootDir, 'js/lib/pdf.min.mjs'), dest: path.join(distAssets, 'pdf.min.mjs') },
     { src: path.join(rootDir, 'js/lib/scanic-detector.js'), dest: path.join(distAssets, 'scanic-detector.js') },
+    { src: path.join(rootDir, 'js/lib/scanic-mlDetector.js'), dest: path.join(distAssets, 'scanic-mlDetector.js') },
+    { src: path.join(rootDir, 'js/lib/scanic-ort.wasm.min.js'), dest: path.join(distAssets, 'scanic-ort.wasm.min.js') },
+    { src: path.join(rootDir, 'js/lib/scanic-ml'), dest: path.join(distAssets, 'scanic-ml') },
     { src: path.join(rootDir, 'assets/tessdata'), dest: path.join(distAssets, 'tessdata') },
     { src: path.join(rootDir, 'assets/icons'), dest: path.join(distAssets, 'icons') },
   ];

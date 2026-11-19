@@ -10,4 +10,4 @@ export const BUILD_DATE = typeof __BUILD_DATE__ !== 'undefined'
 export const VERSION = typeof __VERSION__ !== 'undefined'
   // @ts-ignore
   ? __VERSION__
-  : '0.1.7';
+  : '0.1.8';
