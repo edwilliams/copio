@@ -149,4 +149,17 @@ npm install @copio/sdk
     assert.ok(searchEntries(searchIndex, 'MigrationRunner').some((h) => h.entry.slug === 'storage-adapters'));
     assert.ok(searchEntries(searchIndex, 'adoptedStyleSheets').some((h) => h.entry.slug === 'theming'));
   });
+
+  it('CPO-081: getting-started guide covers install, first scan, and PDF export end-to-end', async () => {
+    const result = await buildDocs();
+    const gsHtml = await readFile(path.join(result.outputDir, 'getting-started.html'), 'utf8');
+
+    assert.ok(gsHtml.includes('npm</span> install @copio/sdk'));
+    assert.ok(gsHtml.includes('unpkg.com/@copio/sdk/dist/cdn.js'));
+    assert.ok(gsHtml.includes('setAssetBase'));
+    assert.ok(gsHtml.includes('<copio-scanner'));
+    assert.ok(gsHtml.includes('SCAN_COMPLETE'));
+    assert.ok(gsHtml.includes('exportPdf'));
+    assert.ok(gsHtml.includes('URL.createObjectURL'));
+  });
 });
