@@ -439,6 +439,35 @@ a:hover {
   font-size: inherit;
 }
 
+.tok-comment {
+  color: #64748b;
+  font-style: italic;
+}
+
+.tok-keyword {
+  color: #c084fc;
+}
+
+.tok-string {
+  color: #86efac;
+}
+
+.tok-number {
+  color: #fbbf24;
+}
+
+.tok-function {
+  color: #38bdf8;
+}
+
+.tok-tag {
+  color: #f472b6;
+}
+
+.tok-attr {
+  color: #7dd3fc;
+}
+
 /* Tables */
 .docs-table-wrap {
   overflow-x: auto;

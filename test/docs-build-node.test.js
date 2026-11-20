@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { buildDocs, parseFrontmatter, renderMarkdown } from '../scripts/build-docs.mjs';
+import { buildDocs, highlightCode, parseFrontmatter, renderMarkdown } from '../scripts/build-docs.mjs';
 import { searchEntries } from '../docs-site/assets/docs.js';
 
 describe('CPO-080: Docs site scaffold & search', () => {
@@ -29,7 +29,11 @@ npm install @copio/sdk
     assert.equal(headings.length, 1);
     assert.equal(headings[0].id, 'install-copiosdk');
     assert.ok(html.includes('data-copy-code'));
-    assert.ok(html.includes('npm install @copio/sdk'));
+    assert.ok(html.includes('<span class="tok-keyword">npm</span> install @copio/sdk'));
+
+    const highlightedJs = highlightCode("import { CopioEngine } from '@copio/sdk';", 'js');
+    assert.ok(highlightedJs.includes('tok-keyword'));
+    assert.ok(highlightedJs.includes('tok-string'));
   });
 
   it('builds dist/docs/ with all pages, live embeds, and valid search-index.json', async () => {
@@ -59,6 +63,7 @@ npm install @copio/sdk
 
     const handoffHtml = await readFile(path.join(result.outputDir, 'handoff.html'), 'utf8');
     assert.ok(handoffHtml.includes('<copio-handoff'));
+    assert.ok(handoffHtml.includes('receiver-url'));
 
     // Verify no broken internal ./page.html links
     for (const slug of result.pages) {

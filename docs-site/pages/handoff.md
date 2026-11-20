@@ -28,14 +28,24 @@ embeds: true
     <span class="docs-version-badge">@experimental</span>
   </div>
   <div class="docs-embed-stage">
-    <copio-handoff theme="dark"></copio-handoff>
+    <copio-handoff id="docs-handoff-embed" theme="dark"></copio-handoff>
+    <script>
+      (function () {
+        var el = document.getElementById('docs-handoff-embed');
+        if (el && typeof location !== 'undefined') {
+          el.setAttribute('receiver-url', location.origin + '/');
+        }
+      })();
+    </script>
   </div>
 </div>
 
 ## Usage
 
+Set `receiver-url` to the page hosting your mobile `<copio-scanner>` sender endpoint (for example `/` in the Copio sandbox):
+
 ```html
-<copio-handoff theme="dark"></copio-handoff>
+<copio-handoff theme="dark" receiver-url="https://copio.netlify.app/"></copio-handoff>
 ```
 
 ```js

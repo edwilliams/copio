@@ -30,6 +30,92 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;');
 }
 
+export function highlightCode(code, lang) {
+  const normalized = String(lang || 'text').toLowerCase();
+
+  const highlightByRegex = (source, regex, classify) => {
+    let out = '';
+    let lastIndex = 0;
+    for (const match of source.matchAll(regex)) {
+      const idx = match.index ?? 0;
+      if (idx > lastIndex) {
+        out += escapeHtml(source.slice(lastIndex, idx));
+      }
+      const token = match[0];
+      const cls = classify(match);
+      out += cls ? `<span class="${cls}">${escapeHtml(token)}</span>` : escapeHtml(token);
+      lastIndex = idx + token.length;
+    }
+    if (lastIndex < source.length) {
+      out += escapeHtml(source.slice(lastIndex));
+    }
+    return out;
+  };
+
+  if (['js', 'javascript', 'ts', 'typescript'].includes(normalized)) {
+    const jsRegex =
+      /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(`(?:\\[\s\S]|[^`])*`|"(?:\\.|[^"\n])*"|'(?:\\.|[^'\n])*')|\b(import|from|export|default|const|let|var|function|return|async|await|new|class|extends|if|else|for|of|in|true|false|null|undefined|type|interface)\b|\b(\d+(?:\.\d+)?)\b|\b([a-zA-Z_$][\w$]*)(?=\s*\()/g;
+    return highlightByRegex(code, jsRegex, (m) => {
+      if (m[1]) return 'tok-comment';
+      if (m[2]) return 'tok-string';
+      if (m[3]) return 'tok-keyword';
+      if (m[4]) return 'tok-number';
+      if (m[5]) return 'tok-function';
+      return '';
+    });
+  }
+
+  if (['html', 'xml', 'svg'].includes(normalized)) {
+    const htmlRegex =
+      /(<!--[\s\S]*?-->)|(<\/?[a-zA-Z0-9-]+|\s*\/?>)|("(?:[^"]*)"|'(?:[^']*)')|([a-zA-Z_:][a-zA-Z0-9_.:-]*)(?==)/g;
+    return highlightByRegex(code, htmlRegex, (m) => {
+      if (m[1]) return 'tok-comment';
+      if (m[2]) return 'tok-tag';
+      if (m[3]) return 'tok-string';
+      if (m[4]) return 'tok-attr';
+      return '';
+    });
+  }
+
+  if (normalized === 'css') {
+    const cssRegex =
+      /(\/\*[\s\S]*?\*\/)|("(?:\\.|[^"])*"|'(?:\\.|[^'])*')|(--[a-zA-Z0-9-]+)|([a-zA-Z-]+)(?=\s*:)|(#[0-9a-fA-F]{3,8}\b|\b\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw|ms|s)?\b)/g;
+    return highlightByRegex(code, cssRegex, (m) => {
+      if (m[1]) return 'tok-comment';
+      if (m[2]) return 'tok-string';
+      if (m[3]) return 'tok-attr';
+      if (m[4]) return 'tok-keyword';
+      if (m[5]) return 'tok-number';
+      return '';
+    });
+  }
+
+  if (['bash', 'sh', 'shell', 'zsh'].includes(normalized)) {
+    const bashRegex =
+      /(#[^\n]*)|("(?:\\.|[^"])*"|'(?:[^']*)')|\b(npm|npx|node|git|gh|curl|pnpm|yarn|bun)\b|(\s--?[a-zA-Z0-9-]+)/g;
+    return highlightByRegex(code, bashRegex, (m) => {
+      if (m[1]) return 'tok-comment';
+      if (m[2]) return 'tok-string';
+      if (m[3]) return 'tok-keyword';
+      if (m[4]) return 'tok-attr';
+      return '';
+    });
+  }
+
+  if (normalized === 'json') {
+    const jsonRegex = /("(?:\\.|[^"])*")(?=\s*:)|("(?:\\.|[^"])*")|\b(true|false|null)\b|\b(-?\d+(?:\.\d+)?)\b/g;
+    return highlightByRegex(code, jsonRegex, (m) => {
+      if (m[1]) return 'tok-attr';
+      if (m[2]) return 'tok-string';
+      if (m[3]) return 'tok-keyword';
+      if (m[4]) return 'tok-number';
+      return '';
+    });
+  }
+
+  return escapeHtml(code);
+}
+
 function slugify(text) {
   return String(text)
     .toLowerCase()
@@ -118,7 +204,7 @@ export function renderMarkdown(markdown) {
             `<span class="docs-code-lang">${escapeHtml(lang)}</span>` +
             `<button type="button" class="docs-copy-btn" data-copy-code>Copy</button>` +
           `</div>` +
-          `<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(codeText)}</code></pre>` +
+          `<pre><code class="language-${escapeHtml(lang)}">${highlightCode(codeText, lang)}</code></pre>` +
         `</div>`,
       );
       continue;
