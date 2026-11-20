@@ -334,6 +334,7 @@ function buildPageHtml({ page, pages, version }) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>if (location.pathname === '/docs') location.replace('/docs/' + location.search + location.hash);</script>
   <title>${escapeHtml(page.title)} — Copio SDK Docs</title>
   <meta name="description" content="${escapeHtml(page.description || 'Copio SDK documentation')}" />
   <link rel="icon" type="image/svg+xml" href="/copio.svg" />

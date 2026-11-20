@@ -7,8 +7,8 @@
 
 [[redirects]]
   from = "/docs"
-  to = "/docs/"
-  status = 301
+  to = "/dist/docs/index.html"
+  status = 200
 
 [[redirects]]
   from = "/docs/"
