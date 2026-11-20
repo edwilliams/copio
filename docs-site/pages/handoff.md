@@ -33,7 +33,7 @@ embeds: true
       (function () {
         var el = document.getElementById('docs-handoff-embed');
         if (el && typeof location !== 'undefined') {
-          el.setAttribute('receiver-url', new URL('./scan.html', location.href).href);
+          el.setAttribute('receiver-url', new URL('/docs/scan.html', location.origin).href);
         }
       })();
     </script>

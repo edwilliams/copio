@@ -65,20 +65,25 @@ npm install @copio/sdk
     assert.ok(handoffHtml.includes('<copio-handoff'));
     assert.ok(handoffHtml.includes('transport="peer"'));
     assert.ok(handoffHtml.includes('receiver-url'));
-    assert.ok(handoffHtml.includes('./scan.html'));
+    assert.ok(handoffHtml.includes('/docs/scan.html'));
 
     const scanHtml = await readFile(path.join(result.outputDir, 'scan.html'), 'utf8');
     assert.ok(scanHtml.includes('<copio-scanner'));
     assert.ok(scanHtml.includes("setAttribute('handoff'"));
 
-    // Verify no broken internal ./page.html links
+    // Verify no broken internal /docs/<slug>/ links and directory index.html files exist
     for (const slug of result.pages) {
-      const html = await readFile(path.join(result.outputDir, `${slug}.html`), 'utf8');
-      const links = [...html.matchAll(/href="\.\/([a-z0-9-]+)\.html"/g)].map((m) => m[1]);
+      const htmlPath =
+        slug === 'index'
+          ? path.join(result.outputDir, 'index.html')
+          : path.join(result.outputDir, slug, 'index.html');
+      const html = await readFile(htmlPath, 'utf8');
+      assert.ok(!html.includes('/dist/docs/'), `Unexpected /dist/docs/ link in ${slug}`);
+      const links = [...html.matchAll(/href="\/docs\/([a-z0-9-]+)\/"/g)].map((m) => m[1]);
       for (const target of links) {
         assert.ok(
           result.pages.includes(target),
-          `Broken internal link ./${target}.html in ${slug}.html`,
+          `Broken internal link /docs/${target}/ in ${slug}`,
         );
       }
     }

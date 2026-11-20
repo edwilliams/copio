@@ -166,7 +166,7 @@ function initDocs() {
 
   async function ensureIndex() {
     if (cachedIndex) return cachedIndex;
-    const res = await fetch('./search-index.json');
+    const res = await fetch('/docs/search-index.json');
     if (!res.ok) throw new Error('Failed to load search index');
     cachedIndex = await res.json();
     return cachedIndex;

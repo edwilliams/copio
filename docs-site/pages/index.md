@@ -44,6 +44,6 @@ Try the interactive `<copio-scanner>` component directly on this documentation p
 
 ## Next Steps
 
-- Follow the [Quickstart](./getting-started.html) to install `@copio/sdk` and embed `<copio-scanner>` in minutes.
-- Explore the [`<copio-scanner>` guide](./scanner.html) for modes, aspect presets, and CSS theming.
-- Learn about [Phone-to-Desktop Handoff](./handoff.html) with `<copio-handoff>`.
+- Follow the [Quickstart](/docs/getting-started/) to install `@copio/sdk` and embed `<copio-scanner>` in minutes.
+- Explore the [`<copio-scanner>` guide](/docs/scanner/) for modes, aspect presets, and CSS theming.
+- Learn about [Phone-to-Desktop Handoff](/docs/handoff/) with `<copio-handoff>`.

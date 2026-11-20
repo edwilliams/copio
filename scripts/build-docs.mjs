@@ -344,7 +344,7 @@ function stripMarkdownForSearch(markdown) {
 }
 
 function pageHref(slug) {
-  return slug === 'index' ? './index.html' : `./${slug}.html`;
+  return slug === 'index' ? '/docs/' : `/docs/${slug}/`;
 }
 
 function buildSidebarHtml(pages, currentSlug) {
@@ -424,13 +424,13 @@ function buildPageHtml({ page, pages, version }) {
   <title>${escapeHtml(page.title)} — Copio SDK Docs</title>
   <meta name="description" content="${escapeHtml(page.description || 'Copio SDK documentation')}" />
   <link rel="icon" type="image/svg+xml" href="/copio.svg" />
-  <link rel="stylesheet" href="./docs.css" />
+  <link rel="stylesheet" href="/docs/docs.css" />
 </head>
 <body>
   <header class="docs-header">
     <div class="docs-header-left">
       <button type="button" class="docs-menu-btn" id="docs-menu-btn" aria-label="Toggle navigation" aria-expanded="false">☰</button>
-      <a class="docs-brand" href="./index.html">
+      <a class="docs-brand" href="/docs/">
         <span class="docs-brand-logo">C</span>
         <span class="docs-brand-name">Copio Docs</span>
       </a>
@@ -474,7 +474,7 @@ function buildPageHtml({ page, pages, version }) {
   </div>
 
   ${sdkEmbedScript}
-  <script type="module" src="./docs.js"></script>
+  <script type="module" src="/docs/docs.js"></script>
 </body>
 </html>
 `;
@@ -528,8 +528,14 @@ export async function buildDocs({
   const searchIndex = [];
   for (const page of parsedPages) {
     const fullHtml = buildPageHtml({ page, pages: parsedPages, version });
-    const outFile = path.join(outputDir, `${page.slug}.html`);
-    await writeFile(outFile, fullHtml, 'utf8');
+    if (page.slug === 'index') {
+      await writeFile(path.join(outputDir, 'index.html'), fullHtml, 'utf8');
+    } else {
+      const slugDir = path.join(outputDir, page.slug);
+      await mkdir(slugDir, { recursive: true });
+      await writeFile(path.join(slugDir, 'index.html'), fullHtml, 'utf8');
+      await writeFile(path.join(outputDir, `${page.slug}.html`), fullHtml, 'utf8');
+    }
     searchIndex.push({
       slug: page.slug,
       href: pageHref(page.slug),
