@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Copio Mobile Handoff Scanner</title>
+  <meta name="theme-color" content="#0b0f17" />
+  <link rel="icon" type="image/svg+xml" href="/copio.svg" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      background: #0b0f17;
+      overflow: hidden;
+    }
+    copio-scanner {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <copio-scanner
+    id="handoff-mobile-scanner"
+    mode="single"
+    aspect="receipt"
+    theme="dark"
+    asset-base="/dist/"
+  ></copio-scanner>
+  <script>
+    (function () {
+      var scanner = document.getElementById('handoff-mobile-scanner');
+      if (scanner && /(?:copio-)?handoff=/.test(window.location.hash)) {
+        scanner.setAttribute('handoff', window.location.hash);
+      }
+      window.addEventListener('hashchange', function () {
+        if (scanner && /(?:copio-)?handoff=/.test(window.location.hash)) {
+          scanner.setAttribute('handoff', window.location.hash);
+        }
+      });
+    })();
+  </script>
+  <script type="module">
+    import { setAssetBase } from '/dist/index.js';
+    setAssetBase('/dist/');
+  </script>
+</body>
+</html>

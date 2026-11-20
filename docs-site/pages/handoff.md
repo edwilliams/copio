@@ -28,12 +28,12 @@ embeds: true
     <span class="docs-version-badge">@experimental</span>
   </div>
   <div class="docs-embed-stage">
-    <copio-handoff id="docs-handoff-embed" theme="dark"></copio-handoff>
+    <copio-handoff id="docs-handoff-embed" theme="dark" transport="peer"></copio-handoff>
     <script>
       (function () {
         var el = document.getElementById('docs-handoff-embed');
         if (el && typeof location !== 'undefined') {
-          el.setAttribute('receiver-url', location.origin + '/');
+          el.setAttribute('receiver-url', new URL('./scan.html', location.href).href);
         }
       })();
     </script>
@@ -42,10 +42,14 @@ embeds: true
 
 ## Usage
 
-Set `receiver-url` to the page hosting your mobile `<copio-scanner>` sender endpoint (for example `/` in the Copio sandbox):
+Set `transport="peer"` for real cross-device WebRTC handoff (the default `auto` mode falls back to in-memory loopback unless a transport/relay is configured), and set `receiver-url` to the dedicated mobile `<copio-scanner>` sender page:
 
 ```html
-<copio-handoff theme="dark" receiver-url="https://copio.netlify.app/"></copio-handoff>
+<copio-handoff
+  theme="dark"
+  transport="peer"
+  receiver-url="https://copio.netlify.app/docs/scan.html">
+</copio-handoff>
 ```
 
 ```js

@@ -63,7 +63,13 @@ npm install @copio/sdk
 
     const handoffHtml = await readFile(path.join(result.outputDir, 'handoff.html'), 'utf8');
     assert.ok(handoffHtml.includes('<copio-handoff'));
+    assert.ok(handoffHtml.includes('transport="peer"'));
     assert.ok(handoffHtml.includes('receiver-url'));
+    assert.ok(handoffHtml.includes('./scan.html'));
+
+    const scanHtml = await readFile(path.join(result.outputDir, 'scan.html'), 'utf8');
+    assert.ok(scanHtml.includes('<copio-scanner'));
+    assert.ok(scanHtml.includes("setAttribute('handoff'"));
 
     // Verify no broken internal ./page.html links
     for (const slug of result.pages) {
