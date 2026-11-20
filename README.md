@@ -21,13 +21,42 @@ Capture, crop, binarize, OCR, and compile multi-page Searchable PDFs 100% client
 
 ---
 
-## Install
+## Install & Consumption Modes
+
+`@copio/sdk` supports three official consumption modes across **Vanilla JS, React, Vue, Svelte, and Angular** via native Shadow DOM custom elements (`<copio-scanner>`, `<copio-handoff>`) with full TypeScript declarations (`.d.ts`) and Custom Elements Manifest (`custom-elements.json`):
+
+### 1. Bundler / npm (Vite, Webpack, Rollup, esbuild)
 
 ```bash
 npm install @copio/sdk
 ```
 
-Works in **Vanilla JS, React, Vue, Svelte, and Angular** via native Shadow DOM custom elements (`<copio-scanner>`) with full TypeScript declarations (`.d.ts`) and Custom Elements Manifest (`custom-elements.json`).
+Import `@copio/sdk/scanner` (self-contained, ~70 KB gzipped) or `@copio/sdk` (batteries-included with OCR, PDF, and Edge Detection adapters):
+
+```js
+import { COPIO_EVENTS } from '@copio/sdk/scanner';
+```
+
+### 2. CDN (Zero-Build)
+
+Drop `<copio-scanner>` into any standalone HTML page or CodePen with **zero `asset-base` configuration** (pin to a major version such as `@copio/sdk@1`):
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/@copio/sdk@1/dist/cdn.js"></script>
+<copio-scanner mode="batch" aspect="a4" theme="dark"></copio-scanner>
+```
+
+`dist/cdn.js` automatically resolves `assetBase` from `import.meta.url`, so lazy workers, WASM, ML models, OCR tessdata, and PDF.js load from the CDN automatically.
+
+### 3. Zero-Build Self-Hosted / Offline PWA
+
+For zero-build apps and offline PWAs (like `copio-documents`), copy `node_modules/@copio/sdk/dist` into a single served folder (e.g. `vendor/copio-sdk/`) and import `cdn.js`:
+
+```html
+<script type="module" src="./vendor/copio-sdk/cdn.js"></script>
+```
+
+All lazy runtime assets (`js/lib/*` and `assets/tessdata/*`) resolve automatically relative to `vendor/copio-sdk/cdn.js` with zero `asset-base` boilerplate. (You can still override via `asset-base="..."` or `setAssetBase(...)` if needed.)
 
 ---
 

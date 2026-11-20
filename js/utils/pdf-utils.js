@@ -11,6 +11,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = resolveAssetUrl('js/lib/pdf.worker.min.
  * @returns {Promise<string[]>} Array of image data URLs
  */
 export async function renderPdfPagesToDataUrls(arrayBuffer, scale = 2.0) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = resolveAssetUrl('js/lib/pdf.worker.min.mjs');
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const images = [];
 

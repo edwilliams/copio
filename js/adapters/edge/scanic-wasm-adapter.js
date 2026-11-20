@@ -277,7 +277,11 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
     if (this.#inlineModule) {
       return this.#inlineModule;
     }
-    const modulePath = '../../lib/scanic-detector.js';
+    const base = getAssetBase();
+    const modulePath =
+      base && base !== '.'
+        ? resolveAssetUrl('js/lib/scanic-detector.js')
+        : '../../lib/scanic-detector.js';
     const mod = await import(/* @vite-ignore */ modulePath);
     await mod.initialize();
     this.#inlineModule = mod;
@@ -324,9 +328,35 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
         this.#defaultOptions.useWorker !== false && typeof Worker === 'function';
 
       if (canUseWorker) {
+        let blobUrlToRevoke = null;
         try {
           const workerUrl = this.#resolveWorkerUrl();
-          const worker = new Worker(workerUrl, { type: 'module' });
+          let worker;
+          let isCrossOrigin = false;
+          let absoluteWorkerUrl = workerUrl;
+          if (typeof location !== 'undefined') {
+            try {
+              const resolved = new URL(workerUrl, location.href);
+              isCrossOrigin = resolved.origin !== location.origin;
+              absoluteWorkerUrl = resolved.href;
+            } catch {
+              // Keep workerUrl as-is
+            }
+          }
+          if (
+            isCrossOrigin &&
+            typeof Blob !== 'undefined' &&
+            typeof URL !== 'undefined' &&
+            typeof URL.createObjectURL === 'function'
+          ) {
+            const blob = new Blob([`import ${JSON.stringify(absoluteWorkerUrl)};`], {
+              type: 'text/javascript',
+            });
+            blobUrlToRevoke = URL.createObjectURL(blob);
+            worker = new Worker(blobUrlToRevoke, { type: 'module' });
+          } else {
+            worker = new Worker(workerUrl, { type: 'module' });
+          }
 
           worker.addEventListener('message', (event) => {
             const msg = event?.data;
@@ -359,6 +389,10 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
             } catch {}
           }
           this.#worker = null;
+        } finally {
+          if (blobUrlToRevoke) {
+            URL.revokeObjectURL(blobUrlToRevoke);
+          }
         }
       }
 

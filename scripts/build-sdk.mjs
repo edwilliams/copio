@@ -198,16 +198,8 @@ async function buildSdk() {
   await mkdir(distAssets, { recursive: true });
   await mkdir(distJsLib, { recursive: true });
 
-  // Dedicated worker & WASM assets in dist/assets/ (CPO-060)
+  // Static data & icon assets in dist/assets/ (worker/WASM/ML libs live once in dist/js/lib/)
   const assetTargets = [
-    { src: path.join(rootDir, 'js/lib/tesseract-core'), dest: path.join(distAssets, 'tesseract-core') },
-    { src: path.join(rootDir, 'js/lib/tesseract-worker.min.js'), dest: path.join(distAssets, 'tesseract-worker.min.js') },
-    { src: path.join(rootDir, 'js/lib/pdf.worker.min.mjs'), dest: path.join(distAssets, 'pdf.worker.min.mjs') },
-    { src: path.join(rootDir, 'js/lib/pdf.min.mjs'), dest: path.join(distAssets, 'pdf.min.mjs') },
-    { src: path.join(rootDir, 'js/lib/scanic-detector.js'), dest: path.join(distAssets, 'scanic-detector.js') },
-    { src: path.join(rootDir, 'js/lib/scanic-mlDetector.js'), dest: path.join(distAssets, 'scanic-mlDetector.js') },
-    { src: path.join(rootDir, 'js/lib/scanic-ort.wasm.min.js'), dest: path.join(distAssets, 'scanic-ort.wasm.min.js') },
-    { src: path.join(rootDir, 'js/lib/scanic-ml'), dest: path.join(distAssets, 'scanic-ml') },
     { src: path.join(rootDir, 'assets/tessdata'), dest: path.join(distAssets, 'tessdata') },
     { src: path.join(rootDir, 'assets/icons'), dest: path.join(distAssets, 'icons') },
   ];

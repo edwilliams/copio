@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (CPO-062)
+- Auto-resolved `assetBase` from `import.meta.url` in `sdk/cdn.js` (`dist/cdn.js`) when not explicitly configured, enabling zero-config CDN and self-hosted `dist/` usage.
+- Added cross-origin `Blob` module worker support and `assetBase`-aware inline fallback in `ScanicWasmEdgeAdapter`, plus dynamic `pdf.worker.min.mjs` `workerSrc` resolution in `pdf-utils.js`.
+- Deduplicated runtime worker/WASM/ML assets in `scripts/build-sdk.mjs` so `tesseract-core/`, `scanic-ml/`, and worker scripts live once in `dist/js/lib/` instead of being duplicated in `dist/assets/`.
+- Documented the three official consumption modes (Bundler/npm, CDN pinned to `@copio/sdk@1`, and Zero-build self-hosted) in `README.md`.
+
 ## [0.1.8] - 2026-11-19
 
 ### Fixed
