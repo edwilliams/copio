@@ -13,13 +13,14 @@
 import { mkdir, readdir, readFile, rm, writeFile, cp } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { expandCemMarkers, generateApiSections } from './generate-api-docs.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const defaultSourceDir = path.join(rootDir, 'docs-site');
 const defaultOutputDir = path.join(rootDir, 'dist', 'docs');
 
-const SECTION_ORDER = ['Overview', 'Components', 'Architecture', 'Reference'];
+const SECTION_ORDER = ['Overview', 'Components', 'Architecture', 'Guides', 'Reference'];
 
 function escapeHtml(text) {
   return String(text)
@@ -492,12 +493,15 @@ export async function buildDocs({
   const assetsDir = path.join(sourceDir, 'assets');
   const entries = (await readdir(pagesDir)).filter((f) => f.endsWith('.md'));
 
+  const apiSections = await generateApiSections();
   const parsedPages = [];
   for (const file of entries) {
     const raw = await readFile(path.join(pagesDir, file), 'utf8');
     const { meta, body } = parseFrontmatter(raw);
     const slug = meta.slug || file.replace(/\.md$/, '');
-    const { html, headings } = renderMarkdown(body);
+    const { html: rawHtml, headings } = renderMarkdown(body);
+    const html = expandCemMarkers(rawHtml, apiSections);
+    const expandedText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     parsedPages.push({
       slug,
       title: meta.title || slug,
@@ -507,7 +511,7 @@ export async function buildDocs({
       embeds: Boolean(meta.embeds),
       html,
       headings,
-      searchText: stripMarkdownForSearch(body),
+      searchText: `${stripMarkdownForSearch(body)} ${expandedText}`.trim(),
     });
   }
 

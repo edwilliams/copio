@@ -75,6 +75,30 @@ async function generateQrSvg(url) {
 /**
  * Desktop Phone-to-Desktop Handoff QR widget (`<copio-handoff>`).
  * @experimental
+ *
+ * @fires {CustomEvent<Object>} copio:handoff-connected - Fired when a mobile sender pairs with this widget
+ * @fires {CustomEvent<import('./events.js').CopioConnectionInfoDetail>} copio:connection-info - Fired with WebRTC transport details
+ * @fires {CustomEvent<import('./events.js').CopioPageAddedDetail>} copio:page-added - Fired when a scanned page arrives from the phone
+ * @fires {CustomEvent<import('./events.js').CopioScanCompleteDetail>} copio:scan-complete - Fired when the handoff session completes
+ * @fires {CustomEvent<import('./events.js').CopioErrorDetail>} copio:error - Fired when a handoff or transport error occurs
+ *
+ * @cssprop [--copio-font-family='Inter', sans-serif] - Primary UI font family
+ * @cssprop [--copio-font-mono='JetBrains Mono', monospace] - Monospace font family
+ * @cssprop [--copio-color-bg=#0b0f17] - Host background color
+ * @cssprop [--copio-color-surface=#131b26] - Handoff card background
+ * @cssprop [--copio-color-surface-elevated=#1c2736] - Elevated surface background
+ * @cssprop [--copio-color-text=#f1f5f9] - Primary text color
+ * @cssprop [--copio-color-text-muted=#94a3b8] - Secondary/muted text color
+ * @cssprop [--copio-color-primary=#38bdf8] - Primary accent color
+ * @cssprop [--copio-color-primary-hover=#7dd3fc] - Primary accent hover color
+ * @cssprop [--copio-color-primary-contrast=#06131f] - Text color on primary accent
+ * @cssprop [--copio-color-success=#22c55e] - Connected/complete status color
+ * @cssprop [--copio-color-warning=#f59e0b] - Expiring/warning status color
+ * @cssprop [--copio-color-danger=#ef4444] - Error/expired status color
+ * @cssprop [--copio-color-border=rgba(148, 163, 184, 0.18)] - Card border color
+ * @cssprop [--copio-radius-md=10px] - Medium border radius
+ * @cssprop [--copio-radius-lg=14px] - Card border radius
+ * @cssprop [--copio-shadow-elevated=0 12px 32px -4px rgba(0, 0, 0, 0.55)] - Card shadow
  */
 export class CopioHandoff extends BaseElement {
   #session = null;

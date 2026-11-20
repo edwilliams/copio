@@ -28,6 +28,63 @@ import {
 /** @type {typeof HTMLElement} */
 const BaseElement = typeof HTMLElement !== 'undefined' ? HTMLElement : /** @type {any} */ (class {});
 
+/**
+ * Embeddable two-stage (`viewfinder` ↔ `workbench`) document scanner Web Component (`<copio-scanner>`).
+ *
+ * @fires {CustomEvent<import('./events.js').CopioPageAddedDetail>} copio:page-added - Fired when a page is captured or imported
+ * @fires {CustomEvent<import('./events.js').CopioPageRemovedDetail>} copio:page-removed - Fired when a page is removed
+ * @fires {CustomEvent<import('./events.js').CopioPagesChangedDetail>} copio:pages-changed - Fired when the active page list changes
+ * @fires {CustomEvent<import('./events.js').CopioScanCompleteDetail>} copio:scan-complete - Fired when a scan session is completed
+ * @fires {CustomEvent<import('./events.js').CopioExportProgressDetail>} copio:export-progress - Fired during PDF or ZIP export
+ * @fires {CustomEvent<import('./events.js').CopioExportCompleteDetail>} copio:export-complete - Fired when an export finishes
+ * @fires {CustomEvent<import('./events.js').CopioOcrCompleteDetail>} copio:ocr-complete - Fired when OCR completes
+ * @fires {CustomEvent<import('./events.js').CopioSyncConnectedDetail>} copio:sync-connected - Fired when P2P sync connects
+ * @fires {CustomEvent<Object>} copio:handoff-connected - Fired when mobile handoff connects to desktop
+ * @fires {CustomEvent<import('./events.js').CopioConnectionInfoDetail>} copio:connection-info - Fired with WebRTC transport details
+ * @fires {CustomEvent<import('./events.js').CopioEdgeDetectedDetail>} copio:edge-detected - Fired when document edges are detected
+ * @fires {CustomEvent<Object>} copio:migration - Fired when storage schema migrations run
+ * @fires {CustomEvent<import('./events.js').CopioErrorDetail>} copio:error - Fired when a recoverable error occurs
+ *
+ * @csspart scanner-root - Outer scanner container
+ * @csspart header - Top header bar
+ * @csspart header-actions - Header action buttons container
+ * @csspart viewfinder - Camera viewfinder stage
+ * @csspart shutter-dock - Bottom shutter button dock
+ * @csspart workbench - Review & editing workbench stage
+ * @csspart filmstrip - Multi-page thumbnail filmstrip
+ * @csspart toolbar - Bottom workbench action toolbar
+ * @csspart ocr-sheet - OCR text results sheet
+ * @csspart handoff-progress - Mobile handoff upload progress view
+ * @csspart handoff-confirm - Mobile handoff confirmation view
+ *
+ * @cssprop [--copio-font-family='Inter', sans-serif] - Primary UI font family
+ * @cssprop [--copio-font-mono='JetBrains Mono', monospace] - Monospace font family
+ * @cssprop [--copio-color-bg=#0b0f17] - Host background color
+ * @cssprop [--copio-color-surface=#131b26] - Surface card/panel background
+ * @cssprop [--copio-color-surface-elevated=#1c2736] - Elevated surface background
+ * @cssprop [--copio-color-surface-overlay=rgba(15, 22, 32, 0.88)] - Overlay backdrop color
+ * @cssprop [--copio-color-stage-bg=#070a0f] - Camera/preview stage background
+ * @cssprop [--copio-color-text=#f1f5f9] - Primary text color
+ * @cssprop [--copio-color-text-muted=#94a3b8] - Secondary/muted text color
+ * @cssprop [--copio-color-text-inverse=#090d14] - Inverse text color
+ * @cssprop [--copio-color-primary=#38bdf8] - Primary accent color
+ * @cssprop [--copio-color-primary-hover=#7dd3fc] - Primary accent hover color
+ * @cssprop [--copio-color-primary-contrast=#06131f] - Text color on primary accent
+ * @cssprop [--copio-color-success=#22c55e] - Success status color
+ * @cssprop [--copio-color-warning=#f59e0b] - Warning status color
+ * @cssprop [--copio-color-danger=#ef4444] - Danger/destructive action color
+ * @cssprop [--copio-color-border=rgba(148, 163, 184, 0.18)] - Subtle border color
+ * @cssprop [--copio-color-border-strong=rgba(148, 163, 184, 0.34)] - Strong border color
+ * @cssprop [--copio-focus-ring=0 0 0 2px #0b0f17, 0 0 0 4px #38bdf8] - Keyboard focus ring
+ * @cssprop [--copio-radius-sm=6px] - Small border radius
+ * @cssprop [--copio-radius-md=10px] - Medium border radius
+ * @cssprop [--copio-radius-lg=14px] - Large border radius
+ * @cssprop [--copio-radius-pill=9999px] - Pill border radius
+ * @cssprop [--copio-touch-target-min=44px] - Minimum interactive touch target size
+ * @cssprop [--copio-crop-handle-hit=48px] - Crop corner handle hit area size
+ * @cssprop [--copio-crop-handle-visual=16px] - Crop corner handle visual size
+ * @cssprop [--copio-shadow-elevated=0 12px 32px -4px rgba(0, 0, 0, 0.55)] - Elevated shadow
+ */
 export class CopioScanner extends BaseElement {
   #engine = null;
   #storage = null;

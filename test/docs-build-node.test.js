@@ -106,4 +106,47 @@ npm install @copio/sdk
     const emptyHits = searchEntries(searchIndex, 'zzzznonexistenttoken');
     assert.equal(emptyHits.length, 0);
   });
+
+  it('CPO-082: generates CEM-backed API reference and hand-written guides without internal symbols or TODOs', async () => {
+    const result = await buildDocs();
+    const expectedGuides = [
+      'storage-adapters',
+      'theming',
+      'licensing',
+      'framework-integration',
+      'offline-service-worker',
+    ];
+    for (const slug of expectedGuides) {
+      assert.ok(result.pages.includes(slug), `Missing guide page: ${slug}`);
+    }
+
+    const apiHtml = await readFile(path.join(result.outputDir, 'api.html'), 'utf8');
+    // CEM-driven sections for <copio-scanner>, <copio-handoff>, and CopioEngine
+    assert.ok(apiHtml.includes('copio:page-added'));
+    assert.ok(apiHtml.includes('--copio-color-primary'));
+    assert.ok(apiHtml.includes('::part(scanner-root)'));
+    assert.ok(apiHtml.includes('docs-badge-experimental'));
+    assert.ok(apiHtml.includes('CopioEngine'));
+    assert.ok(apiHtml.includes('MigrationRunner'));
+
+    // Internal symbols must NOT be documented in API Reference
+    for (const internalSymbol of ['LicenseManager', 'BUILD_DATE', 'CopioSyncDialog', 'CopioDocOcrDialog']) {
+      assert.ok(!apiHtml.includes(internalSymbol), `Internal symbol leaked into api.html: ${internalSymbol}`);
+    }
+
+    // No TODO entries anywhere in built pages
+    for (const slug of result.pages) {
+      const htmlPath =
+        slug === 'index'
+          ? path.join(result.outputDir, 'index.html')
+          : path.join(result.outputDir, slug, 'index.html');
+      const html = await readFile(htmlPath, 'utf8');
+      assert.ok(!/\bTODO\b/i.test(html), `Found TODO entry in ${slug}`);
+    }
+
+    const indexRaw = await readFile(path.join(result.outputDir, 'search-index.json'), 'utf8');
+    const searchIndex = JSON.parse(indexRaw);
+    assert.ok(searchEntries(searchIndex, 'MigrationRunner').some((h) => h.entry.slug === 'storage-adapters'));
+    assert.ok(searchEntries(searchIndex, 'adoptedStyleSheets').some((h) => h.entry.slug === 'theming'));
+  });
 });
