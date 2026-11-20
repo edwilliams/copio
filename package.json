@@ -86,16 +86,17 @@
   "scripts": {
     "build": "npm run build --prefix scripts/bundle",
     "build:sdk": "node scripts/build-sdk.mjs",
+    "build:docs": "node scripts/build-docs.mjs",
     "build:types": "node scripts/build-types.mjs",
     "lint": "oxlint",
     "typecheck": "node scripts/sync-vendor-types.mjs && tsc --noEmit",
     "prepare": "node scripts/sync-vendor-types.mjs",
     "check:size": "node scripts/check-bundle-size.mjs",
     "check:consumer": "tsc -p test/fixtures/ts-consumer/tsconfig.json",
-    "check:ci": "npm run lint && npm run typecheck && npm run build:sdk && npm run check:size && npm run check:consumer && npm test",
+    "check:ci": "npm run lint && npm run typecheck && npm run build:sdk && npm run build:docs && npm run check:size && npm run check:consumer && npm test",
     "release": "node scripts/release.mjs",
     "release:verify": "node scripts/release.mjs --verify",
-    "test": "node --test test/engine-node.test.js test/handoff-node.test.js test/relay-node.test.js test/edge-fixtures-node.test.js test/release-node.test.js && web-test-runner --node-resolve"
+    "test": "node --test test/engine-node.test.js test/handoff-node.test.js test/relay-node.test.js test/edge-fixtures-node.test.js test/release-node.test.js test/docs-build-node.test.js && web-test-runner --node-resolve"
   },
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",

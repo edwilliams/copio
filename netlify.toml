@@ -1,9 +1,24 @@
 [build]
-  command = "npm run build:sdk"
+  command = "npm run build:sdk && npm run build:docs"
   publish = "."
 
 [build.environment]
   GIT_SUBMODULE_STRATEGY = "none"
+
+[[redirects]]
+  from = "/docs"
+  to = "/docs/"
+  status = 301
+
+[[redirects]]
+  from = "/docs/"
+  to = "/dist/docs/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/docs/*"
+  to = "/dist/docs/:splat"
+  status = 200
 
 [[headers]]
   for = "/.well-known/assetlinks.json"
