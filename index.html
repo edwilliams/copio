@@ -246,11 +246,119 @@
       max-height: calc(100% - 48px);
     }
 
+    .host-container-frame[data-container="inline"] {
+      width: 440px;
+      height: 520px;
+      max-width: 100%;
+      max-height: calc(100% - 48px);
+    }
+
     .host-container-frame[data-container="full"] {
       width: 100%;
       height: 100%;
       max-width: 1160px;
       max-height: calc(100% - 48px);
+    }
+
+    .accent-picker-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: var(--sandbox-bg);
+      border: 1px solid var(--sandbox-border);
+      font-size: 11px;
+      color: var(--sandbox-text-muted);
+      cursor: pointer;
+    }
+
+    .accent-picker-wrap input[type="color"] {
+      appearance: none;
+      -webkit-appearance: none;
+      border: none;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .accent-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    .accent-picker-wrap input[type="color"]::-webkit-color-swatch {
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+    }
+
+    .snippet-box {
+      background: var(--sandbox-bg);
+      border: 1px solid var(--sandbox-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .snippet-pre {
+      margin: 0;
+      padding: 8px 10px;
+      font-family: var(--sandbox-mono);
+      font-size: 10px;
+      line-height: 1.45;
+      color: #cbd5e1;
+      max-height: 170px;
+      overflow: auto;
+      white-space: pre;
+    }
+
+    .sandbox-footer {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 18px;
+      background: var(--sandbox-surface);
+      border-top: 1px solid var(--sandbox-border);
+      font-size: 12px;
+      z-index: 20;
+      flex-shrink: 0;
+    }
+
+    .framework-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .framework-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--sandbox-bg);
+      border: 1px solid var(--sandbox-border);
+      color: var(--sandbox-text);
+      text-decoration: none;
+      font-size: 11.5px;
+      font-weight: 500;
+      transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+    }
+
+    .framework-pill:hover {
+      border-color: var(--sandbox-accent);
+      color: var(--sandbox-accent);
+      background: var(--sandbox-surface-elevated);
+    }
+
+    .framework-pill-badge {
+      font-size: 10px;
+      font-family: var(--sandbox-mono);
+      color: var(--sandbox-accent);
     }
 
     .host-container-frame copio-scanner {
@@ -843,6 +951,9 @@
             <button type="button" class="seg-btn" data-container-btn="drawer" aria-pressed="false">
               480×800 Sidebar
             </button>
+            <button type="button" class="seg-btn" data-container-btn="inline" aria-pressed="false">
+              Inline Card
+            </button>
             <button type="button" class="seg-btn" data-container-btn="full" aria-pressed="false">
               100% Full View
             </button>
@@ -889,6 +1000,10 @@
             <button type="button" class="seg-btn" data-theme-btn="light" aria-pressed="false">Light</button>
             <button type="button" class="seg-btn" data-theme-btn="brand" aria-pressed="false">Emerald</button>
           </div>
+          <label class="accent-picker-wrap" title="Customize --copio-color-primary CSS token">
+            <input type="color" id="custom-accent-input" value="#38bdf8" aria-label="Custom primary accent color" />
+            <span>Accent</span>
+          </label>
         </div>
 
         <!-- Inspector Toggle -->
@@ -1089,6 +1204,16 @@
           </div>
         </div>
 
+        <div class="inspector-section">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <div class="control-label">Live Code Snippet</div>
+            <button type="button" class="seg-btn" id="btn-copy-snippet" style="font-size:10.5px; padding:2px 7px; border:1px solid var(--sandbox-border);">Copy</button>
+          </div>
+          <div class="snippet-box">
+            <pre class="snippet-pre" id="dynamic-code-snippet"></pre>
+          </div>
+        </div>
+
         <div class="inspector-header" style="border-top:none;">
           <div class="inspector-title">Dispatched CustomEvents</div>
         </div>
@@ -1099,6 +1224,63 @@
         </div>
       </aside>
     </div>
+
+    <!-- Bottom Framework Sandbox Bar (CPO-085 / CPO-064) -->
+    <footer class="sandbox-footer" aria-label="Try it in your framework">
+      <div class="framework-links" id="framework-sandbox-links">
+        <span class="control-label" style="margin-right:4px;">⚡ Try it in your framework</span>
+        <a
+          class="framework-pill"
+          href="https://stackblitz.com/github/edwilliams/copio/tree/master/examples/vanilla"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-framework-link="vanilla"
+        >
+          <span>Vanilla JS</span>
+          <span class="framework-pill-badge">StackBlitz ↗</span>
+        </a>
+        <a
+          class="framework-pill"
+          href="https://stackblitz.com/github/edwilliams/copio/tree/master/examples/react"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-framework-link="react"
+        >
+          <span>React 19</span>
+          <span class="framework-pill-badge">StackBlitz ↗</span>
+        </a>
+        <a
+          class="framework-pill"
+          href="https://stackblitz.com/github/edwilliams/copio/tree/master/examples/vue"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-framework-link="vue"
+        >
+          <span>Vue 3</span>
+          <span class="framework-pill-badge">StackBlitz ↗</span>
+        </a>
+        <a
+          class="framework-pill"
+          href="https://stackblitz.com/github/edwilliams/copio/tree/master/examples/angular"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-framework-link="angular"
+        >
+          <span>Angular 19</span>
+          <span class="framework-pill-badge">StackBlitz ↗</span>
+        </a>
+        <a
+          class="framework-pill"
+          href="https://codespaces.new/edwilliams/copio"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-framework-link="codespaces"
+        >
+          <span>GitHub Codespaces</span>
+          <span class="framework-pill-badge">Open ↗</span>
+        </a>
+      </div>
+    </footer>
   </div>
 
   <script type="module">
@@ -1500,8 +1682,91 @@
     let currentContainer = 'modal';
     let currentScenario = 'receipt';
     let currentTheme = 'dark';
+    let customAccent = null;
+    let edgeDetectionEnabled = true;
     let eventCounter = 0;
     let inspectorOpen = !window.matchMedia('(max-width: 768px)').matches;
+
+    const dynamicCodeSnippet = document.getElementById('dynamic-code-snippet');
+    const customAccentInput = document.getElementById('custom-accent-input');
+    const btnCopySnippet = document.getElementById('btn-copy-snippet');
+
+    const HOST_MODES = {
+      modal: {
+        className: 'copio-modal',
+        css: '.copio-modal {\n  width: 360px;\n  height: 640px;\n  border-radius: 14px;\n  overflow: hidden;\n}',
+        dims: '360px × 640px (@container ≤400px)',
+      },
+      drawer: {
+        className: 'copio-drawer',
+        css: '.copio-drawer {\n  width: 480px;\n  height: 800px;\n  max-height: 100vh;\n}',
+        dims: '480px × 800px (@container 401..767px)',
+      },
+      inline: {
+        className: 'copio-inline-card',
+        css: '.copio-inline-card {\n  width: 440px;\n  height: 520px;\n  border-radius: 12px;\n  overflow: hidden;\n}',
+        dims: '440px × 520px (Inline Card, @container 401..767px)',
+      },
+      full: {
+        className: 'copio-full-view',
+        css: '.copio-full-view {\n  width: 100%;\n  height: 100dvh;\n}',
+        dims: '100% Full View (@container ≥768px)',
+      },
+    };
+
+    function buildCodeSnippet() {
+      const hostCfg = HOST_MODES[currentContainer] || HOST_MODES.modal;
+      const baseSwatches = THEME_SWATCHES[currentTheme] || THEME_SWATCHES.dark;
+      const primaryColor = customAccent || baseSwatches.primary;
+      const tag = currentScenario === 'handoff' ? 'copio-handoff' : 'copio-scanner';
+
+      const cssBlock = [
+        hostCfg.css,
+        `${tag} {`,
+        `  --copio-color-bg: ${baseSwatches.bg};`,
+        `  --copio-color-surface: ${baseSwatches.surface};`,
+        `  --copio-color-primary: ${primaryColor};`,
+        `  --copio-color-success: ${baseSwatches.success};`,
+        `}`,
+      ].join('\n');
+
+      let htmlBlock;
+      if (currentScenario === 'handoff') {
+        htmlBlock = [
+          `<div class="${hostCfg.className}">`,
+          `  <copio-handoff`,
+          `    mode="single"`,
+          `    aspect="receipt"`,
+          `    theme="${currentTheme}"`,
+          `    transport="peer"`,
+          `  ></copio-handoff>`,
+          `</div>`,
+        ].join('\n');
+      } else {
+        const scenarioCfg = SCENARIOS[currentScenario];
+        const attrs = [
+          `    mode="${scenarioCfg.mode}"`,
+          `    aspect="${scenarioCfg.aspect}"`,
+        ];
+        if (scenarioCfg.maxPages > 0) {
+          attrs.push(`    max-pages="${scenarioCfg.maxPages}"`);
+        }
+        attrs.push(`    theme="${currentTheme}"`);
+        if (!edgeDetectionEnabled) {
+          attrs.push(`    edge-detection="false"`);
+          attrs.push(`    auto-crop="false"`);
+        }
+        htmlBlock = [
+          `<div class="${hostCfg.className}">`,
+          `  <copio-scanner`,
+          ...attrs,
+          `  ></copio-scanner>`,
+          `</div>`,
+        ].join('\n');
+      }
+
+      return `<style>\n${cssBlock}\n</style>\n\n${htmlBlock}`;
+    }
 
     function updateMountBarUi() {
       if (currentScenario === 'handoff') {
@@ -1524,18 +1789,22 @@
           `<span class="tag">&gt;&lt;/copio-scanner&gt;</span>`;
       }
 
-      const dimsMap = {
-        modal: '360px × 640px (@container ≤400px)',
-        drawer: '480px × 800px (@container 401..767px)',
-        full: '100% Full View (@container ≥768px)',
-      };
-      activeContainerDims.textContent = dimsMap[currentContainer];
+      const hostCfg = HOST_MODES[currentContainer] || HOST_MODES.modal;
+      activeContainerDims.textContent = hostCfg.dims;
 
       const swatches = THEME_SWATCHES[currentTheme] || THEME_SWATCHES.dark;
+      const activePrimary = customAccent || swatches.primary;
       document.getElementById('swatch-bg').style.background = swatches.bg;
       document.getElementById('swatch-surface').style.background = swatches.surface;
-      document.getElementById('swatch-primary').style.background = swatches.primary;
+      document.getElementById('swatch-primary').style.background = activePrimary;
       document.getElementById('swatch-success').style.background = swatches.success;
+      if (customAccentInput && !customAccent) {
+        customAccentInput.value = swatches.primary;
+      }
+
+      if (dynamicCodeSnippet) {
+        dynamicCodeSnippet.textContent = buildCodeSnippet();
+      }
     }
 
     function logCustomEvent(eventName, detail) {
@@ -1859,6 +2128,7 @@
     document.querySelectorAll('[data-edge-toggle]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const enabled = btn.getAttribute('data-edge-toggle') === 'on';
+        edgeDetectionEnabled = enabled;
         document.querySelectorAll('[data-edge-toggle]').forEach((b) => {
           b.setAttribute('aria-pressed', String(b === btn));
         });
@@ -1875,6 +2145,7 @@
           simulatedScanner.edgeDetection = enabled;
           simulatedScanner.autoCrop = enabled;
         }
+        updateMountBarUi();
         logCustomEvent('auto-edge-detection', {
           enabled,
           backend: 'ml',
@@ -1886,6 +2157,10 @@
     document.querySelectorAll('[data-theme-btn]').forEach((btn) => {
       btn.addEventListener('click', () => {
         currentTheme = btn.getAttribute('data-theme-btn');
+        customAccent = null;
+        scanner.style.removeProperty('--copio-color-primary');
+        if (liveHandoff) liveHandoff.style.removeProperty('--copio-color-primary');
+        if (simulatedScanner) simulatedScanner.style.removeProperty('--copio-color-primary');
         scanner.setAttribute('theme', currentTheme);
         if (liveHandoff) liveHandoff.setAttribute('theme', currentTheme);
         if (simulatedScanner) simulatedScanner.setAttribute('theme', currentTheme);
@@ -1894,6 +2169,33 @@
         });
         updateMountBarUi();
       });
+    });
+
+    // Custom Primary Accent Color Picker
+    customAccentInput?.addEventListener('input', (e) => {
+      customAccent = e.target.value;
+      scanner.style.setProperty('--copio-color-primary', customAccent);
+      if (liveHandoff) liveHandoff.style.setProperty('--copio-color-primary', customAccent);
+      if (simulatedScanner) simulatedScanner.style.setProperty('--copio-color-primary', customAccent);
+      updateMountBarUi();
+    });
+
+    // Copy Live Code Snippet
+    btnCopySnippet?.addEventListener('click', async () => {
+      const code = dynamicCodeSnippet?.textContent || '';
+      if (!code) return;
+      try {
+        await navigator.clipboard.writeText(code);
+        btnCopySnippet.textContent = 'Copied!';
+        setTimeout(() => {
+          btnCopySnippet.textContent = 'Copy';
+        }, 1600);
+      } catch {
+        btnCopySnippet.textContent = 'Failed';
+        setTimeout(() => {
+          btnCopySnippet.textContent = 'Copy';
+        }, 1600);
+      }
     });
 
     // Inspector Drawer Toggle & Clear
