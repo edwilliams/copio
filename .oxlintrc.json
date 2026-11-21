@@ -5,7 +5,10 @@
     "dist/**",
     "js/lib/**",
     "coverage/**",
-    "test/fixtures/**"
+    "test/fixtures/**",
+    "examples/*/node_modules/**",
+    "examples/*/dist/**",
+    "examples/angular/.angular/**"
   ],
   "overrides": [
     {
