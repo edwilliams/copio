@@ -25,4 +25,5 @@ jobs:
     - run: npm run build:docs
     - run: npm run check:size
     - run: npx tsc -p test/fixtures/ts-consumer/tsconfig.json
+    - run: npm run check:examples
     - run: npm test

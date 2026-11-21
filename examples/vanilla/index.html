@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copio SDK — Vanilla JS Example</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <h1>Copio SDK — Vanilla JS</h1>
+        <p id="status" class="status">Capture or import a page, then click Done or Export PDF.</p>
+      </header>
+
+      <div class="scanner-box">
+        <copio-scanner id="scanner" mode="batch" aspect="a4" theme="dark"></copio-scanner>
+      </div>
+
+      <div class="actions">
+        <button id="export-btn" type="button">Export PDF</button>
+      </div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
