@@ -44,6 +44,7 @@
     "LICENSE*",
     "THIRD_PARTY_NOTICES.md",
     "dist/*.js",
+    "dist/*.js.map",
     "dist/*.d.ts",
     "dist/*.json",
     "dist/adapters",

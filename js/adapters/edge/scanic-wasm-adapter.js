@@ -278,10 +278,13 @@ export class ScanicWasmEdgeAdapter extends EdgeDetectorPort {
       return this.#inlineModule;
     }
     const base = getAssetBase();
+    // Avoid a static relative string literal in import() so Vite's import-analysis
+    // doesn't fail after esbuild strips /* @vite-ignore */ during SDK minification.
+    const fallbackPath = ['..', '..', 'lib', 'scanic-detector.js'].join('/');
     const modulePath =
       base && base !== '.'
         ? resolveAssetUrl('js/lib/scanic-detector.js')
-        : '../../lib/scanic-detector.js';
+        : fallbackPath;
     const mod = await import(/* @vite-ignore */ modulePath);
     await mod.initialize();
     this.#inlineModule = mod;

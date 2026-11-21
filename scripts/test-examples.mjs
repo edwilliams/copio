@@ -49,12 +49,25 @@ async function verifyDevServer(exDir, { name, port, entryPaths }) {
   console.log(`🚀 Verifying dev server for examples/${name} on port ${port}...`);
   const proc = spawn('npm', ['run', 'dev', '--', '--port', String(port)], {
     cwd: exDir,
+    detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   let logs = '';
   proc.stdout.on('data', (d) => { logs += d.toString(); });
   proc.stderr.on('data', (d) => { logs += d.toString(); });
+
+  const killGroup = (signal) => {
+    try {
+      process.kill(-proc.pid, signal);
+    } catch {
+      try {
+        proc.kill(signal);
+      } catch {
+        // Already exited
+      }
+    }
+  };
 
   try {
     const baseUrl = `http://127.0.0.1:${port}`;
@@ -72,26 +85,49 @@ async function verifyDevServer(exDir, { name, port, entryPaths }) {
       await res.text();
     }
 
+    // For Vite examples, also fetch the SDK entry and its transformed chunk modules
+    // to exercise vite:import-analysis on every pre-bundled SDK chunk.
+    if (name !== 'angular') {
+      const sdkEntryRes = await fetch(`${baseUrl}/node_modules/@copio/sdk/dist/index.js`);
+      if (!sdkEntryRes.ok) {
+        throw new Error(`Dev server failed for @copio/sdk/dist/index.js (${sdkEntryRes.status}) in examples/${name}\n${logs}`);
+      }
+      const sdkEntryBody = await sdkEntryRes.text();
+      const chunkMatches = [...sdkEntryBody.matchAll(/\/node_modules\/@copio\/sdk\/dist\/chunk-[A-Za-z0-9]+\.js/g)];
+      const chunkPaths = [...new Set(chunkMatches.map((m) => m[0]))];
+      for (const chunkPath of chunkPaths) {
+        const chunkRes = await fetch(`${baseUrl}${chunkPath}`);
+        if (!chunkRes.ok) {
+          throw new Error(`Dev server failed for ${chunkPath} (${chunkRes.status}) in examples/${name}\n${logs}`);
+        }
+        await chunkRes.text();
+      }
+    }
+
     // Verify /copio-sdk lazy runtime asset serving works in dev mode
     const assetRes = await fetch(`${baseUrl}/copio-sdk/js/lib/pdfkit.js`);
     if (!assetRes.ok) {
       throw new Error(`Dev server failed to serve /copio-sdk/js/lib/pdfkit.js (${assetRes.status}) in examples/${name}`);
     }
 
-    if (logs.includes('[ERROR]') || logs.includes('optimizeDeps')) {
+    if (logs.includes('[ERROR]') || logs.includes('optimizeDeps') || logs.includes('Failed to load source map')) {
       throw new Error(`Dev server logged bundler errors for examples/${name}:\n${logs}`);
     }
 
     console.log(`✅ examples/${name} dev server responded cleanly.`);
   } finally {
-    proc.kill('SIGTERM');
+    killGroup('SIGTERM');
     await new Promise((resolve) => {
       const timer = setTimeout(() => {
-        proc.kill('SIGKILL');
+        killGroup('SIGKILL');
+        proc.stdout.destroy();
+        proc.stderr.destroy();
         resolve();
       }, 2000);
       proc.once('exit', () => {
         clearTimeout(timer);
+        proc.stdout.destroy();
+        proc.stderr.destroy();
         resolve();
       });
     });
