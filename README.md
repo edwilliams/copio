@@ -225,6 +225,21 @@ All events bubble and cross the Shadow DOM boundary (`composed: true`) with type
 
 ---
 
+## Framework Examples
+
+Runnable starter apps in [`examples/`](examples/README.md) (`npm i && npm run dev`) with 1-click cloud sandboxes:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/edwilliams/copio)
+
+| Framework | Local | StackBlitz |
+|---|---|---|
+| **Vanilla JS** | `cd examples/vanilla && npm i && npm run dev` | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/vanilla) |
+| **React 19** | `cd examples/react && npm i && npm run dev` | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/react) |
+| **Vue 3** | `cd examples/vue && npm i && npm run dev` | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/vue) |
+| **Angular 19** | `cd examples/angular && npm i && npm run dev` | [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/angular) |
+
+---
+
 ## Ecosystem
 
 `@copio/sdk` powers two open-source reference applications:

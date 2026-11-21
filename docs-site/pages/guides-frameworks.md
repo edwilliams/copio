@@ -86,26 +86,32 @@ function onScanComplete(event) {
 
 ## Angular
 
-Add `CUSTOM_ELEMENTS_SCHEMA` to your standalone component or NgModule:
+Add `CUSTOM_ELEMENTS_SCHEMA` to your standalone component or NgModule, and attach `copio:*` event listeners via `@ViewChild` (Angular's template syntax reserves `:` for global targets like `window:`):
 
 ```ts
-import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { AfterViewInit, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import '@copio/sdk/scanner';
+import { COPIO_EVENTS, type CopioScanner } from '@copio/sdk';
 
 @Component({
   selector: 'app-scanner',
   standalone: true,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  template: `
-    <copio-scanner
-      mode="single"
-      (copio:scan-complete)="onScanComplete($event)">
-    </copio-scanner>
-  `,
+  template: `<copio-scanner #scanner mode="single"></copio-scanner>`,
 })
-export class ScannerComponent {
-  onScanComplete(event: Event) {
+export class ScannerComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('scanner', { static: true }) scannerRef!: ElementRef<CopioScanner>;
+
+  private onScanComplete = (event: Event) => {
     console.log((event as CustomEvent).detail);
+  };
+
+  ngAfterViewInit() {
+    this.scannerRef.nativeElement.addEventListener(COPIO_EVENTS.SCAN_COMPLETE, this.onScanComplete);
+  }
+
+  ngOnDestroy() {
+    this.scannerRef.nativeElement.removeEventListener(COPIO_EVENTS.SCAN_COMPLETE, this.onScanComplete);
   }
 }
 ```
@@ -122,3 +128,18 @@ export class ScannerComponent {
 
 <copio-scanner mode="batch" on:copio:scan-complete={handleComplete} />
 ```
+
+## Runnable Examples & 1-Click Cloud Sandboxes
+
+Complete starter apps for **Vanilla JS**, **React 19**, **Vue 3**, and **Angular 19** live in [`examples/`](https://github.com/edwilliams/copio/tree/master/examples) — each installs `@copio/sdk`, renders `<copio-scanner>`, listens to `copio:scan-complete`, and exports a PDF.
+
+| Framework | Local (`npm i && npm run dev`) | StackBlitz (1-Click) |
+|---|---|---|
+| **Vanilla JS** | `examples/vanilla` | [Open in StackBlitz](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/vanilla) |
+| **React 19** | `examples/react` | [Open in StackBlitz](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/react) |
+| **Vue 3** | `examples/vue` | [Open in StackBlitz](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/vue) |
+| **Angular 19** | `examples/angular` | [Open in StackBlitz](https://stackblitz.com/github/edwilliams/copio/tree/master/examples/angular) |
+
+Want a full cloud VS Code environment? Launch the repo's `.devcontainer` in GitHub Codespaces:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/edwilliams/copio)
