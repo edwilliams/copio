@@ -47,7 +47,7 @@ async function waitForHttp(url, timeoutMs = 30000) {
 
 async function verifyDevServer(exDir, { name, port, entryPaths }) {
   console.log(`🚀 Verifying dev server for examples/${name} on port ${port}...`);
-  const proc = spawn('npm', ['run', 'dev', '--', '--port', String(port)], {
+  const proc = spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(port)], {
     cwd: exDir,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -71,7 +71,12 @@ async function verifyDevServer(exDir, { name, port, entryPaths }) {
 
   try {
     const baseUrl = `http://127.0.0.1:${port}`;
-    const indexRes = await waitForHttp(`${baseUrl}/`);
+    let indexRes;
+    try {
+      indexRes = await waitForHttp(`${baseUrl}/`);
+    } catch (err) {
+      throw new Error(`${err.message} for examples/${name}\n${logs}`);
+    }
     const html = await indexRes.text();
     if (!html.includes('<html') && !html.includes('<!doctype html')) {
       throw new Error(`Unexpected index.html response from examples/${name}`);
