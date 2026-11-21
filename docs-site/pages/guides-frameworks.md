@@ -57,7 +57,7 @@ export function DocumentScanner({ onComplete }: { onComplete: (pages: unknown[])
 
 ## Vue 3
 
-Configure Vite/Vue to treat `copio-*` tags as custom elements:
+Configure Vite/Vue to treat `copio-*` tags as custom elements and exclude `@copio/sdk` from Vite's `optimizeDeps` pre-bundler:
 
 ```js
 // vite.config.js
@@ -68,6 +68,7 @@ vue({
     },
   },
 });
+// Also set optimizeDeps: { exclude: ['@copio/sdk'] } and build: { target: 'es2022' }
 ```
 
 ```vue

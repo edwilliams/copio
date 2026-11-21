@@ -47,6 +47,9 @@ function copioAssetsPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), copioAssetsPlugin()],
+  optimizeDeps: {
+    exclude: ['@copio/sdk'],
+  },
   build: {
     target: 'es2022',
   },

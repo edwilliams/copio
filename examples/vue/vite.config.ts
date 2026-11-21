@@ -56,6 +56,9 @@ export default defineConfig({
     }),
     copioAssetsPlugin(),
   ],
+  optimizeDeps: {
+    exclude: ['@copio/sdk'],
+  },
   build: {
     target: 'es2022',
   },

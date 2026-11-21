@@ -5,10 +5,11 @@
  *
  * Packs the local @copio/sdk tarball, installs it into each example
  * (vanilla, react, vue, angular) without modifying package.json/lockfiles,
- * and verifies `npm run build` succeeds for every example.
+ * verifies `npm run build` succeeds, and verifies `npm run dev` serves
+ * the app and entry modules cleanly without optimizeDeps/bundler errors.
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,11 +18,84 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const examplesDir = path.join(rootDir, 'examples');
-const examples = ['vanilla', 'react', 'vue', 'angular'];
+
+const EXAMPLES = [
+  { name: 'vanilla', port: 4173, entryPaths: ['/@vite/client', '/src/main.js'] },
+  { name: 'react', port: 4174, entryPaths: ['/@vite/client', '/src/main.tsx'] },
+  { name: 'vue', port: 4175, entryPaths: ['/@vite/client', '/src/main.ts'] },
+  { name: 'angular', port: 4176, entryPaths: ['/main.js'] },
+];
 
 function run(cmd, cwd) {
   console.log(`\n$ (${path.relative(rootDir, cwd) || '.'}) ${cmd}`);
   execSync(cmd, { cwd, stdio: 'inherit' });
+}
+
+async function waitForHttp(url, timeoutMs = 30000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+    } catch {
+      // Server still starting
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  throw new Error(`Timed out waiting for ${url}`);
+}
+
+async function verifyDevServer(exDir, { name, port, entryPaths }) {
+  console.log(`🚀 Verifying dev server for examples/${name} on port ${port}...`);
+  const proc = spawn('npm', ['run', 'dev', '--', '--port', String(port)], {
+    cwd: exDir,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  let logs = '';
+  proc.stdout.on('data', (d) => { logs += d.toString(); });
+  proc.stderr.on('data', (d) => { logs += d.toString(); });
+
+  try {
+    const baseUrl = `http://127.0.0.1:${port}`;
+    const indexRes = await waitForHttp(`${baseUrl}/`);
+    const html = await indexRes.text();
+    if (!html.includes('<html') && !html.includes('<!doctype html')) {
+      throw new Error(`Unexpected index.html response from examples/${name}`);
+    }
+
+    for (const p of entryPaths) {
+      const res = await fetch(`${baseUrl}${p}`);
+      if (!res.ok) {
+        throw new Error(`Dev server failed for ${p} (${res.status}) in examples/${name}\n${logs}`);
+      }
+      await res.text();
+    }
+
+    // Verify /copio-sdk lazy runtime asset serving works in dev mode
+    const assetRes = await fetch(`${baseUrl}/copio-sdk/js/lib/pdfkit.js`);
+    if (!assetRes.ok) {
+      throw new Error(`Dev server failed to serve /copio-sdk/js/lib/pdfkit.js (${assetRes.status}) in examples/${name}`);
+    }
+
+    if (logs.includes('[ERROR]') || logs.includes('optimizeDeps')) {
+      throw new Error(`Dev server logged bundler errors for examples/${name}:\n${logs}`);
+    }
+
+    console.log(`✅ examples/${name} dev server responded cleanly.`);
+  } finally {
+    proc.kill('SIGTERM');
+    await new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        proc.kill('SIGKILL');
+        resolve();
+      }, 2000);
+      proc.once('exit', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
 }
 
 async function main() {
@@ -42,9 +116,9 @@ async function main() {
     const tarballPath = path.join(tmpDir, tgzName);
     console.log(`📦 Packed local @copio/sdk tarball: ${tarballPath}`);
 
-    for (const name of examples) {
-      const exDir = path.join(examplesDir, name);
-      console.log(`\n🧪 Testing example: examples/${name}`);
+    for (const ex of EXAMPLES) {
+      const exDir = path.join(examplesDir, ex.name);
+      console.log(`\n🧪 Testing example: examples/${ex.name}`);
 
       if (!fs.existsSync(path.join(exDir, 'node_modules'))) {
         run('npm install --no-audit --no-fund', exDir);
@@ -55,12 +129,14 @@ async function main() {
       const distIndex = path.join(exDir, 'dist', 'index.html');
       const distBrowserIndex = path.join(exDir, 'dist', 'browser', 'index.html');
       if (!fs.existsSync(distIndex) && !fs.existsSync(distBrowserIndex)) {
-        throw new Error(`Build output missing index.html in examples/${name}/dist`);
+        throw new Error(`Build output missing index.html in examples/${ex.name}/dist`);
       }
-      console.log(`✅ examples/${name} built successfully.`);
+      console.log(`✅ examples/${ex.name} built successfully.`);
+
+      await verifyDevServer(exDir, ex);
     }
 
-    console.log('\n🎉 All framework examples built cleanly!');
+    console.log('\n🎉 All framework examples built and served cleanly!');
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
